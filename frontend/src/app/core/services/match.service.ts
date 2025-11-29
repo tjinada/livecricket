@@ -1,0 +1,107 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { ApiResponse } from '../models';
+
+export interface Match {
+  _id: string;
+  format: 'T20' | 'ODI';
+  team1: any;
+  team2: any;
+  venue: string;
+  date: string;
+  status: 'upcoming' | 'live' | 'completed';
+  toss?: {
+    winner: any;
+    decision: 'bat' | 'bowl';
+  };
+  squads: {
+    team1: SquadPlayer[];
+    team2: SquadPlayer[];
+  };
+  innings: any[];
+  currentInnings?: number;
+  result?: {
+    winner: any;
+    winMargin: number;
+    winType: 'runs' | 'wickets';
+  };
+  displayView: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SquadPlayer {
+  player: any;
+  isPlayingXI: boolean;
+  battingOrder?: number;
+}
+
+export interface CreateMatchDto {
+  format: 'T20' | 'ODI';
+  team1: string;
+  team2: string;
+  venue: string;
+  date: string;
+}
+
+export interface MatchFilters {
+  status?: string;
+  team?: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class MatchService {
+  private readonly apiUrl = '/api/matches';
+
+  constructor(private http: HttpClient) {}
+
+  getAll(filters?: MatchFilters): Observable<ApiResponse<Match[]>> {
+    let params = new HttpParams();
+    
+    if (filters) {
+      if (filters.status) {
+        params = params.set('status', filters.status);
+      }
+      if (filters.team) {
+        params = params.set('team', filters.team);
+      }
+    }
+
+    return this.http.get<ApiResponse<Match[]>>(this.apiUrl, { params });
+  }
+
+  getById(id: string): Observable<ApiResponse<Match>> {
+    return this.http.get<ApiResponse<Match>>(`${this.apiUrl}/${id}`);
+  }
+
+  create(match: CreateMatchDto): Observable<ApiResponse<Match>> {
+    return this.http.post<ApiResponse<Match>>(this.apiUrl, match);
+  }
+
+  update(id: string, match: Partial<CreateMatchDto>): Observable<ApiResponse<Match>> {
+    return this.http.put<ApiResponse<Match>>(`${this.apiUrl}/${id}`, match);
+  }
+
+  delete(id: string): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${id}`);
+  }
+
+  setSquad(id: string, squads: { team1: SquadPlayer[], team2: SquadPlayer[] }): Observable<ApiResponse<Match>> {
+    return this.http.put<ApiResponse<Match>>(`${this.apiUrl}/${id}/squad`, squads);
+  }
+
+  recordToss(id: string, toss: { winner: string, decision: 'bat' | 'bowl' }): Observable<ApiResponse<Match>> {
+    return this.http.put<ApiResponse<Match>>(`${this.apiUrl}/${id}/toss`, toss);
+  }
+
+  startMatch(id: string, data: { openingBatsmen: { striker: string, nonStriker: string }, openingBowler: string }): Observable<ApiResponse<Match>> {
+    return this.http.post<ApiResponse<Match>>(`${this.apiUrl}/${id}/start`, data);
+  }
+
+  setDisplayView(id: string, view: string): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/display-view`, { view });
+  }
+}

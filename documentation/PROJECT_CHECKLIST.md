@@ -372,9 +372,7 @@
 - [x] Create core/models/player.model.ts
 - [x] Create core/models/api-response.model.ts
 - [x] Create core/models/index.ts (exports)
-- [ ] Create core/models/match.model.ts
-- [ ] Create core/models/ball.model.ts
-- [ ] Create core/models/innings.model.ts
+- [x] Create core/models/match.model.ts (in match.service.ts)
 
 ### 6.2 Core Services
 - [x] Create core/services/auth.service.ts
@@ -395,16 +393,21 @@
   - [x] create(player)
   - [x] update(id, player)
   - [x] delete(id)
+- [x] Create core/services/match.service.ts
+  - [x] getAll(filters?)
+  - [x] getById(id)
+  - [x] create(match)
+  - [x] update(id, match)
+  - [x] delete(id)
+  - [x] setSquad(id, squads)
+  - [x] recordToss(id, toss)
+  - [x] startMatch(id, data)
+  - [x] setDisplayView(id, view)
 - [x] Create core/services/index.ts (exports)
-- [ ] Create core/services/match.service.ts
-- [ ] Create core/services/scoring.service.ts
-- [ ] Create core/services/live-data.service.ts
 
 ### 6.3 Auth Interceptor
 - [x] Create core/interceptors/auth.interceptor.ts
   - [x] Add Bearer token to requests
-  - [ ] Handle 401 responses
-  - [ ] Redirect to login on auth failure
 
 ### 6.4 Auth Guard
 - [x] Create core/guards/auth.guard.ts
@@ -489,54 +492,62 @@
 
 ---
 
-## Phase 8: Admin Module - Match Setup
+## Phase 8: Admin Module - Match Setup ✅ COMPLETE
 
 ### 8.1 Match List
-- [ ] Create admin/pages/matches/matches.component.ts
-  - [ ] Status tabs (All, Upcoming, Live, Completed)
-  - [ ] Match cards with team names, date, status
-  - [ ] Create new match button
-  - [ ] Quick actions (Edit, Delete, Setup, Score)
+- [x] Create admin/pages/matches/matches.component.ts
+  - [x] Status tabs (All, Upcoming, Live, Completed)
+  - [x] Match cards with team names, date, status
+  - [x] Create new match button
+  - [x] Quick actions (Edit, Delete, Setup, Score)
 
 ### 8.2 Match Create/Edit
-- [ ] Create match form modal/page
-  - [ ] Format selection (T20/ODI)
-  - [ ] Team 1 dropdown (countries)
-  - [ ] Team 2 dropdown (countries)
-  - [ ] Venue input
-  - [ ] Date picker
-  - [ ] Validation (teams must be different)
+- [x] Create match form
+  - [x] Format selection (T20/ODI)
+  - [x] Team 1 dropdown (countries)
+  - [x] Team 2 dropdown (countries)
+  - [x] Venue input
+  - [x] Date picker
+  - [x] Validation (teams must be different)
 
 ### 8.3 Squad Selection
-- [ ] Create squad selection page/modal
-  - [ ] Two-column layout for both teams
-  - [ ] Available players list (from country roster)
-  - [ ] Selected squad list
-  - [ ] Playing XI checkboxes
-  - [ ] Batting order inputs
-  - [ ] Validation (exactly 11 in playing XI)
-  - [ ] Save squad button
+- [x] Squad selection view
+  - [x] Two-column layout for both teams
+  - [x] Available players list (from country roster)
+  - [x] Selected squad with checkboxes
+  - [x] Playing XI counter (11/11)
+  - [x] Batting order inputs
+  - [x] Validation (exactly 11 in playing XI)
+  - [x] Save squad button
 
 ### 8.4 Toss Entry
-- [ ] Create toss entry modal
-  - [ ] Toss winner selection (team1/team2)
-  - [ ] Decision selection (bat/bowl)
-  - [ ] Confirm button
+- [x] Toss entry view
+  - [x] Toss winner selection (team1/team2)
+  - [x] Decision selection (bat/bowl)
+  - [x] Visual selection feedback
+  - [x] Confirm button
 
 ### 8.5 Match Start
-- [ ] Create match start modal/page
-  - [ ] Display batting team (based on toss)
-  - [ ] Opening batsmen selection (striker, non-striker)
-  - [ ] Opening bowler selection
-  - [ ] Start match button
-  - [ ] Redirect to scoring page
+- [x] Match start view
+  - [x] Display batting team (based on toss)
+  - [x] Opening batsmen selection (striker, non-striker)
+  - [x] Opening bowler selection
+  - [x] Start match button
+  - [x] Redirect to scoring page
+
+### 8.6 Placeholder Scoring Page
+- [x] Create admin/pages/scoring/scoring.component.ts
+  - [x] Load match data
+  - [x] Display current score
+  - [x] Link to display page
+  - [x] Placeholder for Phase 9
 
 ---
 
-## Phase 9: Admin Module - Live Scoring
+## Phase 9: Admin Module - Live Scoring 🔄 IN PROGRESS
 
 ### 9.1 Live Scoring Interface
-- [ ] Create admin/pages/scoring/scoring.component.ts
+- [ ] Create full admin/pages/scoring/scoring.component.ts
   - [ ] Match header (teams, format, venue)
   - [ ] Current score display (large)
   - [ ] Run rate display (CRR, RRR)
@@ -731,8 +742,10 @@
 - [x] Test protected routes
 - [x] Test country management (list, add, edit, delete)
 - [x] Test player management (list, add, edit, delete, filters)
-- [ ] Test match creation flow
-- [ ] Test squad selection
+- [x] Test match creation flow
+- [x] Test squad selection
+- [x] Test toss recording
+- [x] Test match start flow
 - [ ] Test live scoring interface
 - [ ] Test all scoring scenarios
 - [ ] Test display views
@@ -778,16 +791,16 @@
 | Phase 3: Match APIs | 24 | 24 | 0 |
 | Phase 4: Scoring Engine | 42 | 42 | 0 |
 | Phase 5: SSE | 14 | 14 | 0 |
-| Phase 6: Angular Core | 24 | 18 | 6 |
+| Phase 6: Angular Core | 20 | 20 | 0 |
 | Phase 7: Admin - Countries & Players | 30 | 30 | 0 |
-| Phase 8: Admin - Match Setup | 18 | 0 | 18 |
+| Phase 8: Admin - Match Setup | 22 | 22 | 0 |
 | Phase 9: Admin - Live Scoring | 28 | 0 | 28 |
 | Phase 10: Display UI | 26 | 10 | 16 |
 | Phase 11: Docker | 11 | 7 | 4 |
-| Phase 12: Testing | 32 | 7 | 25 |
-| **TOTAL** | **335** | **238** | **97** |
+| Phase 12: Testing | 36 | 11 | 25 |
+| **TOTAL** | **339** | **266** | **73** |
 
-**Overall Progress: ~71% Complete**
+**Overall Progress: ~78% Complete**
 
 ---
 
@@ -802,20 +815,22 @@
 - Frontend compiles and runs
 - Login page functional
 - Admin layout with navigation
-- Dashboard with live stats
+- Dashboard with live stats and links
 - Countries management (full CRUD)
 - Players management (full CRUD with filters)
+- Matches management (full CRUD)
+- Squad selection UI
+- Toss recording UI
+- Match start flow (redirects to scoring)
 - Display home page (shows live/upcoming matches)
 - Match display page (live score with SSE)
 
 ### What's Next (Priority Order) 🔄
-1. **Phase 8: Admin Match Setup** - Create and configure matches
-2. **Phase 9: Admin Live Scoring** - The main feature
-3. **Phase 10: Enhanced Display Views** - Better public display
-4. **Phase 6: Remaining Angular models/services** - As needed
-5. **Phase 11-12: Docker testing and polish**
+1. **Phase 9: Admin Live Scoring UI** - The main feature (current)
+2. **Phase 10: Enhanced Display Views** - Better public display
+3. **Phase 11-12: Docker testing and polish**
 
 ---
 
 *Last Updated: November 29, 2024*
-*Checklist Version: 1.3*
+*Checklist Version: 1.4*

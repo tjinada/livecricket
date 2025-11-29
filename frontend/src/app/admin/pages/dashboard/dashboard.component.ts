@@ -13,21 +13,21 @@ import { HttpClient } from '@angular/common/http';
       
       <!-- Quick Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow p-6">
+        <a routerLink="/admin/countries" class="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h3 class="text-gray-500 text-sm font-medium">Countries</h3>
           <p class="text-3xl font-bold text-gray-800 mt-2">{{ stats.countries }}</p>
-          <a routerLink="/admin/countries" class="text-green-600 text-sm hover:underline">Manage →</a>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6">
+          <span class="text-green-600 text-sm">Manage →</span>
+        </a>
+        <a routerLink="/admin/players" class="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h3 class="text-gray-500 text-sm font-medium">Players</h3>
           <p class="text-3xl font-bold text-gray-800 mt-2">{{ stats.players }}</p>
-          <a routerLink="/admin/players" class="text-green-600 text-sm hover:underline">Manage →</a>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6">
+          <span class="text-green-600 text-sm">Manage →</span>
+        </a>
+        <a routerLink="/admin/matches" class="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h3 class="text-gray-500 text-sm font-medium">Matches</h3>
           <p class="text-3xl font-bold text-gray-800 mt-2">{{ stats.matches }}</p>
-          <a routerLink="/admin/matches" class="text-green-600 text-sm hover:underline">Manage →</a>
-        </div>
+          <span class="text-green-600 text-sm">Manage →</span>
+        </a>
       </div>
 
       <!-- Quick Actions -->
@@ -46,23 +46,38 @@ import { HttpClient } from '@angular/common/http';
           >
             👤 Manage Players
           </a>
-          <div class="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
-            🏏 Create Match<br><span class="text-xs">(Coming Soon)</span>
-          </div>
-          <div class="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
-            📊 Live Scoring<br><span class="text-xs">(Coming Soon)</span>
-          </div>
+          <a 
+            routerLink="/admin/matches"
+            class="p-4 bg-gray-50 rounded-lg text-center text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
+          >
+            🏏 Manage Matches
+          </a>
+          @if (liveMatch) {
+            <a 
+              [routerLink]="['/admin/scoring', liveMatch._id]"
+              class="p-4 bg-red-50 rounded-lg text-center text-red-700 hover:bg-red-100 transition-colors"
+            >
+              📊 Live Scoring
+            </a>
+          } @else {
+            <div class="p-4 bg-gray-50 rounded-lg text-center text-gray-400">
+              📊 No Live Match
+            </div>
+          }
         </div>
       </div>
 
       <!-- Recent Matches -->
       <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Matches</h3>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold text-gray-800">Recent Matches</h3>
+          <a routerLink="/admin/matches" class="text-green-600 text-sm hover:underline">View All →</a>
+        </div>
         
         @if (loading) {
           <p class="text-gray-500">Loading matches...</p>
         } @else if (matches.length === 0) {
-          <p class="text-gray-500">No matches yet. Create your first match to get started.</p>
+          <p class="text-gray-500">No matches yet. <a routerLink="/admin/matches" class="text-green-600 hover:underline">Create your first match</a></p>
         } @else {
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -70,14 +85,13 @@ import { HttpClient } from '@angular/common/http';
                 <tr>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Match</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Format</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Venue</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                   <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                @for (match of matches; track match._id) {
+                @for (match of matches.slice(0, 5); track match._id) {
                   <tr>
                     <td class="px-4 py-3 whitespace-nowrap">
                       <span class="font-medium text-gray-900">{{ match.team1?.name }}</span>
@@ -85,7 +99,6 @@ import { HttpClient } from '@angular/common/http';
                       <span class="font-medium text-gray-900">{{ match.team2?.name }}</span>
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ match.format }}</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ match.venue }}</td>
                     <td class="px-4 py-3 whitespace-nowrap">
                       <span 
                         class="px-2 py-1 text-xs rounded-full"
@@ -103,22 +116,21 @@ import { HttpClient } from '@angular/common/http';
                       {{ match.date | date:'short' }}
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap">
+                      @if (match.status === 'live') {
+                        <a 
+                          [routerLink]="['/admin/scoring', match._id]"
+                          class="text-green-600 hover:text-green-900 text-sm mr-3"
+                        >
+                          Score
+                        </a>
+                      }
                       <a 
-                        [routerLink]="['/display', match._id]" 
+                        [href]="'/display/' + match._id" 
                         target="_blank"
-                        class="text-green-600 hover:text-green-900 text-sm"
+                        class="text-blue-600 hover:text-blue-900 text-sm"
                       >
                         View
                       </a>
-                      @if (match.status === 'live') {
-                        <span class="mx-2 text-gray-300">|</span>
-                        <button 
-                          class="text-blue-600 hover:text-blue-900 text-sm"
-                          (click)="openScoring(match._id)"
-                        >
-                          Score
-                        </button>
-                      }
                     </td>
                   </tr>
                 }
@@ -138,6 +150,7 @@ export class DashboardComponent implements OnInit {
     matches: 0
   };
   matches: any[] = [];
+  liveMatch: any = null;
 
   constructor(private http: HttpClient) {}
 
@@ -177,6 +190,7 @@ export class DashboardComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.matches = response.data;
+          this.liveMatch = this.matches.find(m => m.status === 'live');
         }
         this.loading = false;
       },
@@ -184,9 +198,5 @@ export class DashboardComponent implements OnInit {
         this.loading = false;
       }
     });
-  }
-
-  openScoring(matchId: string) {
-    alert('Live scoring UI coming soon!');
   }
 }

@@ -21,8 +21,11 @@ export const ADMIN_ROUTES: Routes = [
       },
       {
         path: 'matches',
-        loadComponent: () => import('./pages/dashboard/dashboard.component').then(m => m.DashboardComponent)
-        // TODO: Replace with MatchesComponent when created
+        loadComponent: () => import('./pages/matches/matches.component').then(m => m.MatchesComponent)
+      },
+      {
+        path: 'scoring/:matchId',
+        loadComponent: () => import('./pages/scoring/scoring.component').then(m => m.ScoringComponent)
       }
     ]
   }
