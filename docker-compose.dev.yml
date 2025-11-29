@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Backend only - for development with hot reload
+  backend:
+    image: node:20-alpine
+    container_name: livecricket-backend-dev
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/livecricket
+      - JWT_SECRET=dev-secret-key
+      - JWT_EXPIRES_IN=24h
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=cricket123
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - livecricket-network
+
+  mongo:
+    image: mongo:7
+    container_name: livecricket-mongo-dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data_dev:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - livecricket-network
+
+  # MongoDB admin UI (optional)
+  mongo-express:
+    image: mongo-express
+    container_name: livecricket-mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - livecricket-network
+
+volumes:
+  mongo_data_dev:
+
+networks:
+  livecricket-network:
+    driver: bridge

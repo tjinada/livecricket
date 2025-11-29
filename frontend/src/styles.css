@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Score display font */
+.font-score {
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Animation utilities */
+@keyframes pulse-score {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-score {
+  animation: pulse-score 0.3s ease-in-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Ball display colors */
+.ball-dot { @apply bg-gray-300 text-gray-700; }
+.ball-run { @apply bg-blue-100 text-blue-800; }
+.ball-four { @apply bg-green-500 text-white; }
+.ball-six { @apply bg-purple-600 text-white; }
+.ball-wicket { @apply bg-red-600 text-white; }
+.ball-wide { @apply bg-yellow-400 text-yellow-900; }
+.ball-noball { @apply bg-orange-400 text-orange-900; }
