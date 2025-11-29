@@ -14,18 +14,28 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from Angular build (production)
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Import routes
+const matchesRouter = require('./routes/matches');
+const scoringRouter = require('./routes/scoring');
+
+// Connect scoring router to matches broadcast function
+scoringRouter.setBroadcast(matchesRouter.broadcastToMatch);
+
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/countries', require('./routes/countries'));
 app.use('/api/players', require('./routes/players'));
-app.use('/api/matches', require('./routes/matches'));
+app.use('/api/matches', matchesRouter);
+app.use('/api/scoring', scoringRouter);
+app.use('/api/seed', require('./routes/seed'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    mockData: config.useMockData
   });
 });
 
@@ -36,7 +46,7 @@ app.get('*', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('Error:', err.message);
   
   // Mongoose validation error
   if (err.name === 'ValidationError') {
@@ -57,6 +67,14 @@ app.use((err, req, res, next) => {
     });
   }
   
+  // Mongoose CastError (invalid ObjectId)
+  if (err.name === 'CastError' && err.kind === 'ObjectId') {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid ID format'
+    });
+  }
+  
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({
@@ -72,10 +90,18 @@ app.use((err, req, res, next) => {
     });
   }
   
+  // Custom application errors
+  if (err.message) {
+    return res.status(err.status || 400).json({
+      success: false,
+      message: err.message
+    });
+  }
+  
   // Default error
-  res.status(err.status || 500).json({
+  res.status(500).json({
     success: false,
-    message: err.message || 'Internal Server Error'
+    message: 'Internal Server Error'
   });
 });
 
@@ -85,6 +111,13 @@ const startServer = async () => {
     console.log('Connecting to MongoDB...');
     await mongoose.connect(config.mongodb.uri);
     console.log('MongoDB connected successfully');
+    
+    // Seed mock data if enabled
+    if (config.useMockData) {
+      console.log('Mock data mode enabled (USE_MOCK_DATA=true)');
+      const { seedMockData } = require('./seed/mockData');
+      await seedMockData();
+    }
     
     app.listen(config.port, () => {
       console.log(`Server running on port ${config.port}`);

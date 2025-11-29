@@ -23,5 +23,8 @@ module.exports = {
       T20: { overs: 20, maxBalls: 120 },
       ODI: { overs: 50, maxBalls: 300 }
     }
-  }
+  },
+  
+  // Mock data flag - set to 'true' to seed database on startup
+  useMockData: process.env.USE_MOCK_DATA === 'true'
 };

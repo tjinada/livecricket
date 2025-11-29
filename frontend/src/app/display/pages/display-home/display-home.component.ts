@@ -17,6 +17,11 @@ import { HttpClient } from '@angular/common/http';
           <div class="text-center">
             <p class="text-green-200">Loading matches...</p>
           </div>
+        } @else if (error) {
+          <div class="text-center py-12 bg-red-500/20 rounded-lg">
+            <p class="text-red-200 text-lg mb-2">Error loading matches</p>
+            <p class="text-red-300 text-sm">{{ error }}</p>
+          </div>
         } @else if (liveMatches.length > 0) {
           <div class="mb-8">
             <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -70,6 +75,7 @@ import { HttpClient } from '@angular/common/http';
 })
 export class DisplayHomeComponent implements OnInit {
   loading = true;
+  error = '';
   liveMatches: any[] = [];
   upcomingMatches: any[] = [];
 
@@ -80,15 +86,21 @@ export class DisplayHomeComponent implements OnInit {
   }
 
   loadMatches() {
+    console.log('Loading matches...');
     this.http.get<{ success: boolean; data: any[] }>('/api/matches').subscribe({
       next: (response) => {
+        console.log('Matches response:', response);
         if (response.success) {
           this.liveMatches = response.data.filter(m => m.status === 'live');
           this.upcomingMatches = response.data.filter(m => m.status === 'upcoming');
+          console.log('Live matches:', this.liveMatches);
+          console.log('Upcoming matches:', this.upcomingMatches);
         }
         this.loading = false;
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error loading matches:', err);
+        this.error = err.message || 'Failed to load matches';
         this.loading = false;
       }
     });

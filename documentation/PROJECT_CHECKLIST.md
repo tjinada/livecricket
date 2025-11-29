@@ -1,10 +1,11 @@
 # Live Cricket Application - Project Checklist
 
 > **Legend:**
-> - ✅ Complete
-> - 🟡 Partial / In Progress
-> - ❌ Not Started
-> - ⚠️ Has Issues / Needs Review
+> - [x] Complete
+> - [ ] Not Started
+> - 🔄 In Progress
+
+**Last Updated:** November 29, 2024
 
 ---
 
@@ -47,6 +48,7 @@
   - [x] Define schema (name, code, flagUrl)
   - [x] Add unique index on code
   - [x] Add timestamps
+  - [x] Fix duplicate index warning
 - [x] Create Player model
   - [x] Define schema (name, country, role, battingStyle, bowlingStyle, isActive)
   - [x] Add country reference
@@ -96,12 +98,12 @@
 - [x] Create core folder structure
 - [x] Create core/guards folder
 - [x] Create core/services folder
-- [ ] Create core/interceptors folder
+- [x] Create core/interceptors folder
 - [ ] Create core/models folder (TypeScript interfaces)
 
 ### 1.7 Root Project Setup
 - [x] Create root package.json with orchestration scripts
-- [x] Add postinstall script for automatic dependency installation
+- [x] Add install:all script for dependency installation
 - [x] Add dev script with concurrently for parallel dev servers
 - [x] Add build script to build frontend and copy to backend
 - [x] Add start script for production
@@ -111,6 +113,7 @@
 - [x] Create scripts/copy-frontend.js helper
 - [x] Create scripts/clean.js helper
 - [x] Update README.md with usage instructions
+- [x] Create comprehensive .gitignore at root level
 
 ### 1.8 Docker Setup
 - [x] Create Dockerfile (multi-stage build)
@@ -225,90 +228,101 @@
 
 ---
 
-## Phase 4: Scoring Engine
+## Phase 4: Scoring Engine ✅ COMPLETE
 
 ### 4.1 Scoring Service
-- [ ] Create services/scoringEngine.js
-  - [ ] Function: recordBall(matchId, ballData)
-  - [ ] Function: calculateBallNumber(innings)
-  - [ ] Function: updateBatsmanStats(innings, batsmanId, runs, extras)
-  - [ ] Function: updateBowlerStats(innings, bowlerId, runs, extras, isWicket)
-  - [ ] Function: handleStrikeRotation(innings, runs, isOverComplete)
-  - [ ] Function: handleWicket(innings, wicketData)
-  - [ ] Function: checkInningsEnd(match, innings)
-  - [ ] Function: checkMatchEnd(match)
-  - [ ] Function: calculateRunRates(innings, format)
-  - [ ] Function: calculateWinProbability(match)
-  - [ ] Function: getDisplayString(ballData)
-  - [ ] Function: undoLastBall(matchId)
+- [x] Create services/scoringEngine.js
+  - [x] Function: recordBall(matchId, ballData)
+  - [x] Function: getOversDisplay(totalBalls)
+  - [x] Function: getBallDisplay(ballData)
+  - [x] Function: calculateCurrentRunRate(totalRuns, totalBalls)
+  - [x] Function: calculateRequiredRunRate(runsNeeded, ballsRemaining)
+  - [x] Function: calculateWinProbability(match)
+  - [x] Function: undoLastBall(matchId)
+  - [x] Function: swapBatsmen(matchId)
+  - [x] Function: replaceBatsman(matchId, position, newBatsmanId, reason)
+  - [x] Function: changeBowler(matchId, newBowlerId)
+  - [x] Function: endInnings(matchId, reason)
+  - [x] Function: startSecondInnings(matchId, data)
+  - [x] Function: endMatch(matchId, resultOverride)
+- [x] Create services/index.js to export services
 
 ### 4.2 Scoring Routes
-- [ ] Create routes/scoring.js
-  - [ ] POST /api/matches/:id/ball - Record ball (protected)
-    - [ ] Validate match is live
-    - [ ] Validate innings is in progress
-    - [ ] Process normal runs (0-6)
-    - [ ] Process extras (wide, no-ball, bye, leg-bye)
-    - [ ] Process wickets with dismissal types
-    - [ ] Return updated innings state
-    - [ ] Broadcast update via SSE
-  - [ ] DELETE /api/matches/:id/ball/last - Undo last ball (protected)
-    - [ ] Find and remove last ball
-    - [ ] Revert batsman stats
-    - [ ] Revert bowler stats
-    - [ ] Revert innings totals
-    - [ ] Handle wicket reversal
-    - [ ] Broadcast update via SSE
-  - [ ] PUT /api/matches/:id/batsmen - Change batsmen (protected)
-    - [ ] Swap striker/non-striker
-    - [ ] Replace batsman (retired hurt)
-  - [ ] PUT /api/matches/:id/bowler - Change bowler (protected)
-    - [ ] Validate not same as last bowler
-    - [ ] Validate is in bowling team's playing XI
-    - [ ] Update current/last bowler
-  - [ ] POST /api/matches/:id/end-innings - End innings (protected)
-    - [ ] Mark innings as completed
-    - [ ] Handle declaration/rain scenarios
-  - [ ] POST /api/matches/:id/start-second-innings - Start 2nd innings (protected)
-    - [ ] Validate first innings is complete
-    - [ ] Initialize second innings
-    - [ ] Set opening batsmen/bowler
-  - [ ] POST /api/matches/:id/end-match - End match (protected)
-    - [ ] Calculate result
-    - [ ] Determine winner and margin
-    - [ ] Mark match as completed
+- [x] Create routes/scoring.js
+  - [x] POST /api/scoring/:matchId/ball - Record ball (protected)
+    - [x] Validate match is live
+    - [x] Validate innings is in progress
+    - [x] Process normal runs (0-6)
+    - [x] Process extras (wide, no-ball, bye, leg-bye)
+    - [x] Process wickets with dismissal types
+    - [x] Return updated innings state
+    - [x] Broadcast update via SSE
+  - [x] DELETE /api/scoring/:matchId/ball/last - Undo last ball (protected)
+    - [x] Find and remove last ball
+    - [x] Revert batsman stats
+    - [x] Revert bowler stats
+    - [x] Revert innings totals
+    - [x] Handle wicket reversal
+    - [x] Broadcast update via SSE
+  - [x] PUT /api/scoring/:matchId/batsmen/swap - Swap batsmen (protected)
+  - [x] PUT /api/scoring/:matchId/batsmen/replace - Replace batsman (protected)
+  - [x] PUT /api/scoring/:matchId/bowler - Change bowler (protected)
+    - [x] Validate not same as last bowler
+    - [x] Validate is in bowling team's playing XI
+    - [x] Update current/last bowler
+  - [x] POST /api/scoring/:matchId/end-innings - End innings (protected)
+    - [x] Mark innings as completed
+    - [x] Handle declaration/rain scenarios
+  - [x] POST /api/scoring/:matchId/start-second-innings - Start 2nd innings (protected)
+    - [x] Validate first innings is complete
+    - [x] Initialize second innings
+    - [x] Set opening batsmen/bowler
+  - [x] POST /api/scoring/:matchId/end-match - End match (protected)
+    - [x] Calculate result
+    - [x] Determine winner and margin
+    - [x] Mark match as completed
+  - [x] GET /api/scoring/:matchId/stats - Get match statistics
 
 ### 4.3 Scoring Logic Implementation
-- [ ] Ball number calculation
-  - [ ] Increment legal balls only
-  - [ ] Skip count for wides/no-balls
-- [ ] Over completion detection
-  - [ ] Check for 6 legal balls
-  - [ ] Calculate maiden over
-  - [ ] Reset current over array
-  - [ ] Swap strike
-- [ ] Extras handling
-  - [ ] Wide: +1 run to team + any runs, no ball count
-  - [ ] No-ball: +1 run to team + any runs, no ball count, runs to batsman if off bat
-  - [ ] Bye: runs to team only, ball counts
-  - [ ] Leg-bye: runs to team only, ball counts
-- [ ] Wicket handling
-  - [ ] All dismissal types
-  - [ ] Bowler credit rules
-  - [ ] Fielder assignment
-  - [ ] New batsman entry
-  - [ ] Fall of wickets recording
-- [ ] Innings end conditions
-  - [ ] 10 wickets
-  - [ ] Max overs (120 for T20, 300 for ODI)
-  - [ ] Target achieved (2nd innings)
+- [x] Ball number calculation
+  - [x] Increment legal balls only
+  - [x] Skip count for wides/no-balls
+- [x] Over completion detection
+  - [x] Check for 6 legal balls
+  - [x] Calculate maiden over
+  - [x] Reset current over array
+  - [x] Swap strike at end of over
+- [x] Extras handling
+  - [x] Wide: +1 run to team + any runs, no ball count
+  - [x] No-ball: +1 run to team + any runs, no ball count, runs to batsman if off bat
+  - [x] Bye: runs to team only, ball counts
+  - [x] Leg-bye: runs to team only, ball counts
+- [x] Wicket handling
+  - [x] All dismissal types (bowled, caught, lbw, run-out, stumped, hit-wicket)
+  - [x] Bowler credit rules (no credit for run-out)
+  - [x] Fielder assignment
+  - [x] New batsman entry
+  - [x] Fall of wickets recording
+- [x] Strike rotation
+  - [x] Odd runs swap striker/non-striker
+  - [x] End of over swap
+  - [x] Handle wicket scenarios
+- [x] Innings end conditions
+  - [x] 10 wickets
+  - [x] Max overs (120 for T20, 300 for ODI)
+  - [x] Target achieved (2nd innings)
+- [x] Match end and result calculation
+  - [x] Win by wickets
+  - [x] Win by runs
+  - [x] Tie detection
 
 ### 4.4 Register Scoring Routes
-- [ ] Mount /api/matches/:id/* scoring routes in app.js
+- [x] Mount /api/scoring routes in app.js
+- [x] Connect broadcast function from matches router
 
 ---
 
-## Phase 5: Real-time Updates (SSE)
+## Phase 5: Real-time Updates (SSE) ✅ COMPLETE
 
 ### 5.1 SSE Infrastructure
 - [x] Create SSE clients map in matches.js
@@ -326,13 +340,14 @@
 - [x] connected - Initial connection
 - [x] match-state - Initial state
 - [x] view-change - Display view changed
-- [ ] score-update - Ball recorded (in scoring routes)
-- [ ] wicket - Wicket fallen (in scoring routes)
-- [ ] over-complete - Over ended (in scoring routes)
-- [ ] innings-complete - Innings ended (in scoring routes)
-- [ ] match-complete - Match ended (in scoring routes)
-- [ ] batsmen-change - Batsmen swapped/changed (in scoring routes)
-- [ ] bowler-change - Bowler changed (in scoring routes)
+- [x] score-update - Ball recorded
+- [x] wicket - Wicket fallen
+- [x] over-complete - Over ended
+- [x] innings-complete - Innings ended
+- [x] innings-start - Second innings started
+- [x] match-complete - Match ended
+- [x] batsmen-change - Batsmen swapped/changed
+- [x] bowler-change - Bowler changed
 
 ---
 
@@ -395,23 +410,23 @@
   - [ ] Reconnection logic
 
 ### 6.3 Auth Interceptor
-- [ ] Create core/interceptors/auth.interceptor.ts
-  - [ ] Add Bearer token to requests
+- [x] Create core/interceptors/auth.interceptor.ts
+  - [x] Add Bearer token to requests
   - [ ] Handle 401 responses
   - [ ] Redirect to login on auth failure
 
 ### 6.4 Auth Guard
-- [ ] Create core/guards/auth.guard.ts
-  - [ ] Check if authenticated
-  - [ ] Redirect to login if not
-  - [ ] CanActivate implementation
+- [x] Create core/guards/auth.guard.ts
+  - [x] Check if authenticated
+  - [x] Redirect to login if not
+  - [x] CanActivate implementation
 
 ---
 
 ## Phase 7: Admin Module - Countries & Players
 
 ### 7.1 Admin Module Setup
-- [ ] Create admin/admin.routes.ts
+- [x] Create admin/admin.routes.ts
 - [ ] Create admin/components/admin-layout/
   - [ ] admin-layout.component.ts
   - [ ] admin-layout.component.html
@@ -419,21 +434,22 @@
   - [ ] Header with logout
 
 ### 7.2 Login Page
-- [ ] Create admin/pages/login/
-  - [ ] login.component.ts
-  - [ ] Login form (username, password)
-  - [ ] Form validation
-  - [ ] Call auth service
-  - [ ] Redirect to dashboard on success
-  - [ ] Error display
+- [x] Create admin/pages/login/
+  - [x] login.component.ts
+  - [x] Login form (username, password)
+  - [x] Form validation
+  - [x] Call auth service (inline HTTP call)
+  - [x] Redirect to dashboard on success
+  - [x] Error display
 
 ### 7.3 Dashboard Page
-- [ ] Create admin/pages/dashboard/
-  - [ ] dashboard.component.ts
-  - [ ] Stats cards (countries, players, matches)
-  - [ ] Live matches list
-  - [ ] Recent matches list
-  - [ ] Upcoming matches list
+- [x] Create admin/pages/dashboard/
+  - [x] dashboard.component.ts
+  - [x] Stats cards (countries, players, matches) - placeholder
+  - [ ] Live matches list - fetch from API
+  - [ ] Recent matches list - fetch from API
+  - [ ] Upcoming matches list - fetch from API
+  - [x] Logout functionality
 
 ### 7.4 Countries Management
 - [ ] Create admin/pages/countries/country-list/
@@ -590,14 +606,31 @@
 ## Phase 10: Display UI Module
 
 ### 10.1 Display Module Setup
-- [ ] Create display/display.routes.ts
+- [x] Create display/display.routes.ts
 - [ ] Create display/components/display-container/
   - [ ] display-container.component.ts
   - [ ] SSE connection management
   - [ ] View switching based on displayView
   - [ ] Full-screen layout
 
-### 10.2 Score Summary View
+### 10.2 Display Home Page
+- [x] Create display/pages/display-home/
+  - [x] display-home.component.ts
+  - [x] List live matches
+  - [x] List upcoming matches
+  - [x] Link to admin login
+
+### 10.3 Match Display Page
+- [x] Create display/pages/match-display/
+  - [x] match-display.component.ts
+  - [x] Load match data
+  - [x] SSE connection for live updates
+  - [x] Basic score display
+  - [x] Current batsmen display
+  - [x] Current bowler display
+  - [x] Reconnection logic
+
+### 10.4 Score Summary View (Enhanced)
 - [ ] Create display/views/score-summary/
   - [ ] score-summary.component.ts
   - [ ] Large team score display
@@ -611,7 +644,7 @@
   - [ ] Partnership info
   - [ ] Last wicket info
 
-### 10.3 Player Stats View
+### 10.5 Player Stats View
 - [ ] Create display/views/player-stats/
   - [ ] player-stats.component.ts
   - [ ] Two-column layout
@@ -620,7 +653,7 @@
   - [ ] Extras breakdown
   - [ ] Fall of wickets
 
-### 10.4 Overall Summary View
+### 10.6 Overall Summary View
 - [ ] Create display/views/overall-summary/
   - [ ] overall-summary.component.ts
   - [ ] Both innings comparison
@@ -629,7 +662,7 @@
   - [ ] Top performers
   - [ ] Key moments
 
-### 10.5 Projections View
+### 10.7 Projections View
 - [ ] Create display/views/projections/
   - [ ] projections.component.ts
   - [ ] Win probability meter/bar
@@ -637,13 +670,13 @@
   - [ ] Run rate comparison chart
   - [ ] Manhattan chart (runs per over)
 
-### 10.6 Shared Display Components
+### 10.8 Shared Display Components
 - [ ] Create display/components/team-score-card/
 - [ ] Create display/components/batsman-card/
 - [ ] Create display/components/bowler-card/
 - [ ] Create display/components/over-balls/
 
-### 10.7 Animations & Transitions
+### 10.9 Animations & Transitions
 - [ ] Score update animation
 - [ ] Wicket highlight effect
 - [ ] Boundary flash effect
@@ -670,8 +703,8 @@
 - [ ] Verify SSE connections work
 
 ### 11.3 Production Readiness
-- [ ] Update .env.example with all variables
-- [ ] Create README with deployment instructions
+- [x] Update .env.example with all variables
+- [x] Create README with deployment instructions
 - [ ] Document environment variables
 - [ ] Add logging configuration
 - [ ] Configure production MongoDB (if different)
@@ -698,8 +731,8 @@
 - [ ] Test SSE connections
 
 ### 12.2 Frontend Testing
-- [ ] Test login flow
-- [ ] Test protected routes
+- [x] Test login flow
+- [x] Test protected routes
 - [ ] Test country management
 - [ ] Test player management
 - [ ] Test match creation flow
@@ -735,7 +768,8 @@
 - [ ] API documentation (endpoints, request/response)
 - [ ] User guide for admin interface
 - [ ] Deployment guide
-- [ ] Update README.md
+- [x] README.md with setup instructions
+- [x] .gitignore configured
 
 ---
 
@@ -743,34 +777,52 @@
 
 | Phase | Total Tasks | Completed | Remaining |
 |-------|-------------|-----------|-----------|
-| Phase 1: Setup | 47 | 44 | 3 |
+| Phase 1: Setup | 60 | 58 | 2 |
 | Phase 2: Auth & CRUD | 18 | 18 | 0 |
 | Phase 3: Match APIs | 24 | 24 | 0 |
-| Phase 4: Scoring Engine | 35 | 0 | 35 |
-| Phase 5: SSE | 14 | 7 | 7 |
-| Phase 6: Angular Core | 28 | 0 | 28 |
-| Phase 7: Countries & Players | 18 | 0 | 18 |
-| Phase 8: Match Setup | 15 | 0 | 15 |
-| Phase 9: Live Scoring | 24 | 0 | 24 |
-| Phase 10: Display UI | 20 | 0 | 20 |
-| Phase 11: Docker | 9 | 5 | 4 |
-| Phase 12: Testing | 28 | 3 | 25 |
-| **TOTAL** | **291** | **112** | **179** |
+| Phase 4: Scoring Engine | 42 | 42 | 0 |
+| Phase 5: SSE | 14 | 14 | 0 |
+| Phase 6: Angular Core | 30 | 5 | 25 |
+| Phase 7: Admin - Countries & Players | 20 | 8 | 12 |
+| Phase 8: Admin - Match Setup | 15 | 0 | 15 |
+| Phase 9: Admin - Live Scoring | 24 | 0 | 24 |
+| Phase 10: Display UI | 28 | 6 | 22 |
+| Phase 11: Docker | 11 | 7 | 4 |
+| Phase 12: Testing | 30 | 5 | 25 |
+| **TOTAL** | **316** | **187** | **129** |
 
-**Overall Progress: ~38% Complete**
-
----
-
-## Recommended Next Steps
-
-1. **Phase 4: Scoring Engine** - This is the core functionality and blocking all frontend scoring work
-2. **Phase 6: Angular Core** - Services and models needed for all frontend work
-3. **Phase 7-8: Admin Countries, Players, Match Setup** - Basic admin functionality
-4. **Phase 9: Live Scoring UI** - Main admin feature
-5. **Phase 10: Display UI** - Public-facing views
-6. **Phase 12: Testing & Polish** - Final quality pass
+**Overall Progress: ~59% Complete**
 
 ---
 
-*Last Updated: $(date)*
-*Checklist Version: 1.0*
+## Current State Summary
+
+### What's Working ✅
+- Backend API fully functional (auth, countries, players, matches, scoring)
+- Complete scoring engine with all cricket logic
+- All SSE events implemented
+- MongoDB models complete
+- Frontend compiles and runs
+- Login page functional
+- Dashboard page (placeholder)
+- Display home page (shows matches)
+- Match display page (basic, with SSE)
+- Docker configuration ready
+- Root-level project scripts working
+
+### What's Next (Priority Order) 🔄
+1. **Phase 7: Admin UI for Countries & Players** - Need to add data before creating matches
+2. **Phase 8: Admin Match Setup** - Create and configure matches
+3. **Phase 9: Admin Live Scoring** - The main feature
+4. **Phase 10: Enhanced Display Views** - Better public display
+5. **Phase 6: Angular Core Services** - Can be done alongside UI work
+
+### How to Continue in New Chat
+1. Reference this checklist: `E:\Repositories\livecricket\documentation\PROJECT_CHECKLIST.md`
+2. Reference the spec: `E:\Repositories\livecricket\documentation\PROJECT_SPECIFICATION.md`
+3. Start with: "Continue working on the Live Cricket application. Check the PROJECT_CHECKLIST.md for current status."
+
+---
+
+*Last Updated: November 29, 2024*
+*Checklist Version: 1.2*
