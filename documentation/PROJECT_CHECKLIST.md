@@ -26,6 +26,7 @@
 - [x] Configure JWT secret and expiry
 - [x] Configure admin credentials
 - [x] Configure match format settings (T20: 20 overs, ODI: 50 overs)
+- [x] Configure mock data flag (USE_MOCK_DATA)
 
 ### 1.3 Express App Setup
 - [x] Create app.js entry point
@@ -99,7 +100,7 @@
 - [x] Create core/guards folder
 - [x] Create core/services folder
 - [x] Create core/interceptors folder
-- [ ] Create core/models folder (TypeScript interfaces)
+- [x] Create core/models folder (TypeScript interfaces)
 
 ### 1.7 Root Project Setup
 - [x] Create root package.json with orchestration scripts
@@ -133,6 +134,19 @@
   - [x] Configure network
 - [x] Create docker-compose.dev.yml (development overrides)
 - [x] Create docker folder (if needed for scripts)
+
+### 1.9 Mock Data Seeder
+- [x] Create seed/mockData.js
+  - [x] Define mock countries (India, Australia)
+  - [x] Define mock players (11 per country)
+  - [x] Create upcoming match
+  - [x] Create live match with sample innings data
+  - [x] Add hasMockData() check function
+  - [x] Add seedMockData() function
+  - [x] Add reseedMockData() function
+  - [x] Add clearData() function
+- [x] Create routes/seed.js for manual reseed API
+- [x] Integrate seeder into app startup
 
 ---
 
@@ -351,63 +365,40 @@
 
 ---
 
-## Phase 6: Angular Core Setup
+## Phase 6: Angular Core Setup ✅ COMPLETE
 
 ### 6.1 TypeScript Interfaces
-- [ ] Create core/models/country.model.ts
-- [ ] Create core/models/player.model.ts
+- [x] Create core/models/country.model.ts
+- [x] Create core/models/player.model.ts
+- [x] Create core/models/api-response.model.ts
+- [x] Create core/models/index.ts (exports)
 - [ ] Create core/models/match.model.ts
 - [ ] Create core/models/ball.model.ts
 - [ ] Create core/models/innings.model.ts
-- [ ] Create core/models/batting-stats.model.ts
-- [ ] Create core/models/bowling-stats.model.ts
-- [ ] Create core/models/api-response.model.ts
 
 ### 6.2 Core Services
-- [ ] Create core/services/api.service.ts
-  - [ ] Base HTTP methods (get, post, put, delete)
-  - [ ] Error handling
-- [ ] Create core/services/auth.service.ts
-  - [ ] login(username, password)
-  - [ ] logout()
-  - [ ] isAuthenticated()
-  - [ ] getToken()
-  - [ ] Store token in localStorage
-- [ ] Create core/services/country.service.ts
-  - [ ] getAll()
-  - [ ] getById(id)
-  - [ ] create(country)
-  - [ ] update(id, country)
-  - [ ] delete(id)
-- [ ] Create core/services/player.service.ts
-  - [ ] getAll(filters?)
-  - [ ] getById(id)
-  - [ ] create(player)
-  - [ ] update(id, player)
-  - [ ] delete(id)
+- [x] Create core/services/auth.service.ts
+  - [x] login(username, password)
+  - [x] logout()
+  - [x] isAuthenticated()
+  - [x] getToken()
+  - [x] Store token in localStorage
+- [x] Create core/services/country.service.ts
+  - [x] getAll()
+  - [x] getById(id)
+  - [x] create(country)
+  - [x] update(id, country)
+  - [x] delete(id)
+- [x] Create core/services/player.service.ts
+  - [x] getAll(filters?)
+  - [x] getById(id)
+  - [x] create(player)
+  - [x] update(id, player)
+  - [x] delete(id)
+- [x] Create core/services/index.ts (exports)
 - [ ] Create core/services/match.service.ts
-  - [ ] getAll(filters?)
-  - [ ] getById(id)
-  - [ ] create(match)
-  - [ ] update(id, match)
-  - [ ] delete(id)
-  - [ ] setSquad(id, squads)
-  - [ ] recordToss(id, toss)
-  - [ ] startMatch(id, data)
-  - [ ] setDisplayView(id, view)
 - [ ] Create core/services/scoring.service.ts
-  - [ ] recordBall(matchId, ballData)
-  - [ ] undoLastBall(matchId)
-  - [ ] changeBatsmen(matchId, data)
-  - [ ] changeBowler(matchId, bowlerId)
-  - [ ] endInnings(matchId)
-  - [ ] startSecondInnings(matchId, data)
-  - [ ] endMatch(matchId)
 - [ ] Create core/services/live-data.service.ts
-  - [ ] connect(matchId): Observable
-  - [ ] disconnect()
-  - [ ] Handle SSE events
-  - [ ] Reconnection logic
 
 ### 6.3 Auth Interceptor
 - [x] Create core/interceptors/auth.interceptor.ts
@@ -423,15 +414,16 @@
 
 ---
 
-## Phase 7: Admin Module - Countries & Players
+## Phase 7: Admin Module - Countries & Players ✅ COMPLETE
 
 ### 7.1 Admin Module Setup
 - [x] Create admin/admin.routes.ts
-- [ ] Create admin/components/admin-layout/
-  - [ ] admin-layout.component.ts
-  - [ ] admin-layout.component.html
-  - [ ] Sidebar navigation
-  - [ ] Header with logout
+- [x] Create admin/components/admin-layout.component.ts
+  - [x] Header with navigation
+  - [x] Sidebar navigation links (Dashboard, Countries, Players, Matches)
+  - [x] Logout button
+  - [x] View Display link
+  - [x] Router outlet for child routes
 
 ### 7.2 Login Page
 - [x] Create admin/pages/login/
@@ -445,161 +437,176 @@
 ### 7.3 Dashboard Page
 - [x] Create admin/pages/dashboard/
   - [x] dashboard.component.ts
-  - [x] Stats cards (countries, players, matches) - placeholder
-  - [ ] Live matches list - fetch from API
-  - [ ] Recent matches list - fetch from API
-  - [ ] Upcoming matches list - fetch from API
-  - [x] Logout functionality
+  - [x] Stats cards (countries, players, matches) - fetched from API
+  - [x] Quick action buttons with navigation
+  - [x] Recent matches list - fetched from API
+  - [x] Match status badges (live/upcoming/completed)
+  - [x] View and Score action links
 
 ### 7.4 Countries Management
-- [ ] Create admin/pages/countries/country-list/
-  - [ ] country-list.component.ts
-  - [ ] Table display
-  - [ ] Search/filter
-  - [ ] Add button
-  - [ ] Edit/Delete actions
-- [ ] Create admin/pages/countries/country-form/
-  - [ ] country-form.component.ts
-  - [ ] Form fields (name, code, flagUrl)
-  - [ ] Validation
-  - [ ] Create/Update logic
-  - [ ] Cancel/Save buttons
+- [x] Create admin/pages/countries/countries.component.ts
+  - [x] Table display with all countries
+  - [x] Flag display (or placeholder)
+  - [x] Add country button
+  - [x] Edit action per row
+  - [x] Delete action per row
+- [x] Add/Edit Country Modal
+  - [x] Form fields (name, code, flagUrl)
+  - [x] Validation (required fields)
+  - [x] Create/Update logic
+  - [x] Cancel/Save buttons
+  - [x] Error display
+- [x] Delete Confirmation Modal
+  - [x] Confirmation message
+  - [x] Delete/Cancel buttons
+  - [x] Error handling
 
 ### 7.5 Players Management
-- [ ] Create admin/pages/players/player-list/
-  - [ ] player-list.component.ts
-  - [ ] Table display
-  - [ ] Country filter dropdown
-  - [ ] Role filter tabs
-  - [ ] Search
-  - [ ] Add button
-  - [ ] Edit/Delete actions
-- [ ] Create admin/pages/players/player-form/
-  - [ ] player-form.component.ts
-  - [ ] Form fields (name, country, role, battingStyle, bowlingStyle)
-  - [ ] Country dropdown
-  - [ ] Validation
-  - [ ] Create/Update logic
-
-### 7.6 Shared Admin Components
-- [ ] Create confirmation modal component
-- [ ] Create loading spinner component
-- [ ] Create toast/notification component
+- [x] Create admin/pages/players/players.component.ts
+  - [x] Table display with all players
+  - [x] Country filter dropdown
+  - [x] Role filter dropdown
+  - [x] Search by name
+  - [x] Role badges with colors
+  - [x] Status badges (Active/Inactive)
+  - [x] Add player button
+  - [x] Edit action per row
+  - [x] Delete action per row
+- [x] Add/Edit Player Modal
+  - [x] Form fields (name, country, role, battingStyle, bowlingStyle)
+  - [x] Country dropdown populated from API
+  - [x] Role dropdown (batsman, bowler, all-rounder, wicket-keeper)
+  - [x] Batting style dropdown (right-hand, left-hand)
+  - [x] Bowling style dropdown (all valid options)
+  - [x] Active checkbox (edit mode only)
+  - [x] Validation
+  - [x] Create/Update logic
+  - [x] Error display
+- [x] Delete Confirmation Modal
+  - [x] Confirmation message
+  - [x] Delete/Cancel buttons
+  - [x] Error handling
 
 ---
 
 ## Phase 8: Admin Module - Match Setup
 
 ### 8.1 Match List
-- [ ] Create admin/pages/matches/match-list/
-  - [ ] match-list.component.ts
+- [ ] Create admin/pages/matches/matches.component.ts
   - [ ] Status tabs (All, Upcoming, Live, Completed)
   - [ ] Match cards with team names, date, status
   - [ ] Create new match button
-  - [ ] Quick actions (Edit, Delete, Start Scoring)
+  - [ ] Quick actions (Edit, Delete, Setup, Score)
 
 ### 8.2 Match Create/Edit
-- [ ] Create admin/pages/matches/match-form/
-  - [ ] match-form.component.ts
+- [ ] Create match form modal/page
   - [ ] Format selection (T20/ODI)
-  - [ ] Team 1 dropdown
-  - [ ] Team 2 dropdown
+  - [ ] Team 1 dropdown (countries)
+  - [ ] Team 2 dropdown (countries)
   - [ ] Venue input
   - [ ] Date picker
   - [ ] Validation (teams must be different)
 
 ### 8.3 Squad Selection
-- [ ] Create admin/pages/matches/squad-selection/
-  - [ ] squad-selection.component.ts
+- [ ] Create squad selection page/modal
   - [ ] Two-column layout for both teams
   - [ ] Available players list (from country roster)
   - [ ] Selected squad list
   - [ ] Playing XI checkboxes
   - [ ] Batting order inputs
-  - [ ] Drag-drop reordering (optional)
   - [ ] Validation (exactly 11 in playing XI)
+  - [ ] Save squad button
 
 ### 8.4 Toss Entry
-- [ ] Create admin/pages/matches/toss-entry/
-  - [ ] toss-entry.component.ts
+- [ ] Create toss entry modal
   - [ ] Toss winner selection (team1/team2)
   - [ ] Decision selection (bat/bowl)
   - [ ] Confirm button
 
 ### 8.5 Match Start
-- [ ] Create admin/pages/matches/match-start/
-  - [ ] match-start.component.ts
+- [ ] Create match start modal/page
   - [ ] Display batting team (based on toss)
   - [ ] Opening batsmen selection (striker, non-striker)
   - [ ] Opening bowler selection
   - [ ] Start match button
+  - [ ] Redirect to scoring page
 
 ---
 
 ## Phase 9: Admin Module - Live Scoring
 
 ### 9.1 Live Scoring Interface
-- [ ] Create admin/pages/matches/live-scoring/
-  - [ ] live-scoring.component.ts
+- [ ] Create admin/pages/scoring/scoring.component.ts
   - [ ] Match header (teams, format, venue)
-  - [ ] Current score display
+  - [ ] Current score display (large)
   - [ ] Run rate display (CRR, RRR)
+  - [ ] Overs display
 
 ### 9.2 Batsmen Display
-- [ ] Create admin/components/current-batsmen/
-  - [ ] current-batsmen.component.ts
+- [ ] Current batsmen panel
   - [ ] Striker indicator (*)
   - [ ] Name, runs, balls, fours, sixes, SR
   - [ ] Swap batsmen button
 
 ### 9.3 Bowler Display
-- [ ] Create admin/components/current-bowler/
-  - [ ] current-bowler.component.ts
-  - [ ] Name, overs, runs, wickets, economy
+- [ ] Current bowler panel
+  - [ ] Name, overs, maidens, runs, wickets, economy
   - [ ] Change bowler button
 
 ### 9.4 Scoring Panel
-- [ ] Create admin/components/scoring-panel/
-  - [ ] scoring-panel.component.ts
-  - [ ] Run buttons (0, 1, 2, 3, 4, 5, 6)
-  - [ ] Extra buttons (Wide, No Ball, Bye, Leg Bye)
-  - [ ] Wicket button
-  - [ ] Button click handlers
+- [ ] Run buttons (0, 1, 2, 3, 4, 5, 6)
+  - [ ] Visual feedback on click
+  - [ ] Boundary indicators (4, 6)
+- [ ] Extra buttons
+  - [ ] Wide button (opens runs input)
+  - [ ] No Ball button (opens runs input)
+  - [ ] Bye button
+  - [ ] Leg Bye button
+- [ ] Wicket button
+  - [ ] Opens wicket modal
 
 ### 9.5 This Over Display
-- [ ] Create admin/components/over-display/
-  - [ ] over-display.component.ts
-  - [ ] Ball-by-ball display for current over
-  - [ ] Visual indicators (dots, runs, wickets, extras)
+- [ ] Ball-by-ball display for current over
+  - [ ] Dot ball indicator
+  - [ ] Runs indicator
+  - [ ] Wicket indicator (W)
+  - [ ] Extras indicators (Wd, Nb, B, Lb)
 
 ### 9.6 Wicket Modal
-- [ ] Create admin/components/wicket-modal/
-  - [ ] wicket-modal.component.ts
-  - [ ] Dismissal type selection
-  - [ ] Who is out (for run-out)
-  - [ ] Fielder selection (where applicable)
-  - [ ] New batsman selection
-  - [ ] Confirm/Cancel buttons
+- [ ] Dismissal type selection
+  - [ ] Bowled, Caught, LBW, Run-out, Stumped, Hit-wicket
+- [ ] Fielder selection (for caught, run-out, stumped)
+- [ ] New batsman selection
+- [ ] Confirm/Cancel buttons
 
 ### 9.7 Change Bowler Modal
-- [ ] Create admin/components/change-bowler-modal/
-  - [ ] change-bowler-modal.component.ts
-  - [ ] List available bowlers (exclude last bowler)
-  - [ ] Select and confirm
+- [ ] List available bowlers
+  - [ ] Exclude last bowler
+  - [ ] Show bowling stats
+- [ ] Select and confirm
 
 ### 9.8 Scoring Actions
 - [ ] Undo last ball button
-- [ ] End innings button with confirmation
-- [ ] End match button with confirmation
+  - [ ] Confirmation dialog
+- [ ] End innings button
+  - [ ] Confirmation with reason selection
+- [ ] End match button
+  - [ ] Confirmation dialog
 
-### 9.9 Display Control Panel
-- [ ] Create admin/components/display-control/
-  - [ ] display-control.component.ts
-  - [ ] Radio buttons for view selection
+### 9.9 Second Innings Setup
+- [ ] Modal after first innings ends
+  - [ ] Show target
+  - [ ] Opening batsmen selection
+  - [ ] Opening bowler selection
+  - [ ] Start innings button
+
+### 9.10 Display Control Panel
+- [ ] View selection radio buttons
   - [ ] Score Summary
   - [ ] Player Stats
   - [ ] Overall Summary
   - [ ] Projections
+- [ ] Broadcast view change to display
 
 ---
 
@@ -608,7 +615,6 @@
 ### 10.1 Display Module Setup
 - [x] Create display/display.routes.ts
 - [ ] Create display/components/display-container/
-  - [ ] display-container.component.ts
   - [ ] SSE connection management
   - [ ] View switching based on displayView
   - [ ] Full-screen layout
@@ -619,69 +625,59 @@
   - [x] List live matches
   - [x] List upcoming matches
   - [x] Link to admin login
+  - [x] Auto-refresh from API
 
 ### 10.3 Match Display Page
 - [x] Create display/pages/match-display/
   - [x] match-display.component.ts
-  - [x] Load match data
+  - [x] Load match data from API
   - [x] SSE connection for live updates
   - [x] Basic score display
-  - [x] Current batsmen display
-  - [x] Current bowler display
+  - [x] Current batsmen display with stats
+  - [x] Current bowler display with stats
+  - [x] Current over display
+  - [x] Run rate display
   - [x] Reconnection logic
 
 ### 10.4 Score Summary View (Enhanced)
 - [ ] Create display/views/score-summary/
-  - [ ] score-summary.component.ts
   - [ ] Large team score display
-  - [ ] Overs display
-  - [ ] Current run rate
+  - [ ] Overs display with balls
+  - [ ] Current run rate (large)
   - [ ] Required run rate (2nd innings)
-  - [ ] Current batsmen cards
-  - [ ] Current bowler card
-  - [ ] This over display
-  - [ ] Last over display
-  - [ ] Partnership info
+  - [ ] Current batsmen cards (detailed)
+  - [ ] Current bowler card (detailed)
+  - [ ] This over display (visual)
   - [ ] Last wicket info
+  - [ ] Partnership info
 
 ### 10.5 Player Stats View
 - [ ] Create display/views/player-stats/
-  - [ ] player-stats.component.ts
-  - [ ] Two-column layout
-  - [ ] Batting card (all batsmen)
-  - [ ] Bowling card (all bowlers)
+  - [ ] Full batting scorecard
+  - [ ] Full bowling figures
   - [ ] Extras breakdown
-  - [ ] Fall of wickets
+  - [ ] Fall of wickets list
 
 ### 10.6 Overall Summary View
 - [ ] Create display/views/overall-summary/
-  - [ ] overall-summary.component.ts
   - [ ] Both innings comparison
   - [ ] Innings 1 scorecard summary
   - [ ] Innings 2 scorecard summary
   - [ ] Top performers
-  - [ ] Key moments
+  - [ ] Key moments/milestones
 
 ### 10.7 Projections View
 - [ ] Create display/views/projections/
-  - [ ] projections.component.ts
   - [ ] Win probability meter/bar
   - [ ] Projected final score
   - [ ] Run rate comparison chart
-  - [ ] Manhattan chart (runs per over)
+  - [ ] Required vs Actual run rate
 
-### 10.8 Shared Display Components
-- [ ] Create display/components/team-score-card/
-- [ ] Create display/components/batsman-card/
-- [ ] Create display/components/bowler-card/
-- [ ] Create display/components/over-balls/
-
-### 10.9 Animations & Transitions
+### 10.8 Animations & Transitions
 - [ ] Score update animation
 - [ ] Wicket highlight effect
-- [ ] Boundary flash effect
+- [ ] Boundary flash effect (4s and 6s)
 - [ ] View transition animations
-- [ ] Connection lost indicator
 
 ---
 
@@ -733,8 +729,8 @@
 ### 12.2 Frontend Testing
 - [x] Test login flow
 - [x] Test protected routes
-- [ ] Test country management
-- [ ] Test player management
+- [x] Test country management (list, add, edit, delete)
+- [x] Test player management (list, add, edit, delete, filters)
 - [ ] Test match creation flow
 - [ ] Test squad selection
 - [ ] Test live scoring interface
@@ -777,21 +773,21 @@
 
 | Phase | Total Tasks | Completed | Remaining |
 |-------|-------------|-----------|-----------|
-| Phase 1: Setup | 60 | 58 | 2 |
+| Phase 1: Setup | 68 | 68 | 0 |
 | Phase 2: Auth & CRUD | 18 | 18 | 0 |
 | Phase 3: Match APIs | 24 | 24 | 0 |
 | Phase 4: Scoring Engine | 42 | 42 | 0 |
 | Phase 5: SSE | 14 | 14 | 0 |
-| Phase 6: Angular Core | 30 | 5 | 25 |
-| Phase 7: Admin - Countries & Players | 20 | 8 | 12 |
-| Phase 8: Admin - Match Setup | 15 | 0 | 15 |
-| Phase 9: Admin - Live Scoring | 24 | 0 | 24 |
-| Phase 10: Display UI | 28 | 6 | 22 |
+| Phase 6: Angular Core | 24 | 18 | 6 |
+| Phase 7: Admin - Countries & Players | 30 | 30 | 0 |
+| Phase 8: Admin - Match Setup | 18 | 0 | 18 |
+| Phase 9: Admin - Live Scoring | 28 | 0 | 28 |
+| Phase 10: Display UI | 26 | 10 | 16 |
 | Phase 11: Docker | 11 | 7 | 4 |
-| Phase 12: Testing | 30 | 5 | 25 |
-| **TOTAL** | **316** | **187** | **129** |
+| Phase 12: Testing | 32 | 7 | 25 |
+| **TOTAL** | **335** | **238** | **97** |
 
-**Overall Progress: ~59% Complete**
+**Overall Progress: ~71% Complete**
 
 ---
 
@@ -802,27 +798,24 @@
 - Complete scoring engine with all cricket logic
 - All SSE events implemented
 - MongoDB models complete
+- Mock data seeder with toggle
 - Frontend compiles and runs
 - Login page functional
-- Dashboard page (placeholder)
-- Display home page (shows matches)
-- Match display page (basic, with SSE)
-- Docker configuration ready
-- Root-level project scripts working
+- Admin layout with navigation
+- Dashboard with live stats
+- Countries management (full CRUD)
+- Players management (full CRUD with filters)
+- Display home page (shows live/upcoming matches)
+- Match display page (live score with SSE)
 
 ### What's Next (Priority Order) 🔄
-1. **Phase 7: Admin UI for Countries & Players** - Need to add data before creating matches
-2. **Phase 8: Admin Match Setup** - Create and configure matches
-3. **Phase 9: Admin Live Scoring** - The main feature
-4. **Phase 10: Enhanced Display Views** - Better public display
-5. **Phase 6: Angular Core Services** - Can be done alongside UI work
-
-### How to Continue in New Chat
-1. Reference this checklist: `E:\Repositories\livecricket\documentation\PROJECT_CHECKLIST.md`
-2. Reference the spec: `E:\Repositories\livecricket\documentation\PROJECT_SPECIFICATION.md`
-3. Start with: "Continue working on the Live Cricket application. Check the PROJECT_CHECKLIST.md for current status."
+1. **Phase 8: Admin Match Setup** - Create and configure matches
+2. **Phase 9: Admin Live Scoring** - The main feature
+3. **Phase 10: Enhanced Display Views** - Better public display
+4. **Phase 6: Remaining Angular models/services** - As needed
+5. **Phase 11-12: Docker testing and polish**
 
 ---
 
 *Last Updated: November 29, 2024*
-*Checklist Version: 1.2*
+*Checklist Version: 1.3*
