@@ -18,9 +18,14 @@ COPY backend/src ./src
 # Copy frontend build to public folder
 COPY --from=frontend-build /app/frontend/dist/livecricket ./public
 
-# Create non-root user
+# Create uploads directory
+RUN mkdir -p ./public/uploads
+
+# Create non-root user and set ownership
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
+
 USER nodejs
 
 # Expose port
