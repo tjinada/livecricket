@@ -90,6 +90,27 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
             </div>
           }
 
+          <!-- First Innings Complete - Start Second Innings -->
+          @if (isFirstInningsCompleteAwaitingSecond()) {
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span class="text-green-600 text-xl">🏏</span>
+                  <div>
+                    <p class="text-green-800 font-semibold">First Innings Complete!</p>
+                    <p class="text-green-700 text-sm">{{ getFirstInningsSummary() }} - Target: {{ getTarget() }}</p>
+                  </div>
+                </div>
+                <button 
+                  (click)="openSecondInningsModal()"
+                  class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Start Second Innings
+                </button>
+              </div>
+            </div>
+          }
+
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Left Column: Score & Batsmen -->
             <div class="lg:col-span-2 space-y-6">
@@ -966,7 +987,12 @@ export class ScoringComponent implements OnInit, OnDestroy {
 
     this.eventSource.addEventListener('innings-complete', (event: any) => {
       this.reloadMatch().then(() => {
-        if (this.match && this.match.currentInnings === 0 && this.match.innings && this.match.innings[0]?.isComplete) {
+        // Check if first innings just completed and we need to start second innings
+        if (this.match && 
+            this.match.currentInnings === 0 && 
+            this.match.innings && 
+            this.match.innings[0]?.status === 'completed' &&
+            this.match.status === 'live') {
           this.prepareSecondInningsModal();
           this.activeModal = 'secondInnings';
         }
@@ -1322,6 +1348,42 @@ export class ScoringComponent implements OnInit, OnDestroy {
   isLastWicket(): boolean {
     // It's the last wicket if 9 wickets have already fallen (this will be the 10th)
     return (this.currentInnings?.totalWickets || 0) >= 9;
+  }
+
+  isFirstInningsCompleteAwaitingSecond(): boolean {
+    // Check if first innings is complete but second innings hasn't started
+    return this.match?.status === 'live' &&
+           this.match?.currentInnings === 0 &&
+           this.match?.innings?.[0]?.status === 'completed' &&
+           (!this.match?.innings?.[1] || this.match.innings.length === 1);
+  }
+
+  getFirstInningsSummary(): string {
+    const innings = this.match?.innings?.[0];
+    if (!innings) return '';
+    const teamName = this.getTeamNameById(innings.battingTeam);
+    return `${teamName}: ${innings.totalRuns}/${innings.totalWickets} (${this.getOversDisplayForInnings(innings)})`;
+  }
+
+  getTeamNameById(teamId: any): string {
+    if (!this.match || !teamId) return 'Unknown';
+    const id = teamId._id || teamId;
+    const team1Id = this.match.team1?._id || this.match.team1;
+    if (id === team1Id || id?.toString() === team1Id?.toString()) {
+      return this.match.team1?.name || 'Team 1';
+    }
+    return this.match.team2?.name || 'Team 2';
+  }
+
+  getOversDisplayForInnings(innings: any): string {
+    if (!innings) return '0.0';
+    const totalBalls = innings.totalBalls || 0;
+    return `${Math.floor(totalBalls / 6)}.${totalBalls % 6}`;
+  }
+
+  openSecondInningsModal(): void {
+    this.prepareSecondInningsModal();
+    this.activeModal = 'secondInnings';
   }
 
   getAvailableBatsmen(): any[] {
