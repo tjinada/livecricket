@@ -43,6 +43,102 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
         <div class="flex items-center justify-center h-64">
           <p class="text-gray-500">Match not found</p>
         </div>
+      } @else if (match.status === 'completed') {
+        <!-- Completed Match View - Display Controls Still Available -->
+        <div class="max-w-3xl mx-auto px-4 py-6">
+          <!-- Match Result Header -->
+          <div class="bg-gradient-to-r from-green-600 to-green-700 rounded-lg shadow p-6 text-white mb-6">
+            <div class="text-center">
+              <p class="text-green-200 text-sm mb-2">Match Completed</p>
+              <h2 class="text-2xl font-bold mb-2">
+                {{ match.team1?.name }} vs {{ match.team2?.name }}
+              </h2>
+              @if (match.result?.winner) {
+                <p class="text-xl">
+                  {{ match.result!.winner.name }} won
+                  @if (match.result!.winMargin) {
+                    <span>by {{ match.result!.winMargin }} {{ match.result!.winType }}</span>
+                  }
+                </p>
+              }
+            </div>
+          </div>
+
+          <!-- Innings Summary -->
+          <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <h3 class="font-semibold text-gray-800 mb-4">Match Summary</h3>
+            <div class="space-y-3">
+              @for (innings of match.innings; track $index) {
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p class="font-medium text-gray-800">{{ getTeamNameById(innings.battingTeam) }}</p>
+                    <p class="text-sm text-gray-500">Innings {{ $index + 1 }}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-xl font-bold text-gray-800">
+                      {{ innings.totalRuns }}/{{ innings.totalWickets }}
+                    </p>
+                    <p class="text-sm text-gray-500">({{ getOversDisplayForInnings(innings) }} overs)</p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Display Control -->
+          <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-semibold text-gray-800">Display View Control</h3>
+              <button 
+                (click)="showBackgroundSettings = true"
+                class="text-sm text-purple-600 hover:text-purple-800"
+              >
+                🎨 Backgrounds
+              </button>
+            </div>
+            <p class="text-sm text-gray-500 mb-3">Control what is shown on the public display</p>
+            <select 
+              [(ngModel)]="displayView"
+              (change)="changeDisplayView()"
+              class="w-full px-3 py-2 border rounded-lg"
+            >
+              <option value="score-summary">Score Summary</option>
+              <option value="player-stats">Player Stats</option>
+              <option value="overall-summary">Overall Summary</option>
+              <option value="projections">Projections</option>
+            </select>
+          </div>
+
+          <!-- View Display Link -->
+          <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <h3 class="font-semibold text-gray-800 mb-3">Display Screen</h3>
+            <a 
+              [href]="'/display/' + matchId" 
+              target="_blank"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <span>Open Display View</span>
+              <span>→</span>
+            </a>
+          </div>
+
+          <!-- Back to Matches -->
+          <div class="text-center">
+            <a routerLink="/admin/matches" class="text-gray-600 hover:text-gray-800">
+              ← Back to Matches
+            </a>
+          </div>
+        </div>
+
+        <!-- Background Settings Modal for Completed Match -->
+        @if (showBackgroundSettings) {
+          <app-background-settings
+            [matchId]="matchId"
+            [currentSettings]="match.backgrounds"
+            (close)="showBackgroundSettings = false"
+            (saved)="saveBackgroundSettings($event)"
+          ></app-background-settings>
+        }
       } @else if (match.status !== 'live') {
         <div class="flex items-center justify-center h-64 flex-col gap-4">
           <p class="text-gray-500">Match is not live</p>

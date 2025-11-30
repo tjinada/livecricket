@@ -173,6 +173,14 @@ type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
                         Score Match
                       </button>
                     }
+                    @if (match.status === 'completed') {
+                      <button 
+                        (click)="goToScoring(match)"
+                        class="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
+                      >
+                        Manage Display
+                      </button>
+                    }
                     <a 
                       [href]="'/display/' + match._id" 
                       target="_blank"
