@@ -39,6 +39,139 @@ import { HttpClient } from '@angular/common/http';
         <div class="absolute inset-0 bg-black/40"></div>
       </div>
 
+      <!-- ==================== NOTIFICATION OVERLAY ==================== -->
+      <div 
+        *ngIf="showNotification" 
+        class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+        (click)="dismissNotification()"
+      >
+        <!-- SIX Overlay -->
+        <div *ngIf="notificationType === 'six'" class="text-center animate-pulse pointer-events-auto">
+          <!-- Explosion/Firework effect background -->
+          <div class="absolute inset-0 bg-gradient-radial from-purple-600/30 via-transparent to-transparent"></div>
+          
+          <!-- Main content -->
+          <div class="relative">
+            <!-- Big 6 -->
+            <div class="text-[20rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-yellow-500 to-orange-600 leading-none drop-shadow-2xl animate-bounce" style="text-shadow: 0 0 80px rgba(234, 179, 8, 0.8), 0 0 120px rgba(234, 179, 8, 0.5);">
+              6
+            </div>
+            
+            <!-- SIX text -->
+            <div class="text-6xl font-black uppercase tracking-[0.3em] text-white mt-[-2rem]" style="text-shadow: 0 0 40px rgba(168, 85, 247, 0.8);">
+              MAXIMUM!
+            </div>
+            
+            <!-- Batsman info -->
+            <div class="mt-8 bg-black/60 backdrop-blur-md rounded-2xl px-8 py-4 inline-block border border-yellow-500/30">
+              <div class="text-3xl font-bold text-white">{{ notificationData?.batsmanName }}</div>
+              <div class="text-xl text-yellow-400 mt-1">
+                {{ notificationData?.batsmanRuns }} ({{ notificationData?.batsmanBalls }})
+              </div>
+            </div>
+            
+            <!-- Score update -->
+            <div class="mt-4 text-2xl text-gray-300">
+              {{ notificationData?.totalScore }}/{{ notificationData?.totalWickets }}
+            </div>
+          </div>
+          
+          <!-- Decorative circles -->
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border-4 border-yellow-500/20 rounded-full animate-ping"></div>
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border-2 border-purple-500/30 rounded-full animate-ping" style="animation-delay: 0.2s;"></div>
+        </div>
+
+        <!-- FOUR Overlay -->
+        <div *ngIf="notificationType === 'four'" class="text-center pointer-events-auto">
+          <!-- Background effect -->
+          <div class="absolute inset-0 bg-gradient-radial from-green-600/20 via-transparent to-transparent"></div>
+          
+          <!-- Main content -->
+          <div class="relative">
+            <!-- Big 4 -->
+            <div class="text-[16rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-green-300 via-green-500 to-emerald-600 leading-none drop-shadow-2xl" style="text-shadow: 0 0 60px rgba(34, 197, 94, 0.7), 0 0 100px rgba(34, 197, 94, 0.4);">
+              4
+            </div>
+            
+            <!-- FOUR text -->
+            <div class="text-5xl font-black uppercase tracking-[0.2em] text-white mt-[-1rem]" style="text-shadow: 0 0 30px rgba(34, 197, 94, 0.6);">
+              BOUNDARY!
+            </div>
+            
+            <!-- Batsman info -->
+            <div class="mt-6 bg-black/60 backdrop-blur-md rounded-xl px-6 py-3 inline-block border border-green-500/30">
+              <div class="text-2xl font-bold text-white">{{ notificationData?.batsmanName }}</div>
+              <div class="text-lg text-green-400 mt-1">
+                {{ notificationData?.batsmanRuns }} ({{ notificationData?.batsmanBalls }})
+              </div>
+            </div>
+            
+            <!-- Score update -->
+            <div class="mt-3 text-xl text-gray-300">
+              {{ notificationData?.totalScore }}/{{ notificationData?.totalWickets }}
+            </div>
+          </div>
+          
+          <!-- Decorative circle -->
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border-4 border-green-500/20 rounded-full animate-ping"></div>
+        </div>
+
+        <!-- WICKET Overlay -->
+        <div *ngIf="notificationType === 'wicket'" class="text-center pointer-events-auto">
+          <!-- Red dramatic background -->
+          <div class="absolute inset-0 bg-gradient-radial from-red-900/50 via-red-950/30 to-transparent"></div>
+          
+          <!-- Main content -->
+          <div class="relative">
+            <!-- WICKET text -->
+            <div class="text-[10rem] font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-b from-red-400 via-red-600 to-red-800 leading-none" style="text-shadow: 0 0 60px rgba(239, 68, 68, 0.8), 0 0 100px rgba(239, 68, 68, 0.5);">
+              WICKET!
+            </div>
+            
+            <!-- OUT badge -->
+            <div class="mt-4">
+              <span class="bg-red-600 text-white text-4xl font-black px-8 py-2 rounded-lg uppercase tracking-widest">
+                OUT
+              </span>
+            </div>
+            
+            <!-- Dismissed batsman info -->
+            <div class="mt-8 bg-black/70 backdrop-blur-md rounded-2xl px-10 py-6 inline-block border border-red-500/40">
+              <div class="text-4xl font-bold text-white">{{ notificationData?.dismissedName }}</div>
+              <div class="text-2xl text-red-400 mt-2">
+                {{ notificationData?.dismissedRuns }} ({{ notificationData?.dismissedBalls }})
+              </div>
+              
+              <!-- Dismissal details -->
+              <div class="mt-4 text-xl text-gray-300">
+                <span *ngIf="notificationData?.dismissalType === 'bowled'">b {{ notificationData?.bowlerName }}</span>
+                <span *ngIf="notificationData?.dismissalType === 'caught'">
+                  c <span *ngIf="notificationData?.fielderName">{{ notificationData?.fielderName }}</span> b {{ notificationData?.bowlerName }}
+                </span>
+                <span *ngIf="notificationData?.dismissalType === 'lbw'">lbw b {{ notificationData?.bowlerName }}</span>
+                <span *ngIf="notificationData?.dismissalType === 'run-out'">run out</span>
+                <span *ngIf="notificationData?.dismissalType === 'stumped'">st b {{ notificationData?.bowlerName }}</span>
+                <span *ngIf="notificationData?.dismissalType === 'hit-wicket'">hit wicket b {{ notificationData?.bowlerName }}</span>
+              </div>
+            </div>
+            
+            <!-- Updated score -->
+            <div class="mt-6 text-3xl font-bold">
+              <span class="text-white">{{ notificationData?.totalScore }}</span>
+              <span class="text-red-500">/{{ notificationData?.totalWickets }}</span>
+            </div>
+          </div>
+          
+          <!-- Dramatic red pulse -->
+          <div class="absolute inset-0 bg-red-600/10 animate-pulse"></div>
+        </div>
+        
+        <!-- Dismiss hint -->
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-gray-500 text-sm pointer-events-auto cursor-pointer" (click)="dismissNotification()">
+          Click anywhere to dismiss
+        </div>
+      </div>
+
       <!-- Content Layer -->
       <div class="relative z-10 h-screen flex flex-col">
         <!-- Loading State -->
@@ -1062,6 +1195,13 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   displayView = 'score-summary';
   currentBackground: { type: string; url: string | null } | null = null;
   
+  // Notification overlay properties
+  showNotification = false;
+  notificationType: 'six' | 'four' | 'wicket' | null = null;
+  notificationData: any = null;
+  notificationDuration = 10000; // 10 seconds (configurable)
+  private notificationTimeout: any = null;
+  
   private eventSource: EventSource | null = null;
   private playerNameCache: Map<string, string> = new Map();
 
@@ -1083,6 +1223,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.disconnectSSE();
+    if (this.notificationTimeout) {
+      clearTimeout(this.notificationTimeout);
+    }
   }
 
   loadMatch() {
@@ -1178,11 +1321,31 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   connectSSE() {
     this.eventSource = new EventSource(`/api/matches/${this.matchId}/live`);
-    const events = ['score-update', 'wicket', 'over-complete', 'innings-complete', 
+    const events = ['score-update', 'over-complete', 'innings-complete', 
                     'innings-start', 'match-complete', 'batsmen-change', 'bowler-change', 'background-change'];
     events.forEach(event => {
       this.eventSource!.addEventListener(event, () => this.reloadMatch());
     });
+    
+    // Special notification events
+    this.eventSource.addEventListener('six', (event: any) => {
+      const data = JSON.parse(event.data);
+      this.showBigNotification('six', data);
+      this.reloadMatch();
+    });
+    
+    this.eventSource.addEventListener('four', (event: any) => {
+      const data = JSON.parse(event.data);
+      this.showBigNotification('four', data);
+      this.reloadMatch();
+    });
+    
+    this.eventSource.addEventListener('wicket', (event: any) => {
+      const data = JSON.parse(event.data);
+      this.showBigNotification('wicket', data);
+      this.reloadMatch();
+    });
+    
     this.eventSource.addEventListener('view-change', (event: any) => {
       const data = JSON.parse(event.data);
       if (data.view) {
@@ -1203,6 +1366,32 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       this.disconnectSSE();
       setTimeout(() => this.connectSSE(), 3000);
     };
+  }
+  
+  showBigNotification(type: 'six' | 'four' | 'wicket', data: any) {
+    // Clear any existing notification timeout
+    if (this.notificationTimeout) {
+      clearTimeout(this.notificationTimeout);
+    }
+    
+    this.notificationType = type;
+    this.notificationData = data;
+    this.showNotification = true;
+    
+    // Auto-dismiss after configured duration
+    this.notificationTimeout = setTimeout(() => {
+      this.dismissNotification();
+    }, this.notificationDuration);
+  }
+  
+  dismissNotification() {
+    this.showNotification = false;
+    this.notificationType = null;
+    this.notificationData = null;
+    if (this.notificationTimeout) {
+      clearTimeout(this.notificationTimeout);
+      this.notificationTimeout = null;
+    }
   }
 
   disconnectSSE() {

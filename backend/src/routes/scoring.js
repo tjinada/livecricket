@@ -38,15 +38,84 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
 
     // Broadcast update to SSE clients
     if (broadcastToMatch) {
+      // Regular score update
       broadcastToMatch(matchId, 'score-update', {
         innings: result.innings,
         lastBall: result.ball
       });
 
-      if (result.isWicket) {
+      // Special event: SIX hit!
+      if (result.ball.isSix) {
+        // Get batsman details for display
+        const match = await Match.findById(matchId)
+          .populate('innings.battingStats.player', 'name');
+        
+        const currentInnings = match?.innings?.[match.currentInnings];
+        const batsmanStats = currentInnings?.battingStats?.find(
+          s => s.player?._id?.toString() === result.ball.batsman?.toString()
+        );
+        
+        broadcastToMatch(matchId, 'six', {
+          batsmanName: batsmanStats?.player?.name || 'Batsman',
+          batsmanRuns: batsmanStats?.runs || 0,
+          batsmanBalls: batsmanStats?.balls || 0,
+          totalScore: result.innings.totalRuns,
+          totalWickets: result.innings.totalWickets
+        });
+      }
+
+      // Special event: WICKET!
+      if (result.ball.isWicket) {
+        // Get detailed wicket info for display
+        const match = await Match.findById(matchId)
+          .populate('innings.battingStats.player', 'name')
+          .populate('innings.battingStats.dismissal.bowler', 'name')
+          .populate('innings.battingStats.dismissal.fielder', 'name')
+          .populate('innings.bowlingStats.player', 'name');
+        
+        const currentInnings = match?.innings?.[match.currentInnings];
+        
+        // Find dismissed batsman
+        const dismissedId = result.ball.wicket?.dismissedPlayer?.toString();
+        const dismissedStats = currentInnings?.battingStats?.find(
+          s => s.player?._id?.toString() === dismissedId
+        );
+        
+        // Find bowler
+        const bowlerStats = currentInnings?.bowlingStats?.find(
+          s => s.player?._id?.toString() === result.ball.bowler?.toString()
+        );
+        
         broadcastToMatch(matchId, 'wicket', {
-          ball: result.ball,
-          innings: result.innings
+          dismissedName: dismissedStats?.player?.name || 'Batsman',
+          dismissedRuns: dismissedStats?.runs || 0,
+          dismissedBalls: dismissedStats?.balls || 0,
+          dismissalType: result.ball.wicket?.type || 'out',
+          bowlerName: bowlerStats?.player?.name || 'Bowler',
+          bowlerWickets: bowlerStats?.wickets || 0,
+          fielderName: result.ball.wicket?.fielder ? 
+            (currentInnings?.bowlingStats?.find(s => s.player?._id?.toString() === result.ball.wicket?.fielder?.toString())?.player?.name) : null,
+          totalScore: result.innings.totalRuns,
+          totalWickets: result.innings.totalWickets
+        });
+      }
+
+      // Special event: FOUR hit!
+      if (result.ball.isFour) {
+        const match = await Match.findById(matchId)
+          .populate('innings.battingStats.player', 'name');
+        
+        const currentInnings = match?.innings?.[match.currentInnings];
+        const batsmanStats = currentInnings?.battingStats?.find(
+          s => s.player?._id?.toString() === result.ball.batsman?.toString()
+        );
+        
+        broadcastToMatch(matchId, 'four', {
+          batsmanName: batsmanStats?.player?.name || 'Batsman',
+          batsmanRuns: batsmanStats?.runs || 0,
+          batsmanBalls: batsmanStats?.balls || 0,
+          totalScore: result.innings.totalRuns,
+          totalWickets: result.innings.totalWickets
         });
       }
 
