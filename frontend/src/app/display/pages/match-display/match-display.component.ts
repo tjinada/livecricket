@@ -35,6 +35,15 @@ import { HttpClient } from '@angular/common/http';
               <span class="inline-block mt-2 px-3 py-1 bg-gray-500/20 rounded-full text-sm">
                 COMPLETED
               </span>
+              @if (match.result) {
+                <p class="mt-2 text-xl font-semibold">
+                  @if (match.result.winner) {
+                    {{ match.result.winner.name }} won by {{ match.result.winMargin }}
+                  } @else {
+                    {{ match.result.winMargin }}
+                  }
+                </p>
+              }
             } @else {
               <span class="inline-block mt-2 px-3 py-1 bg-yellow-500/20 rounded-full text-sm">
                 UPCOMING
@@ -133,6 +142,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   loading = true;
   error = '';
   private eventSource: EventSource | null = null;
+  private playerNameCache: Map<string, string> = new Map();
 
   constructor(
     private route: ActivatedRoute,
@@ -157,9 +167,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   loadMatch() {
     this.http.get<{ success: boolean; data: any }>(`/api/matches/${this.matchId}`).subscribe({
       next: (response) => {
-        console.log('Match data:', response);
         if (response.success) {
           this.match = response.data;
+          this.buildPlayerNameCache();
         } else {
           this.error = 'Match not found';
         }
@@ -173,21 +183,74 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     });
   }
 
+  reloadMatch() {
+    this.http.get<{ success: boolean; data: any }>(`/api/matches/${this.matchId}`).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.match = response.data;
+          this.buildPlayerNameCache();
+        }
+      }
+    });
+  }
+
+  buildPlayerNameCache() {
+    if (!this.match) return;
+    
+    // Cache player names from squads
+    const cacheFromSquad = (squad: any[]) => {
+      if (!squad) return;
+      squad.forEach(p => {
+        const playerId = p.player?._id || p.player;
+        const playerName = p.player?.name;
+        if (playerId && playerName) {
+          this.playerNameCache.set(playerId.toString(), playerName);
+        }
+      });
+    };
+
+    cacheFromSquad(this.match.squads?.team1);
+    cacheFromSquad(this.match.squads?.team2);
+
+    // Cache from batting/bowling stats
+    this.match.innings?.forEach((inn: any) => {
+      inn.battingStats?.forEach((bs: any) => {
+        const playerId = bs.player?._id || bs.player;
+        const playerName = bs.player?.name;
+        if (playerId && playerName) {
+          this.playerNameCache.set(playerId.toString(), playerName);
+        }
+      });
+      inn.bowlingStats?.forEach((bs: any) => {
+        const playerId = bs.player?._id || bs.player;
+        const playerName = bs.player?.name;
+        if (playerId && playerName) {
+          this.playerNameCache.set(playerId.toString(), playerName);
+        }
+      });
+    });
+  }
+
   connectSSE() {
     this.eventSource = new EventSource(`/api/matches/${this.matchId}/live`);
 
-    this.eventSource.addEventListener('score-update', (event: any) => {
-      const data = JSON.parse(event.data);
-      if (data.innings) {
-        this.match.innings[this.match.currentInnings] = data.innings;
-      }
-    });
-
+    // Reload full match data on any update
+    this.eventSource.addEventListener('score-update', () => this.reloadMatch());
+    this.eventSource.addEventListener('wicket', () => this.reloadMatch());
+    this.eventSource.addEventListener('over-complete', () => this.reloadMatch());
+    this.eventSource.addEventListener('innings-complete', () => this.reloadMatch());
+    this.eventSource.addEventListener('innings-start', () => this.reloadMatch());
+    this.eventSource.addEventListener('match-complete', () => this.reloadMatch());
+    this.eventSource.addEventListener('batsmen-change', () => this.reloadMatch());
+    this.eventSource.addEventListener('bowler-change', () => this.reloadMatch());
+    this.eventSource.addEventListener('view-change', () => this.reloadMatch());
+    
     this.eventSource.addEventListener('match-state', (event: any) => {
       const data = JSON.parse(event.data);
-      if (data.displayView) {
+      if (data.displayView && this.match) {
         this.match.displayView = data.displayView;
       }
+      this.reloadMatch();
     });
 
     this.eventSource.onerror = () => {
@@ -211,6 +274,16 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     return null;
   }
 
+  getPlayerName(player: any): string {
+    if (!player) return 'Not set';
+    if (player.name) return player.name;
+    const playerId = player._id || player;
+    if (this.playerNameCache.has(playerId?.toString())) {
+      return this.playerNameCache.get(playerId.toString())!;
+    }
+    return 'Unknown';
+  }
+
   getBattingTeamName(): string {
     const innings = this.currentInnings;
     if (!innings) return '';
@@ -224,23 +297,10 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     return `${overs}.${balls}`;
   }
 
-  // Get striker info from battingStats
   getStrikerName(): string {
     const innings = this.currentInnings;
     if (!innings?.currentBatsmen?.striker) return 'Not set';
-    
-    // The striker is populated with player object
-    if (innings.currentBatsmen.striker.name) {
-      return innings.currentBatsmen.striker.name;
-    }
-    
-    // Fallback: find in battingStats
-    const strikerId = innings.currentBatsmen.striker._id || innings.currentBatsmen.striker;
-    const stats = innings.battingStats?.find((s: any) => 
-      (s.player?._id || s.player) === strikerId ||
-      s.player?._id === strikerId.toString()
-    );
-    return stats?.player?.name || 'Unknown';
+    return this.getPlayerName(innings.currentBatsmen.striker);
   }
 
   getStrikerStats(): string {
@@ -261,17 +321,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   getNonStrikerName(): string {
     const innings = this.currentInnings;
     if (!innings?.currentBatsmen?.nonStriker) return 'Not set';
-    
-    if (innings.currentBatsmen.nonStriker.name) {
-      return innings.currentBatsmen.nonStriker.name;
-    }
-    
-    const nonStrikerId = innings.currentBatsmen.nonStriker._id || innings.currentBatsmen.nonStriker;
-    const stats = innings.battingStats?.find((s: any) => 
-      (s.player?._id || s.player) === nonStrikerId ||
-      s.player?._id === nonStrikerId.toString()
-    );
-    return stats?.player?.name || 'Unknown';
+    return this.getPlayerName(innings.currentBatsmen.nonStriker);
   }
 
   getNonStrikerStats(): string {
@@ -292,17 +342,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   getCurrentBowlerName(): string {
     const innings = this.currentInnings;
     if (!innings?.currentBowler) return 'Not set';
-    
-    if (innings.currentBowler.name) {
-      return innings.currentBowler.name;
-    }
-    
-    const bowlerId = innings.currentBowler._id || innings.currentBowler;
-    const stats = innings.bowlingStats?.find((s: any) => 
-      (s.player?._id || s.player) === bowlerId ||
-      s.player?._id === bowlerId.toString()
-    );
-    return stats?.player?.name || 'Unknown';
+    return this.getPlayerName(innings.currentBowler);
   }
 
   getCurrentBowlerStats(): string {
@@ -316,9 +356,12 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     });
     
     if (!stats) return '0-0-0-0';
-    const oversDisplay = stats.balls > 0 ? `${stats.overs}.${stats.balls}` : `${stats.overs}`;
-    const econ = (stats.overs * 6 + stats.balls) > 0 
-      ? (stats.runs / ((stats.overs * 6 + stats.balls) / 6)).toFixed(2)
+    const overs = stats.overs || 0;
+    const balls = stats.balls || 0;
+    const oversDisplay = balls > 0 ? `${overs}.${balls}` : `${overs}`;
+    const totalBalls = overs * 6 + balls;
+    const econ = totalBalls > 0 
+      ? (stats.runs / (totalBalls / 6)).toFixed(2)
       : '0.00';
     return `${oversDisplay}-${stats.maidens}-${stats.runs}-${stats.wickets} (Econ: ${econ})`;
   }

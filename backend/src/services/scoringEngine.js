@@ -336,13 +336,35 @@ async function recordBall(matchId, ballData) {
     }
   }
 
-  // Handle strike rotation (only for legal deliveries without wicket on striker)
-  const shouldRotateStrike = isLegalDelivery && runs % 2 === 1;
+  // Handle strike rotation
+  // Strike changes on odd runs actually run by batsmen
+  // - 1 run = rotate, 2 runs = stay, 3 runs = rotate
+  // - Wide/No-ball with 0 additional runs = stay (penalty doesn't count for rotation)
+  // - Wide/No-ball with 1 additional run = rotate
+  // - Wide/No-ball with 2 additional runs = stay
+  // - Bye/Leg-bye follow same odd/even rule based on runs
   const isStrikerOut = ballData.wicket && 
     (ballData.wicket.dismissedPlayer?.toString() === innings.currentBatsmen.striker.toString() ||
      (!ballData.wicket.dismissedPlayer && ballData.wicket.type !== 'run-out'));
 
-  if (shouldRotateStrike && !isStrikerOut) {
+  // For wides/no-balls, only consider additional runs (not the penalty) for rotation
+  // For normal deliveries, consider the runs scored
+  // For byes/leg-byes, consider the runs
+  let runsForRotation = runs;
+  if (isWide) {
+    // Wide: only the additional runs matter for rotation (extraRuns includes penalty, so use runs)
+    // If extraRuns = 1 (just penalty, 0 additional), stay
+    // If extraRuns = 2 (1 penalty + 1 run), rotate
+    runsForRotation = extraRuns - 1; // Subtract the 1-run penalty
+  } else if (isNoBall) {
+    // No-ball: runs scored by batsman count for rotation
+    // The penalty (1 run) doesn't cause rotation
+    runsForRotation = runs;
+  }
+  
+  const shouldRotateStrike = !isStrikerOut && runsForRotation % 2 === 1;
+  
+  if (shouldRotateStrike) {
     const temp = innings.currentBatsmen.striker;
     innings.currentBatsmen.striker = innings.currentBatsmen.nonStriker;
     innings.currentBatsmen.nonStriker = temp;
@@ -366,8 +388,9 @@ async function recordBall(matchId, ballData) {
       bowlerStats.balls = 0;
     }
 
-    // Rotate strike at end of over
-    if (!ballData.wicket) {
+    // Rotate strike at end of over (only if not already rotated due to odd runs on last ball)
+    // And only if no wicket fell on the last ball
+    if (!ballData.wicket && !shouldRotateStrike) {
       const temp = innings.currentBatsmen.striker;
       innings.currentBatsmen.striker = innings.currentBatsmen.nonStriker;
       innings.currentBatsmen.nonStriker = temp;
