@@ -16,7 +16,8 @@ RUN npm ci --only=production
 COPY backend/src ./src
 
 # Copy frontend build to public folder
-COPY --from=frontend-build /app/frontend/dist/livecricket ./public
+# Note: Angular 17+ outputs to 'browser' subfolder
+COPY --from=frontend-build /app/frontend/dist/livecricket/browser ./public
 
 # Create uploads directory
 RUN mkdir -p ./public/uploads
