@@ -5,7 +5,7 @@ services:
     build: .
     container_name: livecricket-app
     ports:
-      - "3000:3000"
+      - "3002:3000"
     environment:
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongo:27017/livecricket
@@ -24,7 +24,7 @@ services:
     image: mongo:7
     container_name: livecricket-mongo
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
