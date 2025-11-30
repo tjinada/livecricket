@@ -14,6 +14,9 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from Angular build (production)
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
 // Import routes
 const matchesRouter = require('./routes/matches');
 const scoringRouter = require('./routes/scoring');
@@ -28,6 +31,7 @@ app.use('/api/players', require('./routes/players'));
 app.use('/api/matches', matchesRouter);
 app.use('/api/scoring', scoringRouter);
 app.use('/api/seed', require('./routes/seed'));
+app.use('/api/uploads', require('./routes/uploads'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
