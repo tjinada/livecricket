@@ -1,6 +1,82 @@
 const express = require('express');
-const { Player, Match } = require('../models');
+const { Player, Match, Country } = require('../models');
 const auth = require('../middleware/auth');
+
+// ESPN Cricinfo to our schema mapping utilities
+const mapRole = (playingRoles) => {
+  if (!playingRoles || playingRoles.length === 0) return 'batsman';
+  
+  const role = playingRoles[0].toLowerCase();
+  const roleMapping = {
+    'opening batter': 'batsman',
+    'top-order batter': 'batsman',
+    'middle-order batter': 'batsman',
+    'batter': 'batsman',
+    'wicketkeeper batter': 'wicket-keeper',
+    'wicketkeeper': 'wicket-keeper',
+    'bowler': 'bowler',
+    'allrounder': 'all-rounder',
+    'batting allrounder': 'all-rounder',
+    'bowling allrounder': 'all-rounder'
+  };
+  
+  return roleMapping[role] || 'batsman';
+};
+
+const mapBattingStyle = (styles) => {
+  if (!styles || styles.length === 0) return 'right-hand';
+  const style = styles[0].toLowerCase();
+  return style.includes('left') ? 'left-hand' : 'right-hand';
+};
+
+const mapBowlingStyle = (styles) => {
+  if (!styles || styles.length === 0) return 'none';
+  
+  const style = styles[0].toLowerCase();
+  
+  // Fast bowlers
+  if (style.includes('right-arm fast-medium') || style.includes('right-arm medium-fast')) {
+    return 'right-arm-fast';
+  }
+  if (style.includes('right-arm fast')) {
+    return 'right-arm-fast';
+  }
+  if (style.includes('right-arm medium')) {
+    return 'right-arm-medium';
+  }
+  if (style.includes('left-arm fast-medium') || style.includes('left-arm medium-fast')) {
+    return 'left-arm-fast';
+  }
+  if (style.includes('left-arm fast')) {
+    return 'left-arm-fast';
+  }
+  if (style.includes('left-arm medium')) {
+    return 'left-arm-medium';
+  }
+  
+  // Spinners
+  if (style.includes('offbreak') || style.includes('off-break') || style.includes('off break')) {
+    return 'right-arm-off-spin';
+  }
+  if (style.includes('legbreak') || style.includes('leg-break') || style.includes('leg break')) {
+    return 'right-arm-leg-spin';
+  }
+  if (style.includes('slow left-arm orthodox') || style.includes('left-arm orthodox')) {
+    return 'left-arm-orthodox';
+  }
+  if (style.includes('chinaman') || style.includes('left-arm wrist')) {
+    return 'left-arm-chinaman';
+  }
+  
+  return 'none';
+};
+
+const buildImageUrl = (headshotImageUrl) => {
+  if (!headshotImageUrl) return null;
+  // ESPN relative path: /lsci/db/PICTURES/CMS/348500/348599.png
+  // Full URL: https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci/db/PICTURES/CMS/348500/348599.png
+  return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x${headshotImageUrl}`;
+};
 
 const router = express.Router();
 
@@ -158,6 +234,167 @@ router.delete('/:id', auth, async (req, res, next) => {
     res.json({
       success: true,
       message: 'Player deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/players/bulk-import - Bulk import players from ESPN Cricinfo JSON (protected)
+router.post('/bulk-import', auth, async (req, res, next) => {
+  try {
+    const { countryId, players: espnData } = req.body;
+    
+    if (!countryId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Country ID is required'
+      });
+    }
+    
+    if (!espnData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Players data is required'
+      });
+    }
+    
+    // Handle both formats: full ESPN response object OR just the results array
+    let espnPlayers;
+    if (Array.isArray(espnData)) {
+      // Already an array
+      espnPlayers = espnData;
+    } else if (espnData.results && Array.isArray(espnData.results)) {
+      // Full ESPN response object with results array
+      espnPlayers = espnData.results;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid format: expected an array of players or ESPN response object with results array'
+      });
+    }
+    
+    if (espnPlayers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Players array is empty'
+      });
+    }
+    
+    // Verify country exists
+    const country = await Country.findById(countryId);
+    if (!country) {
+      return res.status(404).json({
+        success: false,
+        message: 'Country not found'
+      });
+    }
+    
+    const results = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: []
+    };
+    
+    // Filter for male players only and process
+    const malePlayers = espnPlayers.filter(p => p.gender === 'M');
+    
+    for (const espnPlayer of malePlayers) {
+      try {
+        const playerName = espnPlayer.longName || espnPlayer.name;
+        
+        if (!playerName) {
+          results.skipped++;
+          results.errors.push({ name: 'Unknown', reason: 'No name provided' });
+          continue;
+        }
+        
+        const playerData = {
+          name: playerName,
+          country: countryId,
+          role: mapRole(espnPlayer.playingRoles),
+          battingStyle: mapBattingStyle(espnPlayer.longBattingStyles),
+          bowlingStyle: mapBowlingStyle(espnPlayer.longBowlingStyles),
+          imageUrl: buildImageUrl(espnPlayer.headshotImageUrl),
+          espnId: espnPlayer.id, // Store ESPN ID for reference
+          isActive: true
+        };
+        
+        // Try to find existing player by name and country
+        const existingPlayer = await Player.findOne({
+          name: playerName,
+          country: countryId
+        });
+        
+        if (existingPlayer) {
+          // Update existing player
+          await Player.findByIdAndUpdate(existingPlayer._id, playerData);
+          results.updated++;
+        } else {
+          // Create new player
+          const newPlayer = new Player(playerData);
+          await newPlayer.save();
+          results.created++;
+        }
+      } catch (playerError) {
+        results.skipped++;
+        results.errors.push({
+          name: espnPlayer.longName || espnPlayer.name || 'Unknown',
+          reason: playerError.message
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Import complete: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped`,
+      data: results
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/players/bulk-delete/:countryId - Delete all players for a country (protected)
+router.delete('/bulk-delete/:countryId', auth, async (req, res, next) => {
+  try {
+    const { countryId } = req.params;
+    
+    // Verify country exists
+    const country = await Country.findById(countryId);
+    if (!country) {
+      return res.status(404).json({
+        success: false,
+        message: 'Country not found'
+      });
+    }
+    
+    // Check if any players are in match squads
+    const playersInMatches = await Player.find({ country: countryId });
+    const playerIds = playersInMatches.map(p => p._id);
+    
+    const matchCount = await Match.countDocuments({
+      $or: [
+        { 'squads.team1.player': { $in: playerIds } },
+        { 'squads.team2.player': { $in: playerIds } }
+      ]
+    });
+    
+    if (matchCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete players. Some players are in ${matchCount} match squad(s).`
+      });
+    }
+    
+    // Delete all players for this country
+    const result = await Player.deleteMany({ country: countryId });
+    
+    res.json({
+      success: true,
+      message: `${result.deletedCount} player(s) deleted successfully`,
+      deletedCount: result.deletedCount
     });
   } catch (error) {
     next(error);

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PlayerService, CountryService } from '../../../core/services';
+import { PlayerService, CountryService, BulkImportResult } from '../../../core/services';
 import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../../core/models';
 
 @Component({
@@ -12,13 +12,32 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
     <div>
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-800">Players</h2>
-        <button 
-          (click)="openModal()"
-          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-          [disabled]="countries.length === 0"
-        >
-          + Add Player
-        </button>
+        <div class="flex gap-2">
+          @if (filters.country && filteredPlayers.length > 0) {
+            <button 
+              (click)="confirmBulkDelete()"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              title="Delete all players for selected country"
+            >
+              🗑️ Delete All ({{ filteredPlayers.length }})
+            </button>
+          }
+          <button 
+            (click)="openBulkImportModal()"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            [disabled]="!filters.country"
+            [title]="!filters.country ? 'Select a country first to bulk import' : 'Bulk import players from ESPN Cricinfo'"
+          >
+            📥 Bulk Import
+          </button>
+          <button 
+            (click)="openModal()"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            [disabled]="countries.length === 0"
+          >
+            + Add Player
+          </button>
+        </div>
       </div>
 
       <!-- Filters -->
@@ -96,7 +115,7 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Player</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Country</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Batting</th>
@@ -108,8 +127,22 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
             <tbody class="bg-white divide-y divide-gray-200">
               @for (player of filteredPlayers; track player._id) {
                 <tr>
-                  <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                    {{ player.name }}
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center gap-3">
+                      @if (player.imageUrl) {
+                        <img 
+                          [src]="player.imageUrl" 
+                          [alt]="player.name"
+                          class="w-10 h-10 rounded-full object-cover bg-gray-100"
+                          (error)="onImageError($event)"
+                        >
+                      } @else {
+                        <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-sm font-medium">
+                          {{ player.name.charAt(0) }}
+                        </div>
+                      }
+                      <span class="font-medium text-gray-900">{{ player.name }}</span>
+                    </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-gray-500">
                     {{ getCountryName(player.country) }}
@@ -327,6 +360,161 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
           </div>
         </div>
       }
+
+      <!-- Bulk Delete Confirmation Modal -->
+      @if (showBulkDeleteModal) {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-2">🚨 Delete All Players</h3>
+              <p class="text-gray-600 mb-4">
+                Are you sure you want to delete <strong>all {{ filteredPlayers.length }} players</strong> 
+                from <strong>{{ getSelectedCountryName() }}</strong>?
+              </p>
+              <p class="text-red-600 text-sm mb-6">
+                ⚠️ This action cannot be undone!
+              </p>
+
+              @if (bulkDeleteError) {
+                <div class="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                  {{ bulkDeleteError }}
+                </div>
+              }
+
+              <div class="flex justify-end gap-3">
+                <button 
+                  (click)="closeBulkDeleteModal()"
+                  class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button 
+                  (click)="executeBulkDelete()"
+                  [disabled]="bulkDeleting"
+                  class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {{ bulkDeleting ? 'Deleting...' : 'Delete All Players' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Bulk Import Modal -->
+      @if (showBulkImportModal) {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b sticky top-0 bg-white">
+              <h3 class="text-lg font-semibold text-gray-800">
+                Bulk Import Players - {{ getSelectedCountryName() }}
+              </h3>
+            </div>
+            <div class="p-6">
+              <!-- Instructions -->
+              <div class="mb-4 p-4 bg-blue-50 rounded-lg text-sm text-blue-800">
+                <p class="font-medium mb-2">How to get player data from ESPN Cricinfo:</p>
+                <ol class="list-decimal list-inside space-y-1 text-blue-700">
+                  <li>Go to the team page on ESPN Cricinfo (e.g., espncricinfo.com/cricketers/team/sri-lanka-8)</li>
+                  <li>Open browser DevTools (F12) → Network tab</li>
+                  <li>Refresh the page and look for API requests with player data</li>
+                  <li>Copy the <strong>entire JSON response</strong> (or just the <code class="bg-blue-100 px-1 rounded">results</code> array)</li>
+                  <li>Paste below - both formats work!</li>
+                </ol>
+              </div>
+
+              <!-- JSON Input -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  ESPN Cricinfo Players JSON (paste the results array)
+                </label>
+                <textarea
+                  [(ngModel)]="bulkImportJson"
+                  rows="10"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder='{"total": 66, "results": [...]} or [{"id": 12345, "longName": "Player Name", ...}]'
+                  (input)="validateBulkImportJson()"
+                ></textarea>
+              </div>
+
+              <!-- Validation Status -->
+              @if (bulkImportJson) {
+                <div class="mb-4">
+                  @if (bulkImportValidation.valid) {
+                    <div class="p-3 bg-green-50 text-green-700 rounded-lg text-sm">
+                      ✓ Valid JSON: Found {{ bulkImportValidation.totalPlayers }} players 
+                      ({{ bulkImportValidation.malePlayers }} male players will be imported)
+                    </div>
+                  } @else {
+                    <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                      ✗ {{ bulkImportValidation.error }}
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Import Result -->
+              @if (bulkImportResult) {
+                <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 class="font-medium text-gray-800 mb-2">Import Results:</h4>
+                  <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="p-2 bg-green-100 rounded">
+                      <div class="text-2xl font-bold text-green-700">{{ bulkImportResult.created }}</div>
+                      <div class="text-xs text-green-600">Created</div>
+                    </div>
+                    <div class="p-2 bg-blue-100 rounded">
+                      <div class="text-2xl font-bold text-blue-700">{{ bulkImportResult.updated }}</div>
+                      <div class="text-xs text-blue-600">Updated</div>
+                    </div>
+                    <div class="p-2 bg-yellow-100 rounded">
+                      <div class="text-2xl font-bold text-yellow-700">{{ bulkImportResult.skipped }}</div>
+                      <div class="text-xs text-yellow-600">Skipped</div>
+                    </div>
+                  </div>
+                  @if (bulkImportResult.errors.length > 0) {
+                    <div class="mt-3 text-sm text-red-600">
+                      <p class="font-medium">Errors:</p>
+                      <ul class="list-disc list-inside">
+                        @for (err of bulkImportResult.errors.slice(0, 5); track err.name) {
+                          <li>{{ err.name }}: {{ err.reason }}</li>
+                        }
+                        @if (bulkImportResult.errors.length > 5) {
+                          <li>...and {{ bulkImportResult.errors.length - 5 }} more</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (bulkImportError) {
+                <div class="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                  {{ bulkImportError }}
+                </div>
+              }
+
+              <div class="flex justify-end gap-3">
+                <button 
+                  type="button"
+                  (click)="closeBulkImportModal()"
+                  class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  {{ bulkImportResult ? 'Close' : 'Cancel' }}
+                </button>
+                @if (!bulkImportResult) {
+                  <button 
+                    (click)="executeBulkImport()"
+                    [disabled]="bulkImporting || !bulkImportValidation.valid"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {{ bulkImporting ? 'Importing...' : 'Import Players' }}
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -356,6 +544,24 @@ export class PlayersComponent implements OnInit {
   deletingPlayer: Player | null = null;
   deleting = false;
   deleteError = '';
+
+  // Bulk Import
+  showBulkImportModal = false;
+  bulkImportJson = '';
+  bulkImporting = false;
+  bulkImportError = '';
+  bulkImportResult: BulkImportResult | null = null;
+  bulkImportValidation = {
+    valid: false,
+    totalPlayers: 0,
+    malePlayers: 0,
+    error: ''
+  };
+
+  // Bulk Delete
+  showBulkDeleteModal = false;
+  bulkDeleting = false;
+  bulkDeleteError = '';
 
   constructor(
     private playerService: PlayerService,
@@ -573,6 +779,165 @@ export class PlayersComponent implements OnInit {
       error: (err) => {
         this.deleteError = err.error?.message || 'Failed to delete player';
         this.deleting = false;
+      }
+    });
+  }
+
+  // Bulk Import Methods
+  openBulkImportModal() {
+    this.showBulkImportModal = true;
+    this.bulkImportJson = '';
+    this.bulkImportError = '';
+    this.bulkImportResult = null;
+    this.bulkImportValidation = {
+      valid: false,
+      totalPlayers: 0,
+      malePlayers: 0,
+      error: ''
+    };
+  }
+
+  closeBulkImportModal() {
+    // Reload players if import was successful (check before clearing)
+    const shouldReload = this.bulkImportResult !== null;
+    
+    this.showBulkImportModal = false;
+    this.bulkImportJson = '';
+    this.bulkImportError = '';
+    this.bulkImportResult = null;
+    
+    if (shouldReload) {
+      this.loadPlayers();
+    }
+  }
+
+  getSelectedCountryName(): string {
+    const country = this.countries.find(c => c._id === this.filters.country);
+    return country?.name || 'Unknown';
+  }
+
+  validateBulkImportJson() {
+    this.bulkImportValidation = {
+      valid: false,
+      totalPlayers: 0,
+      malePlayers: 0,
+      error: ''
+    };
+
+    if (!this.bulkImportJson.trim()) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(this.bulkImportJson);
+      
+      // Handle both formats: array OR object with results array
+      let playersArray: any[];
+      if (Array.isArray(parsed)) {
+        playersArray = parsed;
+      } else if (parsed.results && Array.isArray(parsed.results)) {
+        // Full ESPN response object
+        playersArray = parsed.results;
+      } else {
+        this.bulkImportValidation.error = 'Invalid format: expected an array or ESPN response with results array';
+        return;
+      }
+
+      if (playersArray.length === 0) {
+        this.bulkImportValidation.error = 'No players found in data';
+        return;
+      }
+
+      // Check if first item looks like ESPN data
+      const first = playersArray[0];
+      if (!first.longName && !first.name) {
+        this.bulkImportValidation.error = 'Invalid format: players must have name or longName field';
+        return;
+      }
+
+      const malePlayers = playersArray.filter((p: any) => p.gender === 'M');
+      
+      this.bulkImportValidation = {
+        valid: true,
+        totalPlayers: playersArray.length,
+        malePlayers: malePlayers.length,
+        error: ''
+      };
+    } catch (e) {
+      this.bulkImportValidation.error = 'Invalid JSON format';
+    }
+  }
+
+  executeBulkImport() {
+    if (!this.filters.country || !this.bulkImportValidation.valid) {
+      return;
+    }
+
+    this.bulkImporting = true;
+    this.bulkImportError = '';
+
+    let players: any[];
+    try {
+      players = JSON.parse(this.bulkImportJson);
+    } catch (e) {
+      this.bulkImportError = 'Failed to parse JSON';
+      this.bulkImporting = false;
+      return;
+    }
+
+    this.playerService.bulkImport(this.filters.country, players).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.bulkImportResult = response.data;
+          this.loadPlayers();
+        } else {
+          this.bulkImportError = response.message || 'Failed to import players';
+        }
+        this.bulkImporting = false;
+      },
+      error: (err) => {
+        this.bulkImportError = err.error?.message || 'Failed to import players';
+        this.bulkImporting = false;
+      }
+    });
+  }
+
+  onImageError(event: Event) {
+    // Hide broken image and show fallback
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+  }
+
+  // Bulk Delete Methods
+  confirmBulkDelete() {
+    this.showBulkDeleteModal = true;
+    this.bulkDeleteError = '';
+  }
+
+  closeBulkDeleteModal() {
+    this.showBulkDeleteModal = false;
+    this.bulkDeleteError = '';
+  }
+
+  executeBulkDelete() {
+    if (!this.filters.country) return;
+
+    this.bulkDeleting = true;
+    this.bulkDeleteError = '';
+
+    this.playerService.bulkDelete(this.filters.country).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.loadPlayers();
+          this.closeBulkDeleteModal();
+        } else {
+          this.bulkDeleteError = response.message || 'Failed to delete players';
+        }
+        this.bulkDeleting = false;
+      },
+      error: (err) => {
+        this.bulkDeleteError = err.error?.message || 'Failed to delete players';
+        this.bulkDeleting = false;
       }
     });
   }

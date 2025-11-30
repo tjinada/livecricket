@@ -49,6 +49,14 @@ const playerSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  imageUrl: {
+    type: String,
+    default: null
+  },
+  espnId: {
+    type: Number,
+    default: null
   }
 }, {
   timestamps: true

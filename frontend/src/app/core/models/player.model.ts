@@ -21,6 +21,8 @@ export interface Player {
   battingStyle: BattingStyle;
   bowlingStyle: BowlingStyle;
   isActive: boolean;
+  imageUrl?: string | null;
+  espnId?: number | null;
   createdAt?: string;
   updatedAt?: string;
 }

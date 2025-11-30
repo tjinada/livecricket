@@ -96,16 +96,10 @@ router.put('/:id', auth, async (req, res, next) => {
 });
 
 // DELETE /api/countries/:id - Delete country (protected)
+// Query param: ?cascade=true to delete all players as well
 router.delete('/:id', auth, async (req, res, next) => {
   try {
-    // Check if country has players
-    const playerCount = await Player.countDocuments({ country: req.params.id });
-    if (playerCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete country. ${playerCount} player(s) are associated with this country.`
-      });
-    }
+    const { cascade } = req.query;
     
     // Check if country is in any match
     const matchCount = await Match.countDocuments({
@@ -116,6 +110,24 @@ router.delete('/:id', auth, async (req, res, next) => {
         success: false,
         message: `Cannot delete country. ${matchCount} match(es) are associated with this country.`
       });
+    }
+    
+    // Check if country has players
+    const playerCount = await Player.countDocuments({ country: req.params.id });
+    
+    if (playerCount > 0 && cascade !== 'true') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete country. ${playerCount} player(s) are associated with this country. Use cascade=true to delete players as well.`,
+        playerCount
+      });
+    }
+    
+    // If cascade, delete all players first
+    let deletedPlayersCount = 0;
+    if (cascade === 'true' && playerCount > 0) {
+      const result = await Player.deleteMany({ country: req.params.id });
+      deletedPlayersCount = result.deletedCount;
     }
     
     const country = await Country.findByIdAndDelete(req.params.id);
@@ -129,7 +141,10 @@ router.delete('/:id', auth, async (req, res, next) => {
     
     res.json({
       success: true,
-      message: 'Country deleted successfully'
+      message: deletedPlayersCount > 0 
+        ? `Country and ${deletedPlayersCount} player(s) deleted successfully`
+        : 'Country deleted successfully',
+      deletedPlayersCount
     });
   } catch (error) {
     next(error);

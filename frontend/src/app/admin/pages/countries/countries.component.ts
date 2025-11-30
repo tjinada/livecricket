@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CountryService } from '../../../core/services';
+import { CountryService, PlayerService } from '../../../core/services';
 import { Country } from '../../../core/models';
 
 @Component({
@@ -166,10 +166,30 @@ import { Country } from '../../../core/models';
           <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div class="p-6">
               <h3 class="text-lg font-semibold text-gray-800 mb-2">Delete Country</h3>
-              <p class="text-gray-600 mb-6">
-                Are you sure you want to delete <strong>{{ deletingCountry?.name }}</strong>? 
-                This action cannot be undone.
-              </p>
+              
+              @if (getPlayerCount(deletingCountry?._id || '') > 0) {
+                <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p class="text-yellow-800 text-sm">
+                    ⚠️ This country has <strong>{{ getPlayerCount(deletingCountry?._id || '') }} player(s)</strong>.
+                  </p>
+                </div>
+                <p class="text-gray-600 mb-4">
+                  Do you want to delete <strong>{{ deletingCountry?.name }}</strong> and all its players?
+                </p>
+                <label class="flex items-center gap-2 mb-6">
+                  <input 
+                    type="checkbox"
+                    [(ngModel)]="cascadeDelete"
+                    class="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                  >
+                  <span class="text-sm text-gray-700">Yes, delete all players too</span>
+                </label>
+              } @else {
+                <p class="text-gray-600 mb-6">
+                  Are you sure you want to delete <strong>{{ deletingCountry?.name }}</strong>? 
+                  This action cannot be undone.
+                </p>
+              }
 
               @if (deleteError) {
                 <div class="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
@@ -186,7 +206,7 @@ import { Country } from '../../../core/models';
                 </button>
                 <button 
                   (click)="deleteCountry()"
-                  [disabled]="deleting"
+                  [disabled]="deleting || (getPlayerCount(deletingCountry?._id || '') > 0 && !cascadeDelete)"
                   class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                 >
                   {{ deleting ? 'Deleting...' : 'Delete' }}
@@ -214,8 +234,12 @@ export class CountriesComponent implements OnInit {
   deletingCountry: Country | null = null;
   deleting = false;
   deleteError = '';
+  cascadeDelete = false;
 
-  constructor(private countryService: CountryService) {}
+  constructor(
+    private countryService: CountryService,
+    private playerService: PlayerService
+  ) {}
 
   ngOnInit() {
     this.loadCountries();
@@ -239,9 +263,20 @@ export class CountriesComponent implements OnInit {
 
   loadPlayerCounts() {
     // Load player counts for each country
-    // This could be optimized with a dedicated API endpoint
-    this.countries.forEach(country => {
-      this.playerCounts[country._id] = 0;
+    this.playerService.getAll().subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Reset counts
+          this.playerCounts = {};
+          // Count players per country
+          response.data.forEach(player => {
+            const countryId = typeof player.country === 'string' 
+              ? player.country 
+              : player.country._id;
+            this.playerCounts[countryId] = (this.playerCounts[countryId] || 0) + 1;
+          });
+        }
+      }
     });
   }
 
@@ -315,6 +350,7 @@ export class CountriesComponent implements OnInit {
     this.showDeleteModal = false;
     this.deletingCountry = null;
     this.deleteError = '';
+    this.cascadeDelete = false;
   }
 
   deleteCountry() {
@@ -323,7 +359,7 @@ export class CountriesComponent implements OnInit {
     this.deleting = true;
     this.deleteError = '';
 
-    this.countryService.delete(this.deletingCountry._id).subscribe({
+    this.countryService.delete(this.deletingCountry._id, this.cascadeDelete).subscribe({
       next: (response) => {
         if (response.success) {
           this.loadCountries();

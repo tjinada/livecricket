@@ -27,7 +27,8 @@ export class CountryService {
     return this.http.put<ApiResponse<Country>>(`${this.apiUrl}/${id}`, country);
   }
 
-  delete(id: string): Observable<ApiResponse<void>> {
-    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${id}`);
+  delete(id: string, cascade: boolean = false): Observable<ApiResponse<{ deletedPlayersCount?: number }>> {
+    const url = cascade ? `${this.apiUrl}/${id}?cascade=true` : `${this.apiUrl}/${id}`;
+    return this.http.delete<ApiResponse<{ deletedPlayersCount?: number }>>(url);
   }
 }

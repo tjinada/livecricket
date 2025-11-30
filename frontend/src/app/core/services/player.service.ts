@@ -3,6 +3,13 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Player, CreatePlayerDto, UpdatePlayerDto, ApiResponse, PlayerRole } from '../models';
 
+export interface BulkImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: Array<{ name: string; reason: string }>;
+}
+
 export interface PlayerFilters {
   country?: string;
   role?: PlayerRole;
@@ -49,5 +56,16 @@ export class PlayerService {
 
   delete(id: string): Observable<ApiResponse<void>> {
     return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/${id}`);
+  }
+
+  bulkImport(countryId: string, players: any[]): Observable<ApiResponse<BulkImportResult>> {
+    return this.http.post<ApiResponse<BulkImportResult>>(`${this.apiUrl}/bulk-import`, {
+      countryId,
+      players
+    });
+  }
+
+  bulkDelete(countryId: string): Observable<ApiResponse<{ deletedCount: number }>> {
+    return this.http.delete<ApiResponse<{ deletedCount: number }>>(`${this.apiUrl}/bulk-delete/${countryId}`);
   }
 }
