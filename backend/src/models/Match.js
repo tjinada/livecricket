@@ -79,6 +79,32 @@ const overBallSchema = new mongoose.Schema({
   display: String
 }, { _id: false });
 
+// Sub-schema for completed over
+const completedOverSchema = new mongoose.Schema({
+  overNumber: Number,
+  bowler: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Player'
+  },
+  balls: [overBallSchema],
+  runs: { type: Number, default: 0 },
+  wickets: { type: Number, default: 0 }
+}, { _id: false });
+
+// Sub-schema for partnership
+const partnershipSchema = new mongoose.Schema({
+  runs: { type: Number, default: 0 },
+  balls: { type: Number, default: 0 },
+  batsman1: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Player'
+  },
+  batsman2: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Player'
+  }
+}, { _id: false });
+
 // Sub-schema for fall of wickets
 const fallOfWicketSchema = new mongoose.Schema({
   wicketNumber: Number,
@@ -147,7 +173,9 @@ const inningsSchema = new mongoose.Schema({
   battingStats: [battingStatsSchema],
   bowlingStats: [bowlingStatsSchema],
   currentOver: [overBallSchema],
-  fallOfWickets: [fallOfWicketSchema]
+  overs: [completedOverSchema],
+  fallOfWickets: [fallOfWicketSchema],
+  partnership: partnershipSchema
 }, { _id: true });
 
 // Sub-schema for background configuration

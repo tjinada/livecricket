@@ -202,6 +202,20 @@ async function recordBall(matchId, ballData) {
     innings.totalBalls += 1;
   }
 
+  // Update partnership
+  if (!innings.partnership) {
+    innings.partnership = {
+      runs: 0,
+      balls: 0,
+      batsman1: innings.currentBatsmen.striker,
+      batsman2: innings.currentBatsmen.nonStriker
+    };
+  }
+  innings.partnership.runs += totalRuns;
+  if (isLegalDelivery) {
+    innings.partnership.balls += 1;
+  }
+
   // Update extras
   if (isWide) {
     innings.extras.wides += extraRuns;
@@ -333,6 +347,14 @@ async function recordBall(matchId, ballData) {
           position: innings.battingStats.length + 1
         });
       }
+
+      // Reset partnership for new batsman
+      innings.partnership = {
+        runs: 0,
+        balls: 0,
+        batsman1: innings.currentBatsmen.striker,
+        batsman2: innings.currentBatsmen.nonStriker
+      };
     }
   }
 
@@ -387,6 +409,20 @@ async function recordBall(matchId, ballData) {
       bowlerStats.overs += 1;
       bowlerStats.balls = 0;
     }
+
+    // Save completed over to overs array
+    const completedOverNumber = Math.floor((innings.totalBalls - 1) / 6) + 1;
+    const overWickets = innings.currentOver.filter(b => b.isWicket).length;
+    if (!innings.overs) {
+      innings.overs = [];
+    }
+    innings.overs.push({
+      overNumber: completedOverNumber,
+      bowler: innings.currentBowler,
+      balls: [...innings.currentOver],
+      runs: overRuns + innings.currentOver.filter(b => b.isExtra).reduce((sum, b) => sum + b.runs, 0),
+      wickets: overWickets
+    });
 
     // Rotate strike at end of over (only if not already rotated due to odd runs on last ball)
     // And only if no wicket fell on the last ball
@@ -888,7 +924,14 @@ async function startSecondInnings(matchId, { striker, nonStriker, bowler }) {
       { player: bowler, overs: 0, balls: 0, runs: 0, wickets: 0, wides: 0, noBalls: 0, maidens: 0, dotBalls: 0 }
     ],
     currentOver: [],
-    fallOfWickets: []
+    overs: [],
+    fallOfWickets: [],
+    partnership: {
+      runs: 0,
+      balls: 0,
+      batsman1: striker,
+      batsman2: nonStriker
+    }
   };
 
   match.innings.push(secondInnings);

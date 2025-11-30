@@ -341,7 +341,14 @@ router.post('/:id/start', auth, async (req, res, next) => {
       ],
       bowlingStats: [
         { player: openingBowler }
-      ]
+      ],
+      overs: [],
+      partnership: {
+        runs: 0,
+        balls: 0,
+        batsman1: openingBatsmen.striker,
+        batsman2: openingBatsmen.nonStriker
+      }
     });
     
     match.status = 'live';
