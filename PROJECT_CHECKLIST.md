@@ -1,6 +1,6 @@
 # Live Cricket Application - Project Checklist
 
-## Overall Progress: ~95% Complete
+## Overall Progress: ~97% Complete
 
 ---
 
@@ -184,6 +184,9 @@
 - [x] Real-time updates across all views
 - [x] Color-coded ball displays
 - [x] Responsive layout
+- [x] **Custom backgrounds (image/video) per view**
+- [x] **Team default backgrounds with fallback**
+- [x] **Backdrop blur for readability**
 
 ---
 

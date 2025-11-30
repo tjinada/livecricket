@@ -442,6 +442,64 @@ router.delete('/:id', auth, async (req, res, next) => {
   }
 });
 
+// PUT /api/matches/:id/backgrounds - Update match backgrounds (protected)
+router.put('/:id/backgrounds', auth, async (req, res, next) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+    
+    const { useTeamBackground, views } = req.body;
+    
+    // Initialize backgrounds if not exists
+    if (!match.backgrounds) {
+      match.backgrounds = {
+        useTeamBackground: true,
+        views: {}
+      };
+    }
+    
+    // Update useTeamBackground flag
+    if (typeof useTeamBackground === 'boolean') {
+      match.backgrounds.useTeamBackground = useTeamBackground;
+    }
+    
+    // Update view-specific backgrounds
+    if (views) {
+      const validViews = ['score-summary', 'player-stats', 'overall-summary', 'projections'];
+      
+      for (const view of validViews) {
+        if (views[view]) {
+          if (!match.backgrounds.views) {
+            match.backgrounds.views = {};
+          }
+          match.backgrounds.views[view] = {
+            type: views[view].type || 'none',
+            url: views[view].url || null
+          };
+        }
+      }
+    }
+    
+    await match.save();
+    
+    // Broadcast background change to display clients
+    broadcastToMatch(req.params.id, 'background-change', { backgrounds: match.backgrounds });
+    
+    res.json({
+      success: true,
+      data: { backgrounds: match.backgrounds }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/matches/:id/live - SSE endpoint for live updates
 router.get('/:id/live', async (req, res, next) => {
   try {

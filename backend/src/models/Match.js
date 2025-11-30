@@ -150,6 +150,27 @@ const inningsSchema = new mongoose.Schema({
   fallOfWickets: [fallOfWicketSchema]
 }, { _id: true });
 
+// Sub-schema for background configuration
+const backgroundSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['image', 'video', 'none'],
+    default: 'none'
+  },
+  url: {
+    type: String,
+    default: null
+  }
+}, { _id: false });
+
+// Sub-schema for view-specific backgrounds
+const viewBackgroundsSchema = new mongoose.Schema({
+  'score-summary': backgroundSchema,
+  'player-stats': backgroundSchema,
+  'overall-summary': backgroundSchema,
+  'projections': backgroundSchema
+}, { _id: false });
+
 // Main Match Schema
 const matchSchema = new mongoose.Schema({
   format: {
@@ -226,6 +247,15 @@ const matchSchema = new mongoose.Schema({
     type: String,
     enum: ['score-summary', 'player-stats', 'overall-summary', 'projections'],
     default: 'score-summary'
+  },
+  // Background configuration per view
+  // Priority: match-specific > batting team default > none
+  backgrounds: {
+    useTeamBackground: {
+      type: Boolean,
+      default: true  // If true, falls back to batting team's background
+    },
+    views: viewBackgroundsSchema
   }
 }, {
   timestamps: true

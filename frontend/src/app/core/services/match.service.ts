@@ -27,6 +27,15 @@ export interface Match {
     winType: 'runs' | 'wickets';
   };
   displayView: string;
+  backgrounds?: {
+    useTeamBackground: boolean;
+    views?: {
+      'score-summary'?: { type: 'image' | 'video' | 'none'; url: string | null };
+      'player-stats'?: { type: 'image' | 'video' | 'none'; url: string | null };
+      'overall-summary'?: { type: 'image' | 'video' | 'none'; url: string | null };
+      'projections'?: { type: 'image' | 'video' | 'none'; url: string | null };
+    };
+  };
   createdAt?: string;
   updatedAt?: string;
 }
@@ -103,5 +112,14 @@ export class MatchService {
 
   setDisplayView(id: string, view: string): Observable<ApiResponse<any>> {
     return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/display-view`, { view });
+  }
+
+  updateBackgrounds(id: string, backgrounds: {
+    useTeamBackground?: boolean;
+    views?: {
+      [key: string]: { type: 'image' | 'video' | 'none'; url: string | null }
+    }
+  }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/backgrounds`, backgrounds);
   }
 }

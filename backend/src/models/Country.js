@@ -19,11 +19,21 @@ const countrySchema = new mongoose.Schema({
   flagUrl: {
     type: String,
     default: null
+  },
+  // Default background for this country (used when country is batting)
+  background: {
+    type: {
+      type: String,
+      enum: ['image', 'video', 'none'],
+      default: 'none'
+    },
+    url: {
+      type: String,
+      default: null
+    }
   }
 }, {
   timestamps: true
 });
-
-// Note: 'unique: true' on code already creates an index, no need for additional index
 
 module.exports = mongoose.model('Country', countrySchema);

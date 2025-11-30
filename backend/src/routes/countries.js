@@ -61,11 +61,21 @@ router.post('/', auth, async (req, res, next) => {
 // PUT /api/countries/:id - Update country (protected)
 router.put('/:id', auth, async (req, res, next) => {
   try {
-    const { name, code, flagUrl } = req.body;
+    const { name, code, flagUrl, background } = req.body;
+    
+    const updateData = { name, code, flagUrl };
+    
+    // Handle background update
+    if (background) {
+      updateData.background = {
+        type: background.type || 'none',
+        url: background.url || null
+      };
+    }
     
     const country = await Country.findByIdAndUpdate(
       req.params.id,
-      { name, code, flagUrl },
+      updateData,
       { new: true, runValidators: true }
     );
     

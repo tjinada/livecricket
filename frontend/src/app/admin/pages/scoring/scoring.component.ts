@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatchService, Match } from '../../../core/services/match.service';
 import { ScoringService, BallData } from '../../../core/services/scoring.service';
+import { BackgroundSettingsComponent, BackgroundSettings } from '../../components/background-settings/background-settings.component';
 
 type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo';
 
 @Component({
   selector: 'app-scoring',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, BackgroundSettingsComponent],
   template: `
     <div class="min-h-screen bg-gray-100">
       <!-- Header -->
@@ -375,7 +376,15 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
 
               <!-- Display Control -->
               <div class="bg-white rounded-lg shadow p-4">
-                <h3 class="font-semibold text-gray-800 mb-3">Display View</h3>
+                <div class="flex justify-between items-center mb-3">
+                  <h3 class="font-semibold text-gray-800">Display View</h3>
+                  <button 
+                    (click)="showBackgroundSettings = true"
+                    class="text-sm text-purple-600 hover:text-purple-800"
+                  >
+                    🎨 Backgrounds
+                  </button>
+                </div>
                 <select 
                   [(ngModel)]="displayView"
                   (change)="changeDisplayView()"
@@ -761,6 +770,16 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
             </div>
           </div>
         </div>
+      }
+
+      <!-- Background Settings Modal -->
+      @if (showBackgroundSettings) {
+        <app-background-settings
+          [matchId]="matchId"
+          [currentSettings]="match?.backgrounds"
+          (close)="showBackgroundSettings = false"
+          (saved)="saveBackgroundSettings($event)"
+        ></app-background-settings>
       }
     </div>
   `
@@ -1489,6 +1508,24 @@ export class ScoringComponent implements OnInit, OnDestroy {
     this.matchService.setDisplayView(this.matchId, this.displayView).subscribe({
       error: (err) => {
         this.error = err.error?.message || 'Failed to change display view';
+      }
+    });
+  }
+
+  // Background settings
+  showBackgroundSettings = false;
+
+  saveBackgroundSettings(settings: BackgroundSettings) {
+    this.matchService.updateBackgrounds(this.matchId, settings).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.showBackgroundSettings = false;
+        } else {
+          this.error = 'Failed to update backgrounds';
+        }
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to update backgrounds';
       }
     });
   }
