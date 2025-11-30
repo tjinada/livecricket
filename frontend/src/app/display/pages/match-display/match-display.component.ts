@@ -792,141 +792,255 @@ import { HttpClient } from '@angular/common/http';
           </div>
 
           <!-- ==================== PROJECTIONS VIEW ==================== -->
-          <div *ngIf="displayView === 'projections'" class="p-6 max-w-5xl mx-auto overflow-y-auto">
-            <div class="text-center mb-8">
-              <h1 class="text-2xl font-bold uppercase tracking-wider text-cyan-400">Scoring Comparison</h1>
-              <div class="flex justify-center gap-6 mt-4">
-                <div class="flex items-center gap-2">
-                  <div class="w-8 h-4 bg-cyan-500 rounded"></div>
-                  <span class="text-gray-300">{{ getFirstInningsTeamName() }}</span>
+          <div *ngIf="displayView === 'projections'" class="h-full flex flex-row p-4 gap-4 overflow-hidden">
+            
+            <!-- Left Side: Graph (takes ~75% of width) -->
+            <div class="flex-1 flex flex-col min-w-0">
+              <!-- Title -->
+              <div class="text-center mb-3">
+                <h1 class="text-2xl font-bold uppercase tracking-wider text-cyan-400">Scoring Comparison</h1>
+                <div class="flex justify-center gap-6 mt-2">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-4 bg-cyan-500 rounded"></div>
+                    <span class="text-gray-300 text-sm">{{ getFirstInningsTeamName() }}</span>
+                  </div>
+                  <div *ngIf="match.innings && match.innings.length > 1" class="flex items-center gap-2">
+                    <div class="w-8 h-4 bg-orange-500 rounded"></div>
+                    <span class="text-gray-300 text-sm">{{ getSecondInningsTeamName() }}</span>
+                  </div>
                 </div>
-                <div *ngIf="match.innings && match.innings.length > 1" class="flex items-center gap-2">
-                  <div class="w-8 h-4 bg-orange-500 rounded"></div>
-                  <span class="text-gray-300">{{ getSecondInningsTeamName() }}</span>
+              </div>
+
+              <!-- Large Graph Container -->
+              <div class="flex-1 bg-gradient-to-b from-gray-800/90 to-gray-900/90 rounded-xl p-4 backdrop-blur-sm">
+                <div class="w-full h-full">
+                  <svg class="w-full h-full" viewBox="0 0 700 400" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                        <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#374151" stroke-width="0.5"/>
+                      </pattern>
+                      <linearGradient id="cyanGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#0891b2;stop-opacity:1" />
+                      </linearGradient>
+                      <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#f97316;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#ea580c;stop-opacity:1" />
+                      </linearGradient>
+                      <linearGradient id="cyanFill" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:0.3" />
+                        <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:0.05" />
+                      </linearGradient>
+                      <linearGradient id="orangeFill" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#f97316;stop-opacity:0.3" />
+                        <stop offset="100%" style="stop-color:#f97316;stop-opacity:0.05" />
+                      </linearGradient>
+                    </defs>
+                    
+                    <!-- Grid background -->
+                    <rect width="620" height="320" x="60" y="30" fill="url(#grid)"/>
+                    
+                    <!-- Y-axis labels (Runs) -->
+                    <text *ngFor="let label of getYAxisLabels()" x="55" [attr.y]="350 - (label * getYScale())" class="fill-gray-400" style="font-size: 13px" text-anchor="end">
+                      {{ label }}
+                    </text>
+                    
+                    <!-- X-axis labels (Overs) -->
+                    <text *ngFor="let over of getOversAxisLabels()" [attr.x]="60 + (over * getXScale())" y="375" class="fill-gray-400" style="font-size: 13px" text-anchor="middle">
+                      {{ over }}
+                    </text>
+                    
+                    <!-- First innings area fill -->
+                    <polygon 
+                      *ngIf="getFirstInningsData().length > 0"
+                      [attr.points]="getFirstInningsAreaPoints()"
+                      fill="url(#cyanFill)"
+                    />
+                    
+                    <!-- First innings line -->
+                    <polyline 
+                      *ngIf="getFirstInningsData().length > 0"
+                      [attr.points]="getFirstInningsLinePointsXL()"
+                      fill="none" 
+                      stroke="url(#cyanGradient)" 
+                      stroke-width="4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <!-- First innings points -->
+                    <circle 
+                      *ngFor="let point of getFirstInningsData()"
+                      [attr.cx]="60 + (point.over * getXScale())" 
+                      [attr.cy]="350 - (point.runs * getYScale())"
+                      r="6"
+                      fill="#06b6d4"
+                      stroke="#fff"
+                      stroke-width="2"
+                    />
+
+                    <!-- Second innings area fill -->
+                    <polygon 
+                      *ngIf="getSecondInningsData().length > 0"
+                      [attr.points]="getSecondInningsAreaPoints()"
+                      fill="url(#orangeFill)"
+                    />
+                    
+                    <!-- Second innings line -->
+                    <polyline 
+                      *ngIf="getSecondInningsData().length > 0"
+                      [attr.points]="getSecondInningsLinePointsXL()"
+                      fill="none" 
+                      stroke="url(#orangeGradient)" 
+                      stroke-width="4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <!-- Second innings points -->
+                    <circle 
+                      *ngFor="let point of getSecondInningsData()"
+                      [attr.cx]="60 + (point.over * getXScale())" 
+                      [attr.cy]="350 - (point.runs * getYScale())"
+                      r="6"
+                      fill="#f97316"
+                      stroke="#fff"
+                      stroke-width="2"
+                    />
+
+                    <!-- Target line (if chasing) -->
+                    <line 
+                      *ngIf="match.currentInnings === 1 && getTarget() > 0"
+                      x1="60" 
+                      [attr.y1]="350 - (getTarget() * getYScale())" 
+                      x2="680" 
+                      [attr.y1]="350 - (getTarget() * getYScale())"
+                      [attr.y2]="350 - (getTarget() * getYScale())"
+                      stroke="#ef4444"
+                      stroke-width="2"
+                      stroke-dasharray="8,4"
+                    />
+                    <text 
+                      *ngIf="match.currentInnings === 1 && getTarget() > 0"
+                      x="685" 
+                      [attr.y]="350 - (getTarget() * getYScale()) + 4" 
+                      class="fill-red-400" 
+                      style="font-size: 11px"
+                    >Target</text>
+
+                    <!-- Axis labels -->
+                    <text x="370" y="395" class="fill-gray-400" style="font-size: 14px; font-weight: 600" text-anchor="middle">OVERS</text>
+                    <text x="20" y="190" class="fill-gray-400" style="font-size: 14px; font-weight: 600" text-anchor="middle" transform="rotate(-90, 20, 190)">RUNS</text>
+                  </svg>
                 </div>
               </div>
             </div>
-
-            <div class="bg-gradient-to-b from-gray-800/90 to-gray-900/90 rounded-lg p-6 mb-6 backdrop-blur-sm">
-              <div class="relative" style="height: 300px;">
-                <svg class="w-full h-full" viewBox="0 0 500 300" preserveAspectRatio="xMidYMid meet">
-                  <defs>
-                    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#374151" stroke-width="0.5"/>
-                    </pattern>
-                  </defs>
-                  <rect width="450" height="250" x="40" y="10" fill="url(#grid)"/>
-                  
-                  <text *ngFor="let label of [0, 50, 100, 150, 200, 250]" x="35" [attr.y]="260 - label" class="fill-gray-500" style="font-size: 10px" text-anchor="end">
-                    {{ label }}
-                  </text>
-                  
-                  <text *ngFor="let over of getOversAxisLabels()" [attr.x]="40 + (over * getOversScale())" y="280" class="fill-gray-500" style="font-size: 10px" text-anchor="middle">
-                    {{ over }}
-                  </text>
-                  
-                  <polyline 
-                    *ngIf="getFirstInningsData().length > 0"
-                    [attr.points]="getFirstInningsLinePoints()"
-                    fill="none" 
-                    stroke="#06b6d4" 
-                    stroke-width="3"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <circle 
-                    *ngFor="let point of getFirstInningsData()"
-                    [attr.cx]="40 + (point.over * getOversScale())" 
-                    [attr.cy]="260 - point.runs"
-                    r="5"
-                    fill="#06b6d4"
-                  />
-
-                  <polyline 
-                    *ngIf="getSecondInningsData().length > 0"
-                    [attr.points]="getSecondInningsLinePoints()"
-                    fill="none" 
-                    stroke="#f97316" 
-                    stroke-width="3"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                  <circle 
-                    *ngFor="let point of getSecondInningsData()"
-                    [attr.cx]="40 + (point.over * getOversScale())" 
-                    [attr.cy]="260 - point.runs"
-                    r="5"
-                    fill="#f97316"
-                  />
-
-                  <text x="250" y="298" class="fill-gray-400" style="font-size: 10px" text-anchor="middle">OVERS</text>
-                  <text x="15" y="130" class="fill-gray-400" style="font-size: 10px" text-anchor="middle" transform="rotate(-90, 15, 130)">RUNS</text>
-                </svg>
+            
+            <!-- Right Side: Stats Panel (takes ~25% of width) -->
+            <div class="w-72 flex flex-col gap-3">
+              
+              <!-- Current Score Card -->
+              <div class="bg-gradient-to-br from-gray-800/95 to-gray-900/95 rounded-xl p-4 backdrop-blur-sm border border-gray-700/50">
+                <div class="text-xs text-gray-500 uppercase tracking-wider mb-2">Current Score</div>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="w-10 h-7 bg-gradient-to-br from-blue-600 to-blue-800 rounded flex items-center justify-center text-xs font-bold">
+                      {{ getBattingTeamCode() }}
+                    </div>
+                    <span class="text-sm text-gray-300">{{ getBattingTeamName() }}</span>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-2xl font-black">{{ currentInnings?.totalRuns || 0 }}/{{ currentInnings?.totalWickets || 0 }}</div>
+                    <div class="text-xs text-gray-500">({{ getOversDisplay() }} ov)</div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div class="bg-gray-800/90 rounded-lg p-4 text-center backdrop-blur-sm">
-                <div class="text-gray-400 text-xs uppercase">Current RR</div>
-                <div class="text-2xl font-bold text-cyan-400">{{ getCurrentRunRate() }}</div>
+              <!-- Run Rates Card -->
+              <div class="bg-gradient-to-br from-gray-800/95 to-gray-900/95 rounded-xl p-4 backdrop-blur-sm border border-gray-700/50">
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="text-center">
+                    <div class="text-xs text-gray-500 uppercase">Current RR</div>
+                    <div class="text-2xl font-bold text-cyan-400">{{ getCurrentRunRate() }}</div>
+                  </div>
+                  <div *ngIf="match.currentInnings === 1" class="text-center">
+                    <div class="text-xs text-gray-500 uppercase">Required RR</div>
+                    <div class="text-2xl font-bold text-orange-400">{{ getRequiredRunRate() }}</div>
+                  </div>
+                  <div *ngIf="match.currentInnings !== 1" class="text-center">
+                    <div class="text-xs text-gray-500 uppercase">Projected</div>
+                    <div class="text-2xl font-bold text-green-400">{{ getProjectedScore() }}</div>
+                  </div>
+                </div>
               </div>
-              <ng-container *ngIf="match.currentInnings === 1">
-                <div class="bg-gray-800/90 rounded-lg p-4 text-center backdrop-blur-sm">
-                  <div class="text-gray-400 text-xs uppercase">Required RR</div>
-                  <div class="text-2xl font-bold text-orange-400">{{ getRequiredRunRate() }}</div>
-                </div>
-                <div class="bg-gray-800/90 rounded-lg p-4 text-center backdrop-blur-sm">
-                  <div class="text-gray-400 text-xs uppercase">Runs Needed</div>
-                  <div class="text-2xl font-bold text-yellow-400">{{ getRunsNeeded() }}</div>
-                </div>
-                <div class="bg-gray-800/90 rounded-lg p-4 text-center backdrop-blur-sm">
-                  <div class="text-gray-400 text-xs uppercase">Balls Left</div>
-                  <div class="text-2xl font-bold text-gray-300">{{ getBallsRemaining() }}</div>
-                </div>
-              </ng-container>
-              <ng-container *ngIf="match.currentInnings !== 1">
-                <div class="bg-gray-800/90 rounded-lg p-4 text-center backdrop-blur-sm">
-                  <div class="text-gray-400 text-xs uppercase">Projected Score</div>
-                  <div class="text-2xl font-bold text-green-400">{{ getProjectedScore() }}</div>
-                </div>
-                <div class="bg-gray-800/90 rounded-lg p-4 text-center backdrop-blur-sm">
-                  <div class="text-gray-400 text-xs uppercase">Overs</div>
-                  <div class="text-2xl font-bold text-gray-300">{{ getOversDisplay() }}</div>
-                </div>
-                <div class="bg-gray-800/90 rounded-lg p-4 text-center backdrop-blur-sm">
-                  <div class="text-gray-400 text-xs uppercase">Wickets</div>
-                  <div class="text-2xl font-bold text-red-400">{{ currentInnings?.totalWickets || 0 }}</div>
-                </div>
-              </ng-container>
-            </div>
 
-            <div *ngIf="match.currentInnings === 1" class="bg-gradient-to-r from-blue-900/90 to-blue-800/90 rounded-lg px-6 py-4 text-center backdrop-blur-sm">
-              <span class="text-gray-300">{{ getSecondBattingTeamName() }} need </span>
-              <span class="text-yellow-400 font-bold text-xl">{{ getRunsNeeded() }}</span>
-              <span class="text-gray-300"> more to win from </span>
-              <span class="text-yellow-400 font-bold text-xl">{{ getOversRemaining() }}</span>
-              <span class="text-gray-300"> overs at </span>
-              <span class="text-cyan-400 font-bold text-xl">{{ getRequiredRunRate() }}</span>
-              <span class="text-gray-300"> RPO</span>
-            </div>
+              <!-- Chase Info (if 2nd innings) -->
+              <div *ngIf="match.currentInnings === 1" class="bg-gradient-to-br from-yellow-900/30 to-orange-900/30 rounded-xl p-4 backdrop-blur-sm border border-yellow-700/30">
+                <div class="text-xs text-yellow-400 uppercase tracking-wider mb-3">Chase Equation</div>
+                <div class="space-y-2">
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Runs Needed</span>
+                    <span class="text-xl font-bold text-yellow-400">{{ getRunsNeeded() }}</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Balls Left</span>
+                    <span class="text-xl font-bold text-gray-200">{{ getBallsRemaining() }}</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Overs Left</span>
+                    <span class="text-lg font-bold text-gray-300">{{ getOversRemaining() }}</span>
+                  </div>
+                </div>
+              </div>
 
-            <div *ngIf="match.currentInnings === 1" class="mt-6 bg-gray-800/90 rounded-lg p-6 backdrop-blur-sm">
-              <h3 class="text-center text-gray-400 uppercase text-sm mb-4">Win Probability</h3>
-              <div class="flex items-center gap-4">
-                <div class="text-right flex-1">
-                  <div class="font-bold">{{ getSecondBattingTeamName() }}</div>
-                  <div class="text-2xl font-bold text-cyan-400">{{ getWinProbability() }}%</div>
+              <!-- 1st Innings Stats (if first innings) -->
+              <div *ngIf="match.currentInnings !== 1" class="bg-gradient-to-br from-gray-800/95 to-gray-900/95 rounded-xl p-4 backdrop-blur-sm border border-gray-700/50">
+                <div class="text-xs text-gray-500 uppercase tracking-wider mb-3">Match Stats</div>
+                <div class="space-y-2">
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Overs</span>
+                    <span class="text-lg font-bold text-gray-200">{{ getOversDisplay() }}</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Wickets</span>
+                    <span class="text-lg font-bold text-red-400">{{ currentInnings?.totalWickets || 0 }}</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Boundaries</span>
+                    <span class="text-lg font-bold">
+                      <span class="text-green-400">{{ getTotalFours() }}</span>
+                      <span class="text-gray-600 mx-1">/</span>
+                      <span class="text-purple-400">{{ getTotalSixes() }}</span>
+                    </span>
+                  </div>
                 </div>
-                <div class="flex-1 h-4 bg-gray-700 rounded-full overflow-hidden">
-                  <div 
-                    class="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-500"
-                    [style.width.%]="getWinProbability()"
-                  ></div>
+              </div>
+
+              <!-- Win Probability (if chasing) -->
+              <div *ngIf="match.currentInnings === 1" class="bg-gradient-to-br from-gray-800/95 to-gray-900/95 rounded-xl p-4 backdrop-blur-sm border border-gray-700/50">
+                <div class="text-xs text-gray-500 uppercase tracking-wider mb-3">Win Probability</div>
+                <div class="space-y-3">
+                  <!-- Chasing Team -->
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-300">{{ getSecondBattingTeamName() }}</span>
+                    <span class="text-xl font-bold text-cyan-400">{{ getWinProbability() }}%</span>
+                  </div>
+                  <!-- Progress Bar -->
+                  <div class="h-3 bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      class="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-500"
+                      [style.width.%]="getWinProbability()"
+                    ></div>
+                  </div>
+                  <!-- Defending Team -->
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-300">{{ getFirstBattingTeamName() }}</span>
+                    <span class="text-xl font-bold text-orange-400">{{ 100 - getWinProbability() }}%</span>
+                  </div>
                 </div>
-                <div class="flex-1">
-                  <div class="font-bold">{{ getFirstBattingTeamName() }}</div>
-                  <div class="text-2xl font-bold text-orange-400">{{ 100 - getWinProbability() }}%</div>
-                </div>
+              </div>
+
+              <!-- Match Info Footer -->
+              <div class="mt-auto bg-gray-900/80 rounded-lg px-3 py-2 text-center">
+                <span class="text-xs text-gray-500">{{ match.format }} Match • {{ getInningsLabel() }}</span>
               </div>
             </div>
           </div>
@@ -1539,35 +1653,50 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     return 450 / maxOvers;
   }
 
+  getOversScaleLarge(): number {
+    const maxOvers = this.match?.format === 'T20' ? 20 : 50;
+    return 530 / maxOvers;
+  }
+
   getFirstInningsData(): { over: number; runs: number }[] {
-    const innings = this.match?.innings?.[0];
-    if (!innings) return [];
-    const totalBalls = innings.totalBalls || 0;
-    const totalRuns = innings.totalRuns || 0;
-    const overs = Math.floor(totalBalls / 6);
-    const points = [];
-    if (overs > 0) {
-      const avgPerOver = totalRuns / overs;
-      for (let i = 1; i <= overs; i++) {
-        points.push({ over: i, runs: Math.min(250, Math.round(avgPerOver * i)) });
-      }
-    }
-    return points;
+    return this.getInningsGraphData(0);
   }
 
   getSecondInningsData(): { over: number; runs: number }[] {
-    const innings = this.match?.innings?.[1];
+    return this.getInningsGraphData(1);
+  }
+
+  getInningsGraphData(inningsIndex: number): { over: number; runs: number }[] {
+    const innings = this.match?.innings?.[inningsIndex];
     if (!innings) return [];
-    const totalBalls = innings.totalBalls || 0;
-    const totalRuns = innings.totalRuns || 0;
-    const overs = Math.floor(totalBalls / 6);
-    const points = [];
-    if (overs > 0) {
-      const avgPerOver = totalRuns / overs;
-      for (let i = 1; i <= overs; i++) {
-        points.push({ over: i, runs: Math.min(250, Math.round(avgPerOver * i)) });
+    
+    const points: { over: number; runs: number }[] = [];
+    let cumulativeRuns = 0;
+    
+    // Use actual over-by-over data if available
+    const overs = innings.overs || [];
+    
+    if (overs.length > 0) {
+      // We have actual over data - use it for accurate graph
+      overs.forEach((over: any, idx: number) => {
+        const overRuns = over.runs || over.balls?.reduce((sum: number, b: any) => sum + (b.runs || 0), 0) || 0;
+        cumulativeRuns += overRuns;
+        points.push({ over: idx + 1, runs: Math.min(250, cumulativeRuns) });
+      });
+    } else {
+      // Fallback: use average (for backwards compatibility)
+      const totalBalls = innings.totalBalls || 0;
+      const totalRuns = innings.totalRuns || 0;
+      const completedOvers = Math.floor(totalBalls / 6);
+      
+      if (completedOvers > 0) {
+        const avgPerOver = totalRuns / completedOvers;
+        for (let i = 1; i <= completedOvers; i++) {
+          points.push({ over: i, runs: Math.min(250, Math.round(avgPerOver * i)) });
+        }
       }
     }
+    
     return points;
   }
 
@@ -1580,6 +1709,18 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   getSecondInningsLinePoints(): string {
     return this.getSecondInningsData()
       .map(p => `${40 + (p.over * this.getOversScale())},${260 - p.runs}`)
+      .join(' ');
+  }
+
+  getFirstInningsLinePointsLarge(): string {
+    return this.getFirstInningsData()
+      .map(p => `${50 + (p.over * this.getOversScaleLarge())},${300 - (p.runs * 1.12)}`)
+      .join(' ');
+  }
+
+  getSecondInningsLinePointsLarge(): string {
+    return this.getSecondInningsData()
+      .map(p => `${50 + (p.over * this.getOversScaleLarge())},${300 - (p.runs * 1.12)}`)
       .join(' ');
   }
 
@@ -1735,5 +1876,68 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     if (!innings) return 0;
     const maxBalls = this.match?.format === 'T20' ? 120 : 300;
     return Math.max(0, maxBalls - (innings.totalBalls || 0));
+  }
+
+  // ==================== PROJECTIONS VIEW HELPERS (NEW LAYOUT) ====================
+
+  getYAxisLabels(): number[] {
+    const maxRuns = this.getMaxRunsForGraph();
+    const step = maxRuns <= 150 ? 25 : maxRuns <= 250 ? 50 : 100;
+    const labels = [];
+    for (let i = 0; i <= maxRuns; i += step) {
+      labels.push(i);
+    }
+    return labels;
+  }
+
+  getMaxRunsForGraph(): number {
+    const firstMax = this.match?.innings?.[0]?.totalRuns || 0;
+    const secondMax = this.match?.innings?.[1]?.totalRuns || 0;
+    const target = this.getTarget();
+    const maxRuns = Math.max(firstMax, secondMax, target, 100);
+    // Round up to nearest 50 for clean axis
+    return Math.ceil(maxRuns / 50) * 50;
+  }
+
+  getXScale(): number {
+    const maxOvers = this.match?.format === 'T20' ? 20 : 50;
+    return 620 / maxOvers;  // Graph width is 620
+  }
+
+  getYScale(): number {
+    const maxRuns = this.getMaxRunsForGraph();
+    return 320 / maxRuns;  // Graph height is 320
+  }
+
+  getFirstInningsLinePointsXL(): string {
+    return this.getFirstInningsData()
+      .map(p => `${60 + (p.over * this.getXScale())},${350 - (p.runs * this.getYScale())}`)
+      .join(' ');
+  }
+
+  getSecondInningsLinePointsXL(): string {
+    return this.getSecondInningsData()
+      .map(p => `${60 + (p.over * this.getXScale())},${350 - (p.runs * this.getYScale())}`)
+      .join(' ');
+  }
+
+  getFirstInningsAreaPoints(): string {
+    const data = this.getFirstInningsData();
+    if (data.length === 0) return '';
+    const baseY = 350;
+    const startX = 60 + (data[0].over * this.getXScale());
+    const endX = 60 + (data[data.length - 1].over * this.getXScale());
+    const linePoints = data.map(p => `${60 + (p.over * this.getXScale())},${350 - (p.runs * this.getYScale())}`).join(' ');
+    return `${startX},${baseY} ${linePoints} ${endX},${baseY}`;
+  }
+
+  getSecondInningsAreaPoints(): string {
+    const data = this.getSecondInningsData();
+    if (data.length === 0) return '';
+    const baseY = 350;
+    const startX = 60 + (data[0].over * this.getXScale());
+    const endX = 60 + (data[data.length - 1].over * this.getXScale());
+    const linePoints = data.map(p => `${60 + (p.over * this.getXScale())},${350 - (p.runs * this.getYScale())}`).join(' ');
+    return `${startX},${baseY} ${linePoints} ${endX},${baseY}`;
   }
 }
