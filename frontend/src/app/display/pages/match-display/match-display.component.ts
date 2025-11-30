@@ -1671,29 +1671,93 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     if (!innings) return [];
     
     const points: { over: number; runs: number }[] = [];
-    let cumulativeRuns = 0;
     
-    // Use actual over-by-over data if available
+    // Get the total completed overs
+    const completedOvers = Math.floor((innings.totalBalls || 0) / 6);
+    const totalRuns = innings.totalRuns || 0;
+    
+    if (completedOvers === 0) return [];
+    
+    // Try to use over-by-over data if available
     const overs = innings.overs || [];
     
-    if (overs.length > 0) {
-      // We have actual over data - use it for accurate graph
-      overs.forEach((over: any, idx: number) => {
-        const overRuns = over.runs || over.balls?.reduce((sum: number, b: any) => sum + (b.runs || 0), 0) || 0;
-        cumulativeRuns += overRuns;
-        points.push({ over: idx + 1, runs: Math.min(250, cumulativeRuns) });
-      });
-    } else {
-      // Fallback: use average (for backwards compatibility)
-      const totalBalls = innings.totalBalls || 0;
-      const totalRuns = innings.totalRuns || 0;
-      const completedOvers = Math.floor(totalBalls / 6);
+    if (overs.length > 0 && overs.length >= completedOvers) {
+      // We have complete over data - use it directly
+      let cumulativeRuns = 0;
       
-      if (completedOvers > 0) {
-        const avgPerOver = totalRuns / completedOvers;
-        for (let i = 1; i <= completedOvers; i++) {
-          points.push({ over: i, runs: Math.min(250, Math.round(avgPerOver * i)) });
+      overs.forEach((over: any, idx: number) => {
+        let overRuns = 0;
+        if (typeof over.runs === 'number' && over.runs > 0) {
+          overRuns = over.runs;
+        } else if (over.balls && over.balls.length > 0) {
+          overRuns = over.balls.reduce((sum: number, ball: any) => sum + (ball.runs || 0), 0);
         }
+        cumulativeRuns += overRuns;
+        points.push({ over: idx + 1, runs: cumulativeRuns });
+      });
+      
+      // Adjust if there's a discrepancy
+      if (points.length > 0 && totalRuns > 0) {
+        const lastPointRuns = points[points.length - 1].runs;
+        if (Math.abs(lastPointRuns - totalRuns) > 2) {
+          const scaleFactor = totalRuns / lastPointRuns;
+          points.forEach(p => {
+            p.runs = Math.round(p.runs * scaleFactor);
+          });
+          points[points.length - 1].runs = totalRuns;
+        }
+      }
+    } else if (overs.length > 0 && overs.length < completedOvers) {
+      // PARTIAL DATA: We have some overs but not all
+      // Use actual data for available overs, then interpolate the rest
+      let cumulativeRuns = 0;
+      
+      // First, add the overs we have data for
+      overs.forEach((over: any, idx: number) => {
+        let overRuns = 0;
+        if (typeof over.runs === 'number' && over.runs > 0) {
+          overRuns = over.runs;
+        } else if (over.balls && over.balls.length > 0) {
+          overRuns = over.balls.reduce((sum: number, ball: any) => sum + (ball.runs || 0), 0);
+        }
+        cumulativeRuns += overRuns;
+        points.push({ over: idx + 1, runs: cumulativeRuns });
+      });
+      
+      // Calculate remaining runs and overs
+      const remainingRuns = totalRuns - cumulativeRuns;
+      const remainingOvers = completedOvers - overs.length;
+      
+      if (remainingOvers > 0 && remainingRuns > 0) {
+        const avgRunsPerRemainingOver = remainingRuns / remainingOvers;
+        
+        // Add interpolated points for the remaining overs
+        for (let i = 1; i <= remainingOvers; i++) {
+          cumulativeRuns += avgRunsPerRemainingOver;
+          points.push({ 
+            over: overs.length + i, 
+            runs: Math.round(cumulativeRuns) 
+          });
+        }
+      }
+      
+      // Ensure last point matches exact total
+      if (points.length > 0) {
+        points[points.length - 1].runs = totalRuns;
+      }
+    } else {
+      // No over data - use pure linear interpolation
+      const runsPerOver = totalRuns / completedOvers;
+      
+      for (let i = 1; i <= completedOvers; i++) {
+        points.push({ 
+          over: i, 
+          runs: Math.round(runsPerOver * i) 
+        });
+      }
+      
+      if (points.length > 0) {
+        points[points.length - 1].runs = totalRuns;
       }
     }
     
