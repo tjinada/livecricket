@@ -465,19 +465,25 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 </div>
               </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">New Batsman</label>
-                <select 
-                  [(ngModel)]="wicketForm.newBatsman"
-                  class="w-full px-3 py-2 border rounded-lg"
-                  required
-                >
-                  <option value="">Select New Batsman</option>
-                  @for (player of getAvailableBatsmen(); track getPlayerId(player)) {
-                    <option [value]="getPlayerId(player)">{{ getSquadPlayerName(player) }}</option>
-                  }
-                </select>
-              </div>
+              @if (!isLastWicket()) {
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">New Batsman</label>
+                  <select 
+                    [(ngModel)]="wicketForm.newBatsman"
+                    class="w-full px-3 py-2 border rounded-lg"
+                    required
+                  >
+                    <option value="">Select New Batsman</option>
+                    @for (player of getAvailableBatsmen(); track getPlayerId(player)) {
+                      <option [value]="getPlayerId(player)">{{ getSquadPlayerName(player) }}</option>
+                    }
+                  </select>
+                </div>
+              } @else {
+                <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p class="text-red-700 text-sm font-medium">This is the final wicket - innings will end.</p>
+                </div>
+              }
 
               @if (wicketError) {
                 <p class="text-red-600 text-sm">{{ wicketError }}</p>
@@ -492,7 +498,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               </button>
               <button 
                 (click)="confirmWicket()"
-                [disabled]="processing || !wicketForm.type || (!wicketForm.newBatsman && (currentInnings?.totalWickets || 0) < 9)"
+                [disabled]="processing || !wicketForm.type || (!wicketForm.newBatsman && !isLastWicket())"
                 class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
               >
                 {{ processing ? 'Recording...' : 'Record Wicket' }}
@@ -1002,6 +1008,10 @@ export class ScoringComponent implements OnInit, OnDestroy {
   }
 
   get needsBowler(): boolean {
+    // Don't need a bowler if innings is complete or match is not live
+    if (this.currentInnings?.status === 'completed' || this.match?.status !== 'live') {
+      return false;
+    }
     return this.currentInnings && !this.currentInnings.currentBowler;
   }
 
@@ -1309,6 +1319,11 @@ export class ScoringComponent implements OnInit, OnDestroy {
     return ['caught', 'run-out', 'stumped'].includes(this.wicketForm.type);
   }
 
+  isLastWicket(): boolean {
+    // It's the last wicket if 9 wickets have already fallen (this will be the 10th)
+    return (this.currentInnings?.totalWickets || 0) >= 9;
+  }
+
   getAvailableBatsmen(): any[] {
     if (!this.currentInnings?.battingStats) return this.battingTeamPlayers;
     const battedPlayerIds = this.currentInnings.battingStats.map((b: any) => {
@@ -1330,7 +1345,7 @@ export class ScoringComponent implements OnInit, OnDestroy {
       this.wicketError = 'Please select fielder';
       return;
     }
-    if (!this.wicketForm.newBatsman && (this.currentInnings?.totalWickets || 0) < 9) {
+    if (!this.wicketForm.newBatsman && !this.isLastWicket()) {
       this.wicketError = 'Please select new batsman';
       return;
     }

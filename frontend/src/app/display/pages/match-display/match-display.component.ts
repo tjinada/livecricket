@@ -244,182 +244,551 @@ import { HttpClient } from '@angular/common/http';
 
           </div>
 
-          <!-- ==================== PLAYER STATS VIEW ==================== -->
-          <div *ngIf="displayView === 'player-stats'" class="p-6 max-w-5xl mx-auto overflow-y-auto">
-            <div class="text-center mb-6">
-              <h1 class="text-2xl font-bold text-blue-400 uppercase tracking-wider">{{ getBattingTeamName() }}</h1>
-              <p class="text-gray-400">{{ match.format }} • {{ getInningsLabel() }}</p>
-            </div>
-
-            <!-- Batting Card -->
-            <div class="bg-gradient-to-r from-blue-900/90 to-blue-800/90 rounded-lg overflow-hidden shadow-xl mb-6 backdrop-blur-sm">
-              <div class="grid grid-cols-12 gap-2 px-4 py-2 bg-blue-950/90 text-xs text-gray-400 uppercase">
-                <div class="col-span-4">Batsman</div>
-                <div class="col-span-3">How Out</div>
-                <div class="col-span-1 text-center">R</div>
-                <div class="col-span-1 text-center">B</div>
-                <div class="col-span-1 text-center">4s</div>
-                <div class="col-span-1 text-center">6s</div>
-                <div class="col-span-1 text-center">SR</div>
-              </div>
-
-              <ng-container *ngFor="let batsman of getBattingStats()">
-                <div 
-                  class="grid grid-cols-12 gap-2 px-4 py-3 border-b border-blue-700/30 hover:bg-blue-800/50 transition-colors"
-                  [ngClass]="{'bg-yellow-900/20': isCurrentBatsman(batsman)}"
-                >
-                  <div class="col-span-4 flex items-center gap-2">
-                    <span *ngIf="isStriker(batsman)" class="text-yellow-400 text-xs">*</span>
-                    <span class="font-semibold" [ngClass]="{'text-yellow-300': isCurrentBatsman(batsman)}">
-                      {{ getBatsmanName(batsman) }}
-                    </span>
-                  </div>
-                  <div class="col-span-3 text-sm text-gray-400">{{ getHowOut(batsman) }}</div>
-                  <div class="col-span-1 text-center font-bold text-lg">{{ batsman.runs || 0 }}</div>
-                  <div class="col-span-1 text-center text-gray-400">{{ batsman.balls || 0 }}</div>
-                  <div class="col-span-1 text-center text-green-400">{{ batsman.fours || 0 }}</div>
-                  <div class="col-span-1 text-center text-purple-400">{{ batsman.sixes || 0 }}</div>
-                  <div class="col-span-1 text-center text-gray-300">{{ getStrikeRate(batsman) }}</div>
-                </div>
-              </ng-container>
-
-              <div *ngIf="getYetToBat().length > 0" class="px-4 py-2 text-gray-500 text-sm">
-                Yet to bat: {{ getYetToBat().join(', ') }}
-              </div>
-
-              <div class="px-4 py-3 bg-blue-950/50">
-                <div class="flex justify-between items-center text-sm">
-                  <div class="text-gray-400">
-                    EXTRAS <span class="text-white ml-2">{{ getTotalExtras() }}</span>
-                    <span class="text-gray-500 ml-2">({{ getExtrasBreakdown() }})</span>
-                  </div>
-                  <div class="text-gray-400">OVERS <span class="text-white ml-2">{{ getOversDisplay() }}</span></div>
-                </div>
-                <div class="flex justify-between items-center mt-2">
-                  <div class="text-xl font-bold">TOTAL</div>
-                  <div class="text-3xl font-bold">{{ currentInnings?.totalRuns || 0 }}/{{ currentInnings?.totalWickets || 0 }}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Bowling Card -->
-            <div class="bg-gradient-to-r from-gray-800/90 to-gray-700/90 rounded-lg overflow-hidden shadow-xl backdrop-blur-sm">
-              <div class="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-900/90 text-xs text-gray-400 uppercase">
-                <div class="col-span-4">Bowler</div>
-                <div class="col-span-1 text-center">O</div>
-                <div class="col-span-1 text-center">M</div>
-                <div class="col-span-2 text-center">R</div>
-                <div class="col-span-2 text-center">W</div>
-                <div class="col-span-2 text-center">Econ</div>
-              </div>
-
-              <ng-container *ngFor="let bowler of getBowlingStats()">
-                <div 
-                  class="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-600/30 hover:bg-gray-600/50 transition-colors"
-                  [ngClass]="{'bg-green-900/20': isCurrentBowler(bowler)}"
-                >
-                  <div class="col-span-4 font-semibold" [ngClass]="{'text-green-300': isCurrentBowler(bowler)}">
-                    {{ getBowlerName(bowler) }}
-                    <span *ngIf="isCurrentBowler(bowler)" class="text-green-400 text-xs ml-1">*</span>
-                  </div>
-                  <div class="col-span-1 text-center">{{ getBowlerOversDisplay(bowler) }}</div>
-                  <div class="col-span-1 text-center text-gray-400">{{ bowler.maidens || 0 }}</div>
-                  <div class="col-span-2 text-center">{{ bowler.runs || 0 }}</div>
-                  <div class="col-span-2 text-center font-bold text-green-400">{{ bowler.wickets || 0 }}</div>
-                  <div class="col-span-2 text-center text-gray-300">{{ getBowlerEconomy(bowler) }}</div>
-                </div>
-              </ng-container>
-            </div>
-
-            <!-- Fall of Wickets -->
-            <div *ngIf="getFallOfWickets().length > 0" class="mt-6 bg-gray-800/50 rounded-lg p-4 backdrop-blur-sm">
-              <h3 class="text-sm text-gray-400 uppercase mb-2">Fall of Wickets</h3>
-              <div class="flex flex-wrap gap-4 text-sm">
-                <span *ngFor="let fow of getFallOfWickets()" class="text-gray-300">
-                  {{ fow.wicketNumber }}-{{ fow.runs }} ({{ getFOWPlayerName(fow) }}, {{ fow.overs }})
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- ==================== MATCH SUMMARY VIEW ==================== -->
-          <div *ngIf="displayView === 'overall-summary'" class="p-6 max-w-5xl mx-auto overflow-y-auto">
-            <div class="bg-gradient-to-r from-blue-600/90 to-blue-800/90 rounded-t-lg px-6 py-4 backdrop-blur-sm">
-              <h1 class="text-xl font-bold uppercase tracking-wider">Match Summary</h1>
-              <p class="text-blue-200 text-sm">{{ match.team1?.name }} vs {{ match.team2?.name }} • {{ match.format }}</p>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-0">
-              <ng-container *ngFor="let innings of match.innings; let idx = index">
-                <div 
-                  class="bg-gradient-to-b from-gray-800/90 to-gray-900/90 p-4 backdrop-blur-sm"
-                  [ngClass]="{'border-r border-gray-700': idx === 0}"
-                >
-                  <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-7 bg-blue-600 rounded flex items-center justify-center text-xs font-bold">
-                        {{ getTeamCode(innings.battingTeam) }}
-                      </div>
-                      <div>
-                        <div class="font-bold text-lg">{{ getTeamName(innings.battingTeam) }}</div>
-                        <div class="text-gray-400 text-xs uppercase">{{ idx === 0 ? '1st' : '2nd' }} Innings</div>
-                      </div>
+          <!-- ==================== PLAYER STATS VIEW (Card-Based Grid) ==================== -->
+          <div *ngIf="displayView === 'player-stats'" class="h-full flex flex-col">
+            
+            <!-- Top Header Bar with Score -->
+            <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
+              <div class="max-w-7xl mx-auto px-4 py-2">
+                <div class="flex items-center justify-between">
+                  <!-- Left: Live Badge + Match Info -->
+                  <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 bg-red-600 px-2 py-0.5 rounded-full">
+                      <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                      <span class="text-xs font-bold uppercase">Live</span>
                     </div>
-                    <div class="text-right">
-                      <div class="text-3xl font-bold">{{ innings.totalRuns || 0 }}</div>
-                      <div class="text-gray-400 text-sm">{{ innings.totalWickets || 0 }} wkts, {{ getInningsOvers(innings) }} ov</div>
+                    <div>
+                      <span class="text-blue-400 font-semibold">{{ getBattingTeamName() }}</span>
+                      <span class="text-gray-500 mx-1">vs</span>
+                      <span class="text-gray-400">{{ getBowlingTeamName() }}</span>
                     </div>
                   </div>
+                  
+                  <!-- Center: Big Score -->
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-7 bg-gradient-to-br from-blue-600 to-blue-800 rounded flex items-center justify-center text-xs font-bold">
+                      {{ getBattingTeamCode() }}
+                    </div>
+                    <div class="text-3xl font-black">{{ currentInnings?.totalRuns || 0 }}/{{ currentInnings?.totalWickets || 0 }}</div>
+                    <div class="text-gray-400 text-sm">({{ getOversDisplay() }} ov)</div>
+                    <div class="text-green-400 text-sm ml-2">CRR {{ getCurrentRunRate() }}</div>
+                  </div>
+                  
+                  <!-- Right: Format -->
+                  <div class="bg-gray-700/50 px-3 py-1 rounded text-xs font-medium">
+                    {{ match.format }} • {{ getInningsLabel() }}
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                  <div class="space-y-2 mb-4">
-                    <ng-container *ngFor="let batsman of getTopBatsmen(innings, 3)">
-                      <div class="flex justify-between items-center text-sm bg-gray-700/30 rounded px-3 py-2">
-                        <div class="flex-1">
-                          <span class="font-medium">{{ getBatsmanName(batsman) }}</span>
-                          <span *ngIf="batsman.isOut" class="text-gray-500 ml-2 text-xs">{{ getShortHowOut(batsman) }}</span>
-                          <span *ngIf="!batsman.isOut && (batsman.isNotOut || isCurrentBatsman(batsman))" class="text-yellow-400 ml-2 text-xs">*</span>
-                        </div>
+            <!-- Main Content - Two Column Grid -->
+            <div class="flex-1 p-4 max-w-7xl mx-auto w-full">
+              <div class="h-full grid grid-cols-2 gap-4">
+                
+                <!-- LEFT COLUMN: Batting -->
+                <div class="flex flex-col bg-gradient-to-b from-blue-900/80 to-blue-950/80 rounded-lg backdrop-blur-sm overflow-hidden">
+                  
+                  <!-- At the Crease Card -->
+                  <div class="bg-yellow-900/30 border-b border-yellow-600/30 px-3 py-2">
+                    <div class="text-xs text-yellow-400 uppercase tracking-wider mb-1">At The Crease</div>
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-4">
+                        <!-- Striker -->
                         <div class="flex items-center gap-2">
-                          <span class="font-bold text-lg">{{ batsman.runs }}</span>
-                          <span class="text-gray-500 text-xs">{{ batsman.balls }}b</span>
+                          <span class="text-yellow-400">●</span>
+                          <span class="font-semibold">{{ getStrikerName() }}</span>
+                          <span class="text-white font-bold">{{ getStrikerRuns() }}</span>
+                          <span class="text-gray-400 text-sm">({{ getStrikerBalls() }})</span>
+                        </div>
+                        <div class="w-px h-4 bg-gray-600"></div>
+                        <!-- Non-Striker -->
+                        <div class="flex items-center gap-2">
+                          <span class="text-gray-500">○</span>
+                          <span class="text-gray-300">{{ getNonStrikerName() }}</span>
+                          <span class="text-gray-300">{{ getNonStrikerRuns() }}</span>
+                          <span class="text-gray-500 text-sm">({{ getNonStrikerBalls() }})</span>
+                        </div>
+                      </div>
+                      <div class="text-xs text-gray-400">
+                        P'ship: <span class="text-white">{{ getPartnershipRuns() }}</span> ({{ getPartnershipBalls() }})
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Batting Header -->
+                  <div class="grid grid-cols-12 gap-1 px-3 py-1.5 bg-blue-950/80 text-xs text-gray-400 uppercase">
+                    <div class="col-span-5">Batsman</div>
+                    <div class="col-span-3">How Out</div>
+                    <div class="col-span-2 text-center">R(B)</div>
+                    <div class="col-span-2 text-center">4/6</div>
+                  </div>
+                  
+                  <!-- Batting Rows -->
+                  <div class="flex-1 overflow-hidden">
+                    <ng-container *ngFor="let batsman of getBattingStats()">
+                      <div 
+                        class="grid grid-cols-12 gap-1 px-3 py-1.5 border-b border-blue-800/30 text-sm"
+                        [ngClass]="{'bg-yellow-900/20': isCurrentBatsman(batsman)}"
+                      >
+                        <div class="col-span-5 flex items-center gap-1 truncate">
+                          <span *ngIf="isStriker(batsman)" class="text-yellow-400 text-xs">●</span>
+                          <span *ngIf="isCurrentBatsman(batsman) && !isStriker(batsman)" class="text-gray-500 text-xs">○</span>
+                          <span class="truncate" [ngClass]="{'text-yellow-300 font-semibold': isCurrentBatsman(batsman)}">
+                            {{ getBatsmanName(batsman) }}
+                          </span>
+                        </div>
+                        <div class="col-span-3 text-gray-400 text-xs truncate">{{ getShortDismissal(batsman) }}</div>
+                        <div class="col-span-2 text-center">
+                          <span class="font-bold">{{ batsman.runs || 0 }}</span>
+                          <span class="text-gray-500 text-xs">({{ batsman.balls || 0 }})</span>
+                        </div>
+                        <div class="col-span-2 text-center text-xs">
+                          <span class="text-green-400">{{ batsman.fours || 0 }}</span>
+                          <span class="text-gray-600">/</span>
+                          <span class="text-purple-400">{{ batsman.sixes || 0 }}</span>
                         </div>
                       </div>
                     </ng-container>
                   </div>
+                  
+                  <!-- Extras & Total -->
+                  <div class="bg-blue-950/80 px-3 py-2 border-t border-blue-800/50">
+                    <div class="flex justify-between items-center text-xs text-gray-400 mb-1">
+                      <span>Extras: <span class="text-white">{{ getTotalExtras() }}</span> ({{ getExtrasBreakdown() }})</span>
+                      <span>YTB: {{ getYetToBatCount() }}</span>
+                    </div>
+                  </div>
+                </div>
 
-                  <div class="border-t border-gray-700 pt-4">
-                    <div class="text-xs text-gray-500 uppercase mb-2">Bowling</div>
+                <!-- RIGHT COLUMN: Bowling + Stats -->
+                <div class="flex flex-col gap-3">
+                  
+                  <!-- Bowling Card -->
+                  <div class="flex-1 bg-gradient-to-b from-gray-800/80 to-gray-900/80 rounded-lg backdrop-blur-sm overflow-hidden flex flex-col">
+                    
+                    <!-- Bowling Now -->
+                    <div class="bg-green-900/30 border-b border-green-700/30 px-3 py-2">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <span class="text-xs text-green-400 uppercase">Bowling</span>
+                          <span class="font-semibold text-green-300">{{ getCurrentBowlerName() }}</span>
+                          <span class="text-white">{{ getCurrentBowlerFigures() }}</span>
+                          <span class="text-gray-400 text-sm">({{ getCurrentBowlerOvers() }})</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                          <span class="text-xs text-gray-500">This Over:</span>
+                          <ng-container *ngFor="let ball of getCurrentOverBalls()">
+                            <div 
+                              class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+                              [ngClass]="getBallColorClass(ball)"
+                            >{{ ball.display === '0' ? '•' : ball.display }}</div>
+                          </ng-container>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Bowling Header -->
+                    <div class="grid grid-cols-12 gap-1 px-3 py-1.5 bg-gray-900/80 text-xs text-gray-400 uppercase">
+                      <div class="col-span-5">Bowler</div>
+                      <div class="col-span-2 text-center">O</div>
+                      <div class="col-span-2 text-center">R</div>
+                      <div class="col-span-1 text-center">W</div>
+                      <div class="col-span-2 text-center">Econ</div>
+                    </div>
+                    
+                    <!-- Bowling Rows -->
+                    <div class="flex-1 overflow-hidden">
+                      <ng-container *ngFor="let bowler of getBowlingStats()">
+                        <div 
+                          class="grid grid-cols-12 gap-1 px-3 py-1.5 border-b border-gray-700/30 text-sm"
+                          [ngClass]="{'bg-green-900/20': isCurrentBowler(bowler)}"
+                        >
+                          <div class="col-span-5 truncate" [ngClass]="{'text-green-300 font-semibold': isCurrentBowler(bowler)}">
+                            <span *ngIf="isCurrentBowler(bowler)" class="text-green-400 mr-1">*</span>
+                            {{ getBowlerName(bowler) }}
+                            <span *ngIf="getBestBowler()?.player === bowler.player" class="text-yellow-400 ml-1">🎯</span>
+                          </div>
+                          <div class="col-span-2 text-center">{{ getBowlerOversDisplay(bowler) }}</div>
+                          <div class="col-span-2 text-center">{{ bowler.runs || 0 }}</div>
+                          <div class="col-span-1 text-center font-bold text-green-400">{{ bowler.wickets || 0 }}</div>
+                          <div class="col-span-2 text-center text-gray-300">{{ getBowlerEconomy(bowler) }}</div>
+                        </div>
+                      </ng-container>
+                    </div>
+                  </div>
+                  
+                  <!-- Stats Cards Row -->
+                  <div class="grid grid-cols-4 gap-2">
+                    <div class="bg-gray-800/80 rounded-lg p-2 text-center backdrop-blur-sm">
+                      <div class="text-green-400 text-xl font-bold">{{ getTotalFours() }}</div>
+                      <div class="text-gray-500 text-xs uppercase">Fours</div>
+                    </div>
+                    <div class="bg-gray-800/80 rounded-lg p-2 text-center backdrop-blur-sm">
+                      <div class="text-purple-400 text-xl font-bold">{{ getTotalSixes() }}</div>
+                      <div class="text-gray-500 text-xs uppercase">Sixes</div>
+                    </div>
+                    <div class="bg-gray-800/80 rounded-lg p-2 text-center backdrop-blur-sm">
+                      <div class="text-gray-300 text-xl font-bold">{{ getDotBallsPercentage() }}%</div>
+                      <div class="text-gray-500 text-xs uppercase">Dots</div>
+                    </div>
+                    <div class="bg-gray-800/80 rounded-lg p-2 text-center backdrop-blur-sm">
+                      <div class="text-yellow-400 text-xl font-bold">{{ getTotalExtras() }}</div>
+                      <div class="text-gray-500 text-xs uppercase">Extras</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Fall of Wickets -->
+                  <div *ngIf="getFallOfWickets().length > 0" class="bg-gray-800/60 rounded-lg px-3 py-2 backdrop-blur-sm">
+                    <div class="text-xs text-gray-500 uppercase mb-1">Fall of Wickets</div>
+                    <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                      <span *ngFor="let fow of getFallOfWickets()" class="text-gray-300">
+                        {{ fow.wicketNumber }}-{{ fow.runs }}
+                        <span class="text-gray-500">({{ getShortPlayerName(fow.player) }})</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom Bar (if chasing) -->
+            <div *ngIf="match.currentInnings === 1" class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-t border-gray-700/50">
+              <div class="max-w-7xl mx-auto px-4 py-2">
+                <div class="flex items-center justify-center gap-6 text-sm">
+                  <span class="text-gray-400">Target: <span class="text-white font-bold">{{ getTarget() }}</span></span>
+                  <span class="text-gray-400">Need: <span class="text-yellow-400 font-bold">{{ getRunsNeeded() }}</span> from <span class="text-yellow-400 font-bold">{{ getBallsRemaining() }}</span> balls</span>
+                  <span class="text-gray-400">RRR: <span class="text-orange-400 font-bold">{{ getRequiredRunRate() }}</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ==================== MATCH SUMMARY VIEW (Context-Aware) ==================== -->
+          <div *ngIf="displayView === 'overall-summary'" class="h-full flex flex-col">
+            
+            <!-- Top Header Bar -->
+            <div class="bg-gradient-to-r from-blue-600/95 to-blue-800/95 backdrop-blur-sm border-b border-blue-500/30">
+              <div class="max-w-6xl mx-auto px-6 py-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h1 class="text-xl font-bold uppercase tracking-wider">Match Summary</h1>
+                    <p class="text-blue-200 text-sm">{{ match.team1?.name }} vs {{ match.team2?.name }} • {{ match.format }}</p>
+                  </div>
+                  <div class="bg-blue-900/50 px-3 py-1 rounded text-sm">
+                    {{ match.status === 'completed' ? 'Completed' : 'In Progress' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ===== STATE 1: First Innings In Progress ===== -->
+            <div *ngIf="match.status !== 'completed' && match.currentInnings === 0" class="flex-1 flex flex-col justify-center px-6 py-4">
+              <div class="max-w-3xl mx-auto w-full">
+                
+                <!-- Centered Team Score -->
+                <div class="text-center mb-8">
+                  <div class="flex items-center justify-center gap-4 mb-4">
+                    <div class="w-16 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center text-xl font-bold shadow-lg">
+                      {{ getTeamCode(match.innings[0]?.battingTeam) }}
+                    </div>
+                    <span class="text-2xl font-light text-gray-300">{{ getTeamName(match.innings[0]?.battingTeam) }}</span>
+                    <span class="text-xs text-gray-500 uppercase bg-gray-700/50 px-2 py-1 rounded">Batting</span>
+                  </div>
+                  <div class="text-7xl font-black mb-2">{{ match.innings[0]?.totalRuns || 0 }}/{{ match.innings[0]?.totalWickets || 0 }}</div>
+                  <div class="text-xl text-gray-400">({{ getInningsOvers(match.innings[0]) }} overs)</div>
+                  <div class="text-lg text-cyan-400 mt-2">CRR: {{ getSummaryRunRate(0) }}</div>
+                </div>
+
+                <!-- Two Column: Top Batsmen & Top Bowlers -->
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                  <!-- Top Batsmen -->
+                  <div class="bg-gray-800/60 rounded-lg p-4 backdrop-blur-sm">
+                    <div class="text-xs text-gray-500 uppercase mb-3">Top Batsmen</div>
                     <div class="space-y-2">
-                      <ng-container *ngFor="let bowler of getTopBowlersForInnings(idx, 3)">
-                        <div class="flex justify-between items-center text-sm">
-                          <span class="text-gray-300">{{ getBowlerName(bowler) }}</span>
-                          <span class="text-gray-400">{{ bowler.wickets }}-{{ bowler.runs }} ({{ getBowlerOversDisplay(bowler) }})</span>
+                      <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[0], 3)">
+                        <div class="flex justify-between items-center">
+                          <div class="flex items-center gap-2">
+                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 0)" class="text-yellow-400">🏏</span>
+                            <span class="font-medium">{{ getShortPlayerName(batsman.player) }}</span>
+                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 0)" class="text-yellow-400 text-xs">*</span>
+                          </div>
+                          <div class="flex items-center gap-2">
+                            <span class="font-bold text-xl">{{ batsman.runs }}</span>
+                            <span class="text-gray-500 text-sm">({{ batsman.balls }})</span>
+                          </div>
+                        </div>
+                      </ng-container>
+                    </div>
+                  </div>
+                  
+                  <!-- Top Bowlers -->
+                  <div class="bg-gray-800/60 rounded-lg p-4 backdrop-blur-sm">
+                    <div class="text-xs text-gray-500 uppercase mb-3">Top Bowlers</div>
+                    <div class="space-y-2">
+                      <ng-container *ngFor="let bowler of getSummaryBowlers(0, 3)">
+                        <div class="flex justify-between items-center">
+                          <span class="font-medium">{{ getShortPlayerName(bowler.player) }}</span>
+                          <span class="text-gray-300">{{ bowler.wickets }}-{{ bowler.runs }} ({{ getBowlerOversDisplay(bowler) }})</span>
                         </div>
                       </ng-container>
                     </div>
                   </div>
                 </div>
-              </ng-container>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-5 gap-3 mb-6">
+                  <div class="bg-gray-800/60 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div class="text-green-400 text-2xl font-bold">{{ getSummaryFours(0) }}</div>
+                    <div class="text-gray-500 text-xs uppercase">Fours</div>
+                  </div>
+                  <div class="bg-gray-800/60 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div class="text-purple-400 text-2xl font-bold">{{ getSummarySixes(0) }}</div>
+                    <div class="text-gray-500 text-xs uppercase">Sixes</div>
+                  </div>
+                  <div class="bg-gray-800/60 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div class="text-yellow-400 text-2xl font-bold">{{ getSummaryExtras(0) }}</div>
+                    <div class="text-gray-500 text-xs uppercase">Extras</div>
+                  </div>
+                  <div class="bg-gray-800/60 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div class="text-cyan-400 text-2xl font-bold">{{ getSummaryRunRate(0) }}</div>
+                    <div class="text-gray-500 text-xs uppercase">Run Rate</div>
+                  </div>
+                  <div class="bg-gray-800/60 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div class="text-gray-300 text-2xl font-bold">{{ getSummaryBallsRemaining(0) }}</div>
+                    <div class="text-gray-500 text-xs uppercase">Balls Left</div>
+                  </div>
+                </div>
+
+                <!-- Bottom Status -->
+                <div class="bg-gray-800/40 rounded-lg px-6 py-4 text-center backdrop-blur-sm">
+                  <span class="text-gray-400">{{ getTeamName(match.innings[0]?.bowlingTeam) }}</span>
+                  <span class="text-gray-500"> to bat next</span>
+                </div>
+              </div>
             </div>
 
-            <div class="bg-gradient-to-r from-gray-700/90 to-gray-800/90 rounded-b-lg px-6 py-4 backdrop-blur-sm">
-              <div *ngIf="match.status === 'completed' && match.result" class="text-center text-lg font-semibold">
-                <span *ngIf="match.result.winner" class="text-green-400">{{ getTeamName(match.result.winner) }}</span>
-                <span *ngIf="match.result.winner" class="text-gray-300"> won by {{ match.result.winMargin }}</span>
-                <span *ngIf="!match.result.winner" class="text-yellow-400">{{ match.result.winMargin }}</span>
-              </div>
-              <div *ngIf="match.status !== 'completed' && match.currentInnings === 1" class="text-center">
-                <span class="text-cyan-400">{{ getSecondBattingTeamName() }}</span>
-                <span class="text-gray-300"> need </span>
-                <span class="text-yellow-400 font-bold">{{ getRunsNeeded() }}</span>
-                <span class="text-gray-300"> runs from </span>
-                <span class="text-yellow-400 font-bold">{{ getBallsRemaining() }}</span>
-                <span class="text-gray-300"> balls</span>
-              </div>
-              <div *ngIf="match.status !== 'completed' && match.currentInnings !== 1" class="text-center text-gray-400">
-                {{ getBattingTeamName() }} batting
+            <!-- ===== STATE 2: Second Innings In Progress (The Chase) ===== -->
+            <div *ngIf="match.status !== 'completed' && match.currentInnings === 1" class="flex-1 flex flex-col justify-center px-6 py-4">
+              <div class="max-w-5xl mx-auto w-full">
+                
+                <!-- Two Innings Side by Side -->
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                  
+                  <!-- 1st Innings (Completed) -->
+                  <div class="bg-gray-800/60 rounded-lg p-5 backdrop-blur-sm">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center gap-3">
+                        <div class="w-12 h-9 bg-gradient-to-br from-gray-600 to-gray-700 rounded flex items-center justify-center text-sm font-bold">
+                          {{ getTeamCode(match.innings[0]?.battingTeam) }}
+                        </div>
+                        <div>
+                          <div class="font-bold">{{ getTeamName(match.innings[0]?.battingTeam) }}</div>
+                          <div class="text-gray-500 text-xs uppercase">1st Innings</div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-3xl font-bold">{{ match.innings[0]?.totalRuns || 0 }}/{{ match.innings[0]?.totalWickets || 0 }}</div>
+                        <div class="text-gray-500 text-sm">({{ getInningsOvers(match.innings[0]) }} ov)</div>
+                      </div>
+                    </div>
+                    <div class="space-y-1">
+                      <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[0], 3)">
+                        <div class="flex justify-between items-center text-sm">
+                          <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                          <span><span class="font-bold">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
+                        </div>
+                      </ng-container>
+                    </div>
+                  </div>
+
+                  <!-- 2nd Innings (In Progress) -->
+                  <div class="bg-gradient-to-br from-blue-900/60 to-blue-950/60 rounded-lg p-5 backdrop-blur-sm border border-blue-700/30">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center gap-3">
+                        <div class="w-12 h-9 bg-gradient-to-br from-blue-600 to-blue-800 rounded flex items-center justify-center text-sm font-bold">
+                          {{ getTeamCode(match.innings[1]?.battingTeam) }}
+                        </div>
+                        <div>
+                          <div class="font-bold text-blue-300">{{ getTeamName(match.innings[1]?.battingTeam) }}</div>
+                          <div class="text-blue-400 text-xs uppercase">2nd Innings • Batting</div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-3xl font-bold text-white">{{ match.innings[1]?.totalRuns || 0 }}/{{ match.innings[1]?.totalWickets || 0 }}</div>
+                        <div class="text-blue-400 text-sm">({{ getInningsOvers(match.innings[1]) }} ov)</div>
+                      </div>
+                    </div>
+                    <div class="space-y-1">
+                      <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[1], 3)">
+                        <div class="flex justify-between items-center text-sm">
+                          <div class="flex items-center gap-1">
+                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 1)" class="text-yellow-400 text-xs">🏏</span>
+                            <span class="text-gray-200">{{ getShortPlayerName(batsman.player) }}</span>
+                          </div>
+                          <span><span class="font-bold">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
+                        </div>
+                      </ng-container>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Win Probability Bar -->
+                <div class="bg-gray-800/60 rounded-lg p-4 mb-4 backdrop-blur-sm">
+                  <div class="flex items-center gap-4">
+                    <div class="text-right w-32">
+                      <div class="font-semibold text-sm">{{ getTeamName(match.innings[1]?.battingTeam) }}</div>
+                      <div class="text-xl font-bold text-cyan-400">{{ getWinProbability() }}%</div>
+                    </div>
+                    <div class="flex-1 h-3 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        class="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-500"
+                        [style.width.%]="getWinProbability()"
+                      ></div>
+                    </div>
+                    <div class="w-32">
+                      <div class="font-semibold text-sm">{{ getTeamName(match.innings[0]?.battingTeam) }}</div>
+                      <div class="text-xl font-bold text-orange-400">{{ 100 - getWinProbability() }}%</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Chase Equation -->
+                <div class="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg px-6 py-4 text-center backdrop-blur-sm border border-yellow-700/30">
+                  <div class="text-2xl font-bold">
+                    <span class="text-gray-300">{{ getTeamName(match.innings[1]?.battingTeam) }} need </span>
+                    <span class="text-yellow-400">{{ getRunsNeeded() }}</span>
+                    <span class="text-gray-300"> runs from </span>
+                    <span class="text-yellow-400">{{ getBallsRemaining() }}</span>
+                    <span class="text-gray-300"> balls</span>
+                  </div>
+                  <div class="text-gray-400 mt-2">
+                    Required Rate: <span class="text-orange-400 font-bold">{{ getRequiredRunRate() }}</span> • 
+                    Current Rate: <span class="text-cyan-400 font-bold">{{ getSummaryRunRate(1) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <!-- ===== STATE 3: Match Completed ===== -->
+            <div *ngIf="match.status === 'completed'" class="flex-1 flex flex-col justify-center px-6 py-4">
+              <div class="max-w-5xl mx-auto w-full">
+                
+                <!-- Result Banner -->
+                <div class="bg-gradient-to-r from-blue-900/60 to-blue-800/60 rounded-lg px-6 py-5 mb-6 text-center backdrop-blur-sm border border-blue-700/30">
+                  <div class="text-2xl font-bold">
+                    <span *ngIf="match.result?.winner" class="text-white">{{ getTeamName(match.result.winner) }}</span>
+                    <span *ngIf="match.result?.winner" class="text-blue-300"> won by {{ match.result.winMargin }}</span>
+                    <span *ngIf="!match.result?.winner" class="text-yellow-400">{{ match.result?.winMargin || 'Match Tied' }}</span>
+                  </div>
+                </div>
+
+                <!-- Two Innings Side by Side -->
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                  
+                  <!-- 1st Innings -->
+                  <div class="bg-gray-800/60 rounded-lg p-5 backdrop-blur-sm">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center gap-3">
+                        <div class="w-12 h-9 bg-gradient-to-br from-gray-600 to-gray-700 rounded flex items-center justify-center text-sm font-bold">
+                          {{ getTeamCode(match.innings[0]?.battingTeam) }}
+                        </div>
+                        <div>
+                          <div class="font-bold">{{ getTeamName(match.innings[0]?.battingTeam) }}</div>
+                          <div class="text-gray-500 text-xs uppercase">1st Innings</div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-3xl font-bold">{{ match.innings[0]?.totalRuns || 0 }}/{{ match.innings[0]?.totalWickets || 0 }}</div>
+                        <div class="text-gray-500 text-sm">({{ getInningsOvers(match.innings[0]) }} ov)</div>
+                      </div>
+                    </div>
+                    <div class="space-y-1 mb-3">
+                      <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[0], 3)">
+                        <div class="flex justify-between items-center text-sm">
+                          <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                          <span><span class="font-bold">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
+                        </div>
+                      </ng-container>
+                    </div>
+                    <div class="border-t border-gray-700 pt-3">
+                      <div class="text-xs text-gray-500 uppercase mb-1">Best Bowler</div>
+                      <div *ngIf="getSummaryBowlers(0, 1)[0] as bowler" class="flex justify-between items-center text-sm">
+                        <span class="text-gray-300">{{ getShortPlayerName(bowler.player) }}</span>
+                        <span class="text-cyan-400 font-semibold">{{ bowler.wickets }}-{{ bowler.runs }} ({{ getBowlerOversDisplay(bowler) }})</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 2nd Innings -->
+                  <div class="bg-gray-800/60 rounded-lg p-5 backdrop-blur-sm">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center gap-3">
+                        <div class="w-12 h-9 bg-gradient-to-br from-gray-600 to-gray-700 rounded flex items-center justify-center text-sm font-bold">
+                          {{ getTeamCode(match.innings[1]?.battingTeam) }}
+                        </div>
+                        <div>
+                          <div class="font-bold">{{ getTeamName(match.innings[1]?.battingTeam) }}</div>
+                          <div class="text-gray-500 text-xs uppercase">2nd Innings</div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-3xl font-bold">{{ match.innings[1]?.totalRuns || 0 }}/{{ match.innings[1]?.totalWickets || 0 }}</div>
+                        <div class="text-gray-500 text-sm">({{ getInningsOvers(match.innings[1]) }} ov)</div>
+                      </div>
+                    </div>
+                    <div class="space-y-1 mb-3">
+                      <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[1], 3)">
+                        <div class="flex justify-between items-center text-sm">
+                          <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                          <span><span class="font-bold">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
+                        </div>
+                      </ng-container>
+                    </div>
+                    <div class="border-t border-gray-700 pt-3">
+                      <div class="text-xs text-gray-500 uppercase mb-1">Best Bowler</div>
+                      <div *ngIf="getSummaryBowlers(1, 1)[0] as bowler" class="flex justify-between items-center text-sm">
+                        <span class="text-gray-300">{{ getShortPlayerName(bowler.player) }}</span>
+                        <span class="text-cyan-400 font-semibold">{{ bowler.wickets }}-{{ bowler.runs }} ({{ getBowlerOversDisplay(bowler) }})</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Stats Comparison -->
+                <div class="grid grid-cols-4 gap-3">
+                  <div class="bg-gray-800/60 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div class="flex justify-center gap-4">
+                      <span class="text-gray-400">{{ getSummaryFours(0) }}</span>
+                      <span class="text-green-400 font-bold">4s</span>
+                      <span class="text-gray-400">{{ getSummaryFours(1) }}</span>
+                    </div>
+                  </div>
+                  <div class="bg-gray-800/60 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div class="flex justify-center gap-4">
+                      <span class="text-gray-400">{{ getSummarySixes(0) }}</span>
+                      <span class="text-purple-400 font-bold">6s</span>
+                      <span class="text-gray-400">{{ getSummarySixes(1) }}</span>
+                    </div>
+                  </div>
+                  <div class="bg-gray-800/60 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div class="flex justify-center gap-4">
+                      <span class="text-gray-400">{{ getSummaryExtras(0) }}</span>
+                      <span class="text-yellow-400 font-bold">Ext</span>
+                      <span class="text-gray-400">{{ getSummaryExtras(1) }}</span>
+                    </div>
+                  </div>
+                  <div class="bg-gray-800/60 rounded-lg p-3 text-center backdrop-blur-sm">
+                    <div class="flex justify-center gap-4">
+                      <span class="text-gray-400">{{ getSummaryRunRate(0) }}</span>
+                      <span class="text-cyan-400 font-bold">RR</span>
+                      <span class="text-gray-400">{{ getSummaryRunRate(1) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- ==================== PROJECTIONS VIEW ==================== -->
@@ -1242,5 +1611,129 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     const ballsFactor = ballsRemaining / maxBalls;
     probability = probability * (0.6 + ballsFactor * 0.4);
     return Math.max(5, Math.min(95, Math.round(probability)));
+  }
+
+  // ==================== NEW PLAYER STATS VIEW HELPERS ====================
+
+  getShortDismissal(batsman: any): string {
+    if (!batsman.isOut) {
+      if (batsman.isNotOut || this.isCurrentBatsman(batsman)) return 'not out';
+      return '';
+    }
+    const d = batsman.dismissal;
+    if (!d?.type) return 'out';
+    const bowlerName = this.getPlayerName(d.bowler)?.split(' ').pop() || '';
+    switch (d.type) {
+      case 'bowled': return `b ${bowlerName}`;
+      case 'caught': return `c b ${bowlerName}`;
+      case 'lbw': return `lbw ${bowlerName}`;
+      case 'run-out': return 'run out';
+      case 'stumped': return `st b ${bowlerName}`;
+      case 'hit-wicket': return 'hit wkt';
+      default: return 'out';
+    }
+  }
+
+  getShortPlayerName(player: any): string {
+    const name = this.getPlayerName(player);
+    return name?.split(' ').pop() || 'Unknown';
+  }
+
+  getYetToBatCount(): number {
+    return this.getYetToBat().length;
+  }
+
+  getCurrentBowlerOvers(): string {
+    const bowlerId = this.currentInnings?.currentBowler?._id || this.currentInnings?.currentBowler;
+    const stats = this.currentInnings?.bowlingStats?.find((b: any) => {
+      const id = b.player?._id || b.player;
+      return id === bowlerId || id?.toString() === bowlerId?.toString();
+    });
+    if (!stats) return '0.0';
+    return `${stats.overs || 0}.${stats.balls || 0}`;
+  }
+
+  getBestBowler(): any {
+    const bowlingStats = this.currentInnings?.bowlingStats || [];
+    if (bowlingStats.length === 0) return null;
+    return [...bowlingStats].sort((a: any, b: any) => {
+      if ((b.wickets || 0) !== (a.wickets || 0)) {
+        return (b.wickets || 0) - (a.wickets || 0);
+      }
+      return (a.runs || 0) - (b.runs || 0);
+    })[0];
+  }
+
+  getTotalFours(): number {
+    const battingStats = this.currentInnings?.battingStats || [];
+    return battingStats.reduce((sum: number, b: any) => sum + (b.fours || 0), 0);
+  }
+
+  getTotalSixes(): number {
+    const battingStats = this.currentInnings?.battingStats || [];
+    return battingStats.reduce((sum: number, b: any) => sum + (b.sixes || 0), 0);
+  }
+
+  getDotBallsPercentage(): number {
+    const bowlingStats = this.currentInnings?.bowlingStats || [];
+    const totalDots = bowlingStats.reduce((sum: number, b: any) => sum + (b.dotBalls || 0), 0);
+    const totalBalls = this.currentInnings?.totalBalls || 0;
+    if (totalBalls === 0) return 0;
+    return Math.round((totalDots / totalBalls) * 100);
+  }
+
+  // ==================== SUMMARY VIEW HELPERS ====================
+
+  getSummaryRunRate(inningsIndex: number): string {
+    const innings = this.match?.innings?.[inningsIndex];
+    if (!innings) return '0.00';
+    const balls = innings.totalBalls || 0;
+    const runs = innings.totalRuns || 0;
+    if (balls === 0) return '0.00';
+    return ((runs / balls) * 6).toFixed(2);
+  }
+
+  isBatsmanCurrentlyBatting(batsman: any, inningsIndex: number): boolean {
+    const innings = this.match?.innings?.[inningsIndex];
+    if (!innings) return false;
+    const playerId = batsman.player?._id || batsman.player;
+    const strikerId = innings.currentBatsmen?.striker?._id || innings.currentBatsmen?.striker;
+    const nonStrikerId = innings.currentBatsmen?.nonStriker?._id || innings.currentBatsmen?.nonStriker;
+    return playerId === strikerId || playerId?.toString() === strikerId?.toString() ||
+           playerId === nonStrikerId || playerId?.toString() === nonStrikerId?.toString();
+  }
+
+  getSummaryBowlers(inningsIndex: number, count: number): any[] {
+    const innings = this.match?.innings?.[inningsIndex];
+    if (!innings?.bowlingStats) return [];
+    return [...innings.bowlingStats]
+      .sort((a: any, b: any) => (b.wickets || 0) - (a.wickets || 0) || (a.runs || 0) - (b.runs || 0))
+      .slice(0, count);
+  }
+
+  getSummaryFours(inningsIndex: number): number {
+    const innings = this.match?.innings?.[inningsIndex];
+    if (!innings?.battingStats) return 0;
+    return innings.battingStats.reduce((sum: number, b: any) => sum + (b.fours || 0), 0);
+  }
+
+  getSummarySixes(inningsIndex: number): number {
+    const innings = this.match?.innings?.[inningsIndex];
+    if (!innings?.battingStats) return 0;
+    return innings.battingStats.reduce((sum: number, b: any) => sum + (b.sixes || 0), 0);
+  }
+
+  getSummaryExtras(inningsIndex: number): number {
+    const innings = this.match?.innings?.[inningsIndex];
+    if (!innings?.extras) return 0;
+    const e = innings.extras;
+    return (e.wides || 0) + (e.noBalls || 0) + (e.byes || 0) + (e.legByes || 0);
+  }
+
+  getSummaryBallsRemaining(inningsIndex: number): number {
+    const innings = this.match?.innings?.[inningsIndex];
+    if (!innings) return 0;
+    const maxBalls = this.match?.format === 'T20' ? 120 : 300;
+    return Math.max(0, maxBalls - (innings.totalBalls || 0));
   }
 }
