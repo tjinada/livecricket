@@ -72,13 +72,15 @@ import { HttpClient } from '@angular/common/http';
       <!-- ==================== NOTIFICATION OVERLAY ==================== -->
       <div 
         *ngIf="showNotification" 
-        class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-        (click)="dismissNotification()"
+        class="fixed inset-0 z-50 flex items-center justify-center"
       >
+        <!-- Dark backdrop for better visibility -->
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="dismissNotification()"></div>
+        
         <!-- SIX Overlay -->
-        <div *ngIf="notificationType === 'six'" class="text-center animate-pulse pointer-events-auto">
+        <div *ngIf="notificationType === 'six'" class="text-center animate-pulse relative z-10" (click)="dismissNotification()">
           <!-- Explosion/Firework effect background -->
-          <div class="absolute inset-0 bg-gradient-radial from-purple-600/30 via-transparent to-transparent"></div>
+          <div class="absolute inset-0 bg-gradient-radial from-purple-600/40 via-purple-900/20 to-transparent"></div>
           
           <!-- Main content -->
           <div class="relative">
@@ -112,9 +114,9 @@ import { HttpClient } from '@angular/common/http';
         </div>
 
         <!-- FOUR Overlay -->
-        <div *ngIf="notificationType === 'four'" class="text-center pointer-events-auto">
+        <div *ngIf="notificationType === 'four'" class="text-center relative z-10" (click)="dismissNotification()">
           <!-- Background effect -->
-          <div class="absolute inset-0 bg-gradient-radial from-green-600/20 via-transparent to-transparent"></div>
+          <div class="absolute inset-0 bg-gradient-radial from-green-600/30 via-green-900/20 to-transparent"></div>
           
           <!-- Main content -->
           <div class="relative">
@@ -147,9 +149,9 @@ import { HttpClient } from '@angular/common/http';
         </div>
 
         <!-- WICKET Overlay -->
-        <div *ngIf="notificationType === 'wicket'" class="text-center pointer-events-auto">
+        <div *ngIf="notificationType === 'wicket'" class="text-center relative z-10" (click)="dismissNotification()">
           <!-- Red dramatic background -->
-          <div class="absolute inset-0 bg-gradient-radial from-red-900/50 via-red-950/30 to-transparent"></div>
+          <div class="absolute inset-0 bg-gradient-radial from-red-900/60 via-red-950/40 to-transparent"></div>
           
           <!-- Main content -->
           <div class="relative">
@@ -195,12 +197,97 @@ import { HttpClient } from '@angular/common/http';
           <!-- Dramatic red pulse -->
           <div class="absolute inset-0 bg-red-600/10 animate-pulse"></div>
         </div>
+
+        <!-- THIRD UMPIRE DECISION Overlay -->
+        <div *ngIf="notificationType === 'third-umpire'" class="text-center relative z-10">
+          <!-- Decision pending state - flashing animation -->
+          <div *ngIf="!thirdUmpireDecision" class="relative">
+            <!-- Alternating OUT and NOT OUT -->
+            <div class="relative h-[20rem] flex items-center justify-center">
+              <!-- OUT flashing -->
+              <div 
+                class="absolute text-[12rem] font-black uppercase tracking-wider animate-third-umpire-out"
+                style="color: #ef4444; text-shadow: 0 0 60px rgba(239, 68, 68, 0.8), 0 0 120px rgba(239, 68, 68, 0.5);">
+                OUT
+              </div>
+              <!-- NOT OUT flashing -->
+              <div 
+                class="absolute text-[12rem] font-black uppercase tracking-wider animate-third-umpire-notout"
+                style="color: #22c55e; text-shadow: 0 0 60px rgba(34, 197, 94, 0.8), 0 0 120px rgba(34, 197, 94, 0.5);">
+                NOT OUT
+              </div>
+            </div>
+            
+            <!-- 3rd Umpire label -->
+            <div class="text-4xl font-bold text-white mt-4 tracking-widest">3RD UMPIRE REVIEW</div>
+            
+            <!-- Pending indicator -->
+            <div class="mt-8 flex items-center justify-center gap-3">
+              <div class="w-4 h-4 bg-yellow-400 rounded-full animate-bounce"></div>
+              <span class="text-2xl text-yellow-400 font-semibold">Decision Pending...</span>
+              <div class="w-4 h-4 bg-yellow-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+            </div>
+          </div>
+          
+          <!-- Decision made state -->
+          <div *ngIf="thirdUmpireDecision" class="relative">
+            <!-- Final Decision -->
+            <div 
+              class="text-[14rem] font-black uppercase tracking-wider leading-none"
+              [style.color]="thirdUmpireDecision === 'out' ? '#ef4444' : '#22c55e'"
+              [style.text-shadow]="thirdUmpireDecision === 'out' ? '0 0 80px rgba(239, 68, 68, 0.9), 0 0 150px rgba(239, 68, 68, 0.6)' : '0 0 80px rgba(34, 197, 94, 0.9), 0 0 150px rgba(34, 197, 94, 0.6)'">
+              {{ thirdUmpireDecision === 'out' ? 'OUT' : 'NOT OUT' }}
+            </div>
+            
+            <!-- Decision label -->
+            <div class="text-4xl font-bold text-white mt-6 tracking-widest">3RD UMPIRE DECISION</div>
+            
+            <!-- Batsman info (if out) -->
+            <div *ngIf="thirdUmpireDecision === 'out' && notificationData?.dismissedName" 
+                 class="mt-8 bg-black/60 backdrop-blur-md rounded-2xl px-10 py-6 inline-block border border-red-500/40">
+              <div class="text-3xl font-bold text-white">{{ notificationData?.dismissedName }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CUSTOM MESSAGE Overlay -->
+        <div *ngIf="notificationType === 'custom-message'" class="text-center relative z-10 max-w-4xl mx-auto px-8">
+          <div class="bg-gradient-to-b from-gray-800/95 to-gray-900/95 backdrop-blur-md rounded-3xl px-12 py-10 border border-gray-600/50 shadow-2xl">
+            <!-- Custom message text -->
+            <div 
+              class="text-5xl font-bold text-white leading-tight"
+              style="text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
+              {{ customMessage }}
+            </div>
+          </div>
+        </div>
         
-        <!-- Dismiss hint -->
-        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-gray-500 text-sm pointer-events-auto cursor-pointer" (click)="dismissNotification()">
+        <!-- Dismiss hint (only for auto-dismissable notifications) -->
+        <div 
+          *ngIf="notificationType !== 'third-umpire' || thirdUmpireDecision"
+          class="absolute bottom-8 left-1/2 -translate-x-1/2 text-gray-500 text-sm cursor-pointer z-20" 
+          (click)="dismissNotification()">
           Click anywhere to dismiss
         </div>
       </div>
+
+      <!-- CSS for third umpire animation -->
+      <style>
+        @keyframes third-umpire-out {
+          0%, 50% { opacity: 1; transform: scale(1); }
+          50.01%, 100% { opacity: 0; transform: scale(0.95); }
+        }
+        @keyframes third-umpire-notout {
+          0%, 50% { opacity: 0; transform: scale(0.95); }
+          50.01%, 100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-third-umpire-out {
+          animation: third-umpire-out 1s ease-in-out infinite;
+        }
+        .animate-third-umpire-notout {
+          animation: third-umpire-notout 1s ease-in-out infinite;
+        }
+      </style>
 
       <!-- Content Layer -->
       <div class="relative z-10 h-screen flex flex-col">
@@ -284,33 +371,33 @@ import { HttpClient } from '@angular/common/http';
               </div>
 
               <!-- Current Batsmen Card -->
-              <div class="bg-gradient-to-r from-gray-800/90 via-gray-700/90 to-gray-800/90 backdrop-blur-md rounded-xl px-8 py-4 mb-4 shadow-2xl border border-gray-600/40">
-                <div class="flex items-center gap-12">
+              <div class="bg-gradient-to-r from-gray-800/90 via-gray-700/90 to-gray-800/90 backdrop-blur-md rounded-xl px-10 py-5 mb-4 shadow-2xl border border-gray-600/40">
+                <div class="flex items-center gap-14">
                   <!-- Striker -->
-                  <div class="flex items-center gap-3">
-                    <span class="text-yellow-400 text-xl">●</span>
+                  <div class="flex items-center gap-4">
+                    <span class="text-yellow-400 text-2xl">●</span>
                     <div>
-                      <div class="font-bold text-lg">{{ getStrikerName() }}</div>
+                      <div class="font-bold text-2xl text-white">{{ getStrikerName() }}</div>
                       <div class="text-gray-400 text-sm">Striker</div>
                     </div>
-                    <div class="text-right ml-4">
-                      <div class="text-2xl font-bold">{{ getStrikerRuns() }}<span class="text-gray-500 text-base ml-1">({{ getStrikerBalls() }})</span></div>
-                      <div class="text-xs text-gray-500">SR: {{ getStrikerSR() }}</div>
+                    <div class="text-right ml-6">
+                      <div class="text-3xl font-bold">{{ getStrikerRuns() }}<span class="text-gray-500 text-lg ml-1">({{ getStrikerBalls() }})</span></div>
+                      <div class="text-sm text-gray-500">SR: {{ getStrikerSR() }}</div>
                     </div>
                   </div>
                   
-                  <div class="w-px h-12 bg-gray-600"></div>
+                  <div class="w-px h-14 bg-gray-600"></div>
                   
                   <!-- Non-Striker -->
-                  <div class="flex items-center gap-3">
-                    <span class="text-gray-500 text-xl">○</span>
+                  <div class="flex items-center gap-4">
+                    <span class="text-gray-500 text-2xl">○</span>
                     <div>
-                      <div class="font-semibold text-gray-300">{{ getNonStrikerName() }}</div>
+                      <div class="font-semibold text-xl text-gray-300">{{ getNonStrikerName() }}</div>
                       <div class="text-gray-500 text-sm">Non-striker</div>
                     </div>
-                    <div class="text-right ml-4">
-                      <div class="text-xl text-gray-300">{{ getNonStrikerRuns() }}<span class="text-gray-500 text-sm ml-1">({{ getNonStrikerBalls() }})</span></div>
-                      <div class="text-xs text-gray-500">SR: {{ getNonStrikerSR() }}</div>
+                    <div class="text-right ml-6">
+                      <div class="text-2xl text-gray-300">{{ getNonStrikerRuns() }}<span class="text-gray-500 text-base ml-1">({{ getNonStrikerBalls() }})</span></div>
+                      <div class="text-sm text-gray-500">SR: {{ getNonStrikerSR() }}</div>
                     </div>
                   </div>
                 </div>
@@ -362,12 +449,12 @@ import { HttpClient } from '@angular/common/http';
                   
                   <!-- Current Bowler -->
                   <div class="flex items-center gap-4">
-                    <div class="w-10 h-7 bg-gray-600 rounded flex items-center justify-center text-xs font-bold">
+                    <div class="w-12 h-9 bg-gray-600 rounded flex items-center justify-center text-sm font-bold">
                       {{ getBowlingTeamCode() }}
                     </div>
                     <div>
-                      <div class="font-semibold">{{ getCurrentBowlerName() }}</div>
-                      <div class="text-gray-400 text-sm">{{ getCurrentBowlerFullFigures() }}</div>
+                      <div class="font-semibold text-xl">{{ getCurrentBowlerName() }}</div>
+                      <div class="text-gray-400 text-base">{{ getCurrentBowlerFullFigures() }}</div>
                     </div>
                   </div>
 
@@ -1251,10 +1338,16 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   
   // Notification overlay properties
   showNotification = false;
-  notificationType: 'six' | 'four' | 'wicket' | null = null;
+  notificationType: 'six' | 'four' | 'wicket' | 'third-umpire' | 'custom-message' | null = null;
   notificationData: any = null;
   notificationDuration = 10000; // 10 seconds (configurable)
   private notificationTimeout: any = null;
+  
+  // Third Umpire properties
+  thirdUmpireDecision: 'out' | 'not-out' | null = null;
+  
+  // Custom Message properties
+  customMessage: string = '';
   
   private eventSource: EventSource | null = null;
   private playerNameCache: Map<string, string> = new Map();
@@ -1465,6 +1558,26 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       this.reloadMatch();
     });
     
+    // Third Umpire events
+    this.eventSource.addEventListener('third-umpire-start', (event: any) => {
+      this.showThirdUmpireOverlay();
+    });
+    
+    this.eventSource.addEventListener('third-umpire-decision', (event: any) => {
+      const data = JSON.parse(event.data);
+      this.showThirdUmpireDecision(data.decision);
+    });
+    
+    // Custom message events
+    this.eventSource.addEventListener('custom-message', (event: any) => {
+      const data = JSON.parse(event.data);
+      this.showCustomMessage(data.message);
+    });
+    
+    this.eventSource.addEventListener('custom-message-dismiss', () => {
+      this.dismissNotification();
+    });
+    
     this.eventSource.addEventListener('view-change', (event: any) => {
       const data = JSON.parse(event.data);
       if (data.view) {
@@ -1507,10 +1620,45 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     this.showNotification = false;
     this.notificationType = null;
     this.notificationData = null;
+    this.thirdUmpireDecision = null;
+    this.customMessage = '';
     if (this.notificationTimeout) {
       clearTimeout(this.notificationTimeout);
       this.notificationTimeout = null;
     }
+  }
+  
+  showThirdUmpireOverlay() {
+    // Clear any existing notification
+    if (this.notificationTimeout) {
+      clearTimeout(this.notificationTimeout);
+    }
+    
+    this.thirdUmpireDecision = null;
+    this.notificationType = 'third-umpire';
+    this.showNotification = true;
+    // No auto-dismiss for pending decision - admin controls when to show decision
+  }
+  
+  showThirdUmpireDecision(decision: 'out' | 'not-out') {
+    this.thirdUmpireDecision = decision;
+    
+    // Auto-dismiss after showing decision
+    this.notificationTimeout = setTimeout(() => {
+      this.dismissNotification();
+    }, this.notificationDuration);
+  }
+  
+  showCustomMessage(message: string) {
+    // Clear any existing notification
+    if (this.notificationTimeout) {
+      clearTimeout(this.notificationTimeout);
+    }
+    
+    this.customMessage = message;
+    this.notificationType = 'custom-message';
+    this.showNotification = true;
+    // Custom messages don't auto-dismiss - admin controls when to dismiss
   }
 
   disconnectSSE() {

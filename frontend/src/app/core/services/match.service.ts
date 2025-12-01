@@ -122,4 +122,8 @@ export class MatchService {
   }): Observable<ApiResponse<any>> {
     return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/backgrounds`, backgrounds);
   }
+
+  sendNotification(id: string, type: string, data: any): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${id}/notification`, { type, data });
+  }
 }

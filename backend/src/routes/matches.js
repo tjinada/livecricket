@@ -569,4 +569,52 @@ function broadcastToMatch(matchId, event, data) {
 // Export broadcast function for use in scoring routes
 router.broadcastToMatch = broadcastToMatch;
 
+// POST /api/matches/:id/notification - Send display notifications
+router.post('/:id/notification', async (req, res, next) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+    
+    const { type, data } = req.body;
+    
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Notification type is required'
+      });
+    }
+    
+    // Validate notification type
+    const validTypes = [
+      'third-umpire-start',
+      'third-umpire-decision',
+      'custom-message',
+      'custom-message-dismiss'
+    ];
+    
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid notification type'
+      });
+    }
+    
+    // Broadcast the notification to all display clients
+    broadcastToMatch(req.params.id, type, data || {});
+    
+    res.json({
+      success: true,
+      message: 'Notification sent'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

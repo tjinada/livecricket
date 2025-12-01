@@ -109,6 +109,67 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
             </select>
           </div>
 
+          <!-- Display Overlays for Completed Match -->
+          <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <h3 class="font-semibold text-gray-800 mb-3">Display Overlays</h3>
+            
+            <!-- Third Umpire -->
+            <div class="mb-4">
+              <p class="text-sm text-gray-600 mb-2">3rd Umpire Decision</p>
+              <div class="grid grid-cols-3 gap-2">
+                <button 
+                  (click)="startThirdUmpire()"
+                  [disabled]="thirdUmpireActive"
+                  class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 disabled:opacity-50"
+                >
+                  ⏳ Review
+                </button>
+                <button 
+                  (click)="thirdUmpireOut()"
+                  [disabled]="!thirdUmpireActive"
+                  class="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  OUT
+                </button>
+                <button 
+                  (click)="thirdUmpireNotOut()"
+                  [disabled]="!thirdUmpireActive"
+                  class="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                >
+                  NOT OUT
+                </button>
+              </div>
+            </div>
+            
+            <!-- Custom Message -->
+            <div>
+              <p class="text-sm text-gray-600 mb-2">Custom Message</p>
+              <div class="flex gap-2 mb-2">
+                <input 
+                  type="text" 
+                  [(ngModel)]="customMessageText"
+                  placeholder="Enter message..."
+                  class="flex-1 px-3 py-2 border rounded-lg text-sm"
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button 
+                  (click)="showCustomMessage()"
+                  [disabled]="!customMessageText"
+                  class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                >
+                  📢 Show
+                </button>
+                <button 
+                  (click)="dismissCustomMessage()"
+                  class="px-3 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600"
+                >
+                  ✖ Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- View Display Link -->
           <div class="bg-white rounded-lg shadow p-4 mb-6">
             <h3 class="font-semibold text-gray-800 mb-3">Display Screen</h3>
@@ -512,6 +573,67 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   <option value="overall-summary">Overall Summary</option>
                   <option value="projections">Projections</option>
                 </select>
+              </div>
+
+              <!-- Display Overlays -->
+              <div class="bg-white rounded-lg shadow p-4">
+                <h3 class="font-semibold text-gray-800 mb-3">Display Overlays</h3>
+                
+                <!-- Third Umpire -->
+                <div class="mb-4">
+                  <p class="text-sm text-gray-600 mb-2">3rd Umpire Decision</p>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button 
+                      (click)="startThirdUmpire()"
+                      [disabled]="thirdUmpireActive"
+                      class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 disabled:opacity-50"
+                    >
+                      ⏳ Review
+                    </button>
+                    <button 
+                      (click)="thirdUmpireOut()"
+                      [disabled]="!thirdUmpireActive"
+                      class="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                    >
+                      OUT
+                    </button>
+                    <button 
+                      (click)="thirdUmpireNotOut()"
+                      [disabled]="!thirdUmpireActive"
+                      class="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                    >
+                      NOT OUT
+                    </button>
+                  </div>
+                </div>
+                
+                <!-- Custom Message -->
+                <div>
+                  <p class="text-sm text-gray-600 mb-2">Custom Message</p>
+                  <div class="flex gap-2 mb-2">
+                    <input 
+                      type="text" 
+                      [(ngModel)]="customMessageText"
+                      placeholder="Enter message..."
+                      class="flex-1 px-3 py-2 border rounded-lg text-sm"
+                    />
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button 
+                      (click)="showCustomMessage()"
+                      [disabled]="!customMessageText"
+                      class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      📢 Show
+                    </button>
+                    <button 
+                      (click)="dismissCustomMessage()"
+                      class="px-3 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600"
+                    >
+                      ✖ Dismiss
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -944,6 +1066,10 @@ export class ScoringComponent implements OnInit, OnDestroy {
     nonStriker: '',
     bowler: ''
   };
+
+  // Display overlay controls
+  thirdUmpireActive = false;
+  customMessageText = '';
 
   // SSE connection
   private eventSource: EventSource | null = null;
@@ -1738,6 +1864,59 @@ export class ScoringComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.error = err.error?.message || 'Failed to update backgrounds';
+      }
+    });
+  }
+
+  // Display Overlay Controls
+  startThirdUmpire() {
+    this.thirdUmpireActive = true;
+    this.matchService.sendNotification(this.matchId, 'third-umpire-start', {}).subscribe({
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to start 3rd umpire review';
+        this.thirdUmpireActive = false;
+      }
+    });
+  }
+
+  thirdUmpireOut() {
+    this.matchService.sendNotification(this.matchId, 'third-umpire-decision', { decision: 'out' }).subscribe({
+      next: () => {
+        this.thirdUmpireActive = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to send decision';
+      }
+    });
+  }
+
+  thirdUmpireNotOut() {
+    this.matchService.sendNotification(this.matchId, 'third-umpire-decision', { decision: 'not-out' }).subscribe({
+      next: () => {
+        this.thirdUmpireActive = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to send decision';
+      }
+    });
+  }
+
+  showCustomMessage() {
+    if (!this.customMessageText.trim()) return;
+    this.matchService.sendNotification(this.matchId, 'custom-message', { message: this.customMessageText }).subscribe({
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to show custom message';
+      }
+    });
+  }
+
+  dismissCustomMessage() {
+    this.matchService.sendNotification(this.matchId, 'custom-message-dismiss', {}).subscribe({
+      next: () => {
+        this.customMessageText = '';
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to dismiss message';
       }
     });
   }
