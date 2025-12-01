@@ -199,32 +199,36 @@ import { HttpClient } from '@angular/common/http';
         </div>
 
         <!-- THIRD UMPIRE DECISION Overlay -->
-        <div *ngIf="notificationType === 'third-umpire'" class="text-center relative z-10">
-          <!-- Decision pending state - flashing animation -->
+        <div *ngIf="notificationType === 'third-umpire'" class="text-center relative z-10 w-full px-8">
+          <!-- Decision pending state - side by side with alternating highlights -->
           <div *ngIf="!thirdUmpireDecision" class="relative">
-            <!-- Alternating OUT and NOT OUT -->
-            <div class="relative h-[20rem] flex items-center justify-center">
-              <!-- OUT flashing -->
+            <!-- 3rd Umpire label at top -->
+            <div class="text-5xl font-bold text-white mb-8 tracking-widest">3RD UMPIRE REVIEW</div>
+            
+            <!-- Side by side NOT OUT and OUT -->
+            <div class="flex items-center justify-center gap-16">
+              <!-- NOT OUT on LEFT (Green) -->
               <div 
-                class="absolute text-[12rem] font-black uppercase tracking-wider animate-third-umpire-out"
-                style="color: #ef4444; text-shadow: 0 0 60px rgba(239, 68, 68, 0.8), 0 0 120px rgba(239, 68, 68, 0.5);">
-                OUT
-              </div>
-              <!-- NOT OUT flashing -->
-              <div 
-                class="absolute text-[12rem] font-black uppercase tracking-wider animate-third-umpire-notout"
-                style="color: #22c55e; text-shadow: 0 0 60px rgba(34, 197, 94, 0.8), 0 0 120px rgba(34, 197, 94, 0.5);">
+                class="text-[10rem] font-black uppercase tracking-wider animate-third-umpire-notout-highlight px-12 py-6 rounded-3xl transition-all"
+                style="text-shadow: 0 0 60px rgba(34, 197, 94, 0.8), 0 0 120px rgba(34, 197, 94, 0.5);">
                 NOT OUT
+              </div>
+              
+              <!-- Divider -->
+              <div class="h-48 w-1 bg-gray-600"></div>
+              
+              <!-- OUT on RIGHT (Red) -->
+              <div 
+                class="text-[10rem] font-black uppercase tracking-wider animate-third-umpire-out-highlight px-12 py-6 rounded-3xl transition-all"
+                style="text-shadow: 0 0 60px rgba(239, 68, 68, 0.8), 0 0 120px rgba(239, 68, 68, 0.5);">
+                OUT
               </div>
             </div>
             
-            <!-- 3rd Umpire label -->
-            <div class="text-4xl font-bold text-white mt-4 tracking-widest">3RD UMPIRE REVIEW</div>
-            
             <!-- Pending indicator -->
-            <div class="mt-8 flex items-center justify-center gap-3">
+            <div class="mt-12 flex items-center justify-center gap-3">
               <div class="w-4 h-4 bg-yellow-400 rounded-full animate-bounce"></div>
-              <span class="text-2xl text-yellow-400 font-semibold">Decision Pending...</span>
+              <span class="text-3xl text-yellow-400 font-semibold">Decision Pending...</span>
               <div class="w-4 h-4 bg-yellow-400 rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
             </div>
           </div>
@@ -273,19 +277,43 @@ import { HttpClient } from '@angular/common/http';
 
       <!-- CSS for third umpire animation -->
       <style>
-        @keyframes third-umpire-out {
-          0%, 50% { opacity: 1; transform: scale(1); }
-          50.01%, 100% { opacity: 0; transform: scale(0.95); }
+        @keyframes third-umpire-notout-highlight {
+          0%, 50% { 
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.3);
+            border: 4px solid #22c55e;
+            transform: scale(1.05);
+            text-shadow: 0 0 80px rgba(34, 197, 94, 1), 0 0 150px rgba(34, 197, 94, 0.8);
+          }
+          50.01%, 100% { 
+            color: #4b5563;
+            background: transparent;
+            border: 4px solid transparent;
+            transform: scale(1);
+            text-shadow: none;
+          }
         }
-        @keyframes third-umpire-notout {
-          0%, 50% { opacity: 0; transform: scale(0.95); }
-          50.01%, 100% { opacity: 1; transform: scale(1); }
+        @keyframes third-umpire-out-highlight {
+          0%, 50% { 
+            color: #4b5563;
+            background: transparent;
+            border: 4px solid transparent;
+            transform: scale(1);
+            text-shadow: none;
+          }
+          50.01%, 100% { 
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.3);
+            border: 4px solid #ef4444;
+            transform: scale(1.05);
+            text-shadow: 0 0 80px rgba(239, 68, 68, 1), 0 0 150px rgba(239, 68, 68, 0.8);
+          }
         }
-        .animate-third-umpire-out {
-          animation: third-umpire-out 1s ease-in-out infinite;
+        .animate-third-umpire-notout-highlight {
+          animation: third-umpire-notout-highlight 1s ease-in-out infinite;
         }
-        .animate-third-umpire-notout {
-          animation: third-umpire-notout 1s ease-in-out infinite;
+        .animate-third-umpire-out-highlight {
+          animation: third-umpire-out-highlight 1s ease-in-out infinite;
         }
       </style>
 
