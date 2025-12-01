@@ -116,7 +116,7 @@ interface DefaultBackgrounds {
                         [src]="getBackground(view.key)!.url!"
                         autoplay
                         loop
-                        muted
+                        [muted]="true"
                         playsinline
                         class="w-full h-full object-cover"
                       ></video>

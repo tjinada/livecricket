@@ -17,7 +17,7 @@ import { HttpClient } from '@angular/common/http';
           [src]="currentBackground!.url!"
           autoplay
           loop
-          muted
+          [muted]="true"
           playsinline
           class="w-full h-full object-cover"
         ></video>
@@ -43,7 +43,7 @@ import { HttpClient } from '@angular/common/http';
             [src]="battingTeamFlagVideo"
             autoplay
             loop
-            muted
+            [muted]="true"
             playsinline
             class="absolute left-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
             style="mix-blend-mode: screen;"
@@ -55,7 +55,7 @@ import { HttpClient } from '@angular/common/http';
             [src]="bowlingTeamFlagVideo"
             autoplay
             loop
-            muted
+            [muted]="true"
             playsinline
             class="absolute right-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
             style="mix-blend-mode: screen; transform: scaleX(-1);"

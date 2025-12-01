@@ -164,7 +164,7 @@ import { Country } from '../../../core/models';
                           [src]="form.flagVideo"
                           autoplay
                           loop
-                          muted
+                          [muted]="true"
                           playsinline
                           class="h-20 w-auto rounded"
                         ></video>
@@ -337,7 +337,7 @@ import { Country } from '../../../core/models';
               [src]="previewVideoUrl"
               autoplay
               loop
-              muted
+              [muted]="true"
               playsinline
               class="max-h-64 mx-auto rounded"
             ></video>
