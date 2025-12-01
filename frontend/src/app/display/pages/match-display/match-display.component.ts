@@ -36,7 +36,10 @@ import { HttpClient } from '@angular/common/http';
         ></div>
         
         <!-- Dark Overlay for readability -->
-        <div class="absolute inset-0 bg-black/40"></div>
+        <div class="absolute inset-0 bg-black/30"></div>
+        
+        <!-- Vignette Effect - dark edges, clear center -->
+        <div class="absolute inset-0" style="background: radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0,0,0,0.4) 70%, rgba(0,0,0,0.7) 100%);"></div>
       </div>
 
       <!-- ==================== NOTIFICATION OVERLAY ==================== -->
@@ -227,30 +230,34 @@ import { HttpClient } from '@angular/common/http';
             <div class="flex-1 flex flex-col justify-center items-center px-6 py-4">
               
               <!-- Central Score Display -->
-              <div class="text-center mb-6">
-                <!-- Team Badge & Name -->
-                <div class="flex items-center justify-center gap-3 mb-4">
-                  <div class="w-14 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center text-lg font-bold shadow-lg">
+              <div class="flex flex-col items-center mb-6">
+                <!-- Team Badge & Name with backdrop -->
+                <div class="flex items-center justify-center gap-4 mb-5 bg-black/50 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10">
+                  <div class="w-16 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-xl font-black shadow-lg border border-blue-400/30">
                     {{ getBattingTeamCode() }}
                   </div>
-                  <span class="text-2xl font-light text-gray-300">{{ getBattingTeamName() }}</span>
+                  <span class="text-3xl font-semibold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">{{ getBattingTeamName() }}</span>
                 </div>
                 
-                <!-- Big Score -->
+                <!-- Big Score with subtle backdrop -->
                 <div class="relative">
-                  <div class="flex items-baseline justify-center gap-2">
-                    <span class="text-8xl font-black tracking-tight text-white drop-shadow-lg">{{ currentInnings?.totalRuns || 0 }}</span>
-                    <span class="text-5xl font-light text-gray-400">/</span>
-                    <span class="text-6xl font-bold text-gray-300">{{ currentInnings?.totalWickets || 0 }}</span>
-                  </div>
-                  <div class="text-xl text-gray-400 mt-2 font-light">
-                    <span class="text-gray-500">(</span>{{ getOversDisplay() }} overs<span class="text-gray-500">)</span>
+                  <!-- Subtle dark pill behind score -->
+                  <div class="absolute inset-0 -inset-x-8 -inset-y-2 bg-black/40 rounded-3xl blur-xl"></div>
+                  <div class="relative text-center">
+                    <div class="flex items-baseline justify-center gap-2">
+                      <span class="text-9xl font-black tracking-tight text-white" style="text-shadow: 0 4px 20px rgba(0,0,0,0.8), 0 2px 10px rgba(0,0,0,0.9), 0 0 60px rgba(255,255,255,0.15);">{{ currentInnings?.totalRuns || 0 }}</span>
+                      <span class="text-5xl font-light text-gray-400">/</span>
+                      <span class="text-7xl font-bold text-gray-200" style="text-shadow: 0 2px 10px rgba(0,0,0,0.7);">{{ currentInnings?.totalWickets || 0 }}</span>
+                    </div>
+                    <div class="text-xl text-gray-300 mt-2 font-light" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
+                      <span class="text-gray-400">(</span>{{ getOversDisplay() }} overs<span class="text-gray-400">)</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <!-- Current Batsmen Card -->
-              <div class="bg-gradient-to-r from-gray-800/80 via-gray-700/80 to-gray-800/80 backdrop-blur-sm rounded-xl px-8 py-4 mb-4 shadow-xl border border-gray-700/30">
+              <div class="bg-gradient-to-r from-gray-800/90 via-gray-700/90 to-gray-800/90 backdrop-blur-md rounded-xl px-8 py-4 mb-4 shadow-2xl border border-gray-600/40">
                 <div class="flex items-center gap-12">
                   <!-- Striker -->
                   <div class="flex items-center gap-3">
@@ -290,13 +297,13 @@ import { HttpClient } from '@angular/common/http';
               </div>
 
               <!-- Last Wicket Info (if any wickets have fallen) -->
-              <div *ngIf="getLastWicket()" class="bg-red-900/30 backdrop-blur-sm rounded-lg px-6 py-2 mb-4 border border-red-700/30">
+              <div *ngIf="getLastWicket()" class="bg-red-900/40 backdrop-blur-md rounded-lg px-6 py-2 mb-4 border border-red-600/40">
                 <span class="text-red-400 text-sm">Last Wkt: </span>
                 <span class="text-white font-medium">{{ getLastWicket() }}</span>
               </div>
 
               <!-- Recent Overs Timeline -->
-              <div *ngIf="getRecentOvers().length > 0" class="bg-gray-800/60 backdrop-blur-sm rounded-xl px-6 py-4 mb-4">
+              <div *ngIf="getRecentOvers().length > 0" class="bg-gray-800/70 backdrop-blur-md rounded-xl px-6 py-4 mb-4 border border-gray-700/30">
                 <div class="text-xs text-gray-500 uppercase tracking-wider mb-3 text-center">Recent Overs</div>
                 <div class="flex items-center justify-center gap-4">
                   <ng-container *ngFor="let over of getRecentOvers(); let i = index">
