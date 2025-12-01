@@ -592,9 +592,12 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   >
                     <option value="">Select New Batsman</option>
                     @for (player of getAvailableBatsmen(); track getPlayerId(player)) {
-                      <option [value]="getPlayerId(player)">{{ getSquadPlayerName(player) }}</option>
+                      <option [value]="getPlayerId(player)">
+                        #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
+                      </option>
                     }
                   </select>
+                  <p class="text-xs text-gray-500 mt-1">Sorted by batting order (auto-selected next in line)</p>
                 </div>
               } @else {
                 <div class="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -777,7 +780,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                       [value]="getPlayerId(player)" 
                       [disabled]="getPlayerId(player) === secondInningsForm.nonStriker"
                     >
-                      {{ getSquadPlayerName(player) }}
+                      #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
                     </option>
                   }
                 </select>
@@ -795,7 +798,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                       [value]="getPlayerId(player)"
                       [disabled]="getPlayerId(player) === secondInningsForm.striker"
                     >
-                      {{ getSquadPlayerName(player) }}
+                      #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
                     </option>
                   }
                 </select>
@@ -1189,7 +1192,9 @@ export class ScoringComponent implements OnInit, OnDestroy {
     const team1Id = this.match.team1?._id || this.match.team1;
     const isTeam1BattedFirst = firstBattingTeamId === team1Id || firstBattingTeamId?.toString() === team1Id?.toString();
     const squad = isTeam1BattedFirst ? this.match.squads?.team2 : this.match.squads?.team1;
-    return squad?.filter((p: any) => p.isPlayingXI) || [];
+    const playingXI = squad?.filter((p: any) => p.isPlayingXI) || [];
+    // Sort by batting order
+    return playingXI.sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
   }
 
   get secondBowlingTeamPlayers() {
@@ -1428,6 +1433,21 @@ export class ScoringComponent implements OnInit, OnDestroy {
     if (type === 'wicket') {
       this.wicketForm = { type: '', fielder: '', runs: 0, newBatsman: '' };
       this.wicketError = '';
+      
+      // Auto-select next batsman based on batting order
+      if (!this.isLastWicket()) {
+        const availableBatsmen = this.getAvailableBatsmen();
+        if (availableBatsmen.length > 0) {
+          // Sort by batting order and pick the first one
+          const sortedAvailable = [...availableBatsmen].sort((a, b) => 
+            (a.battingOrder || 99) - (b.battingOrder || 99)
+          );
+          const nextBatsman = sortedAvailable[0];
+          if (nextBatsman) {
+            this.wicketForm.newBatsman = this.getPlayerId(nextBatsman);
+          }
+        }
+      }
     } else if (type === 'changeBowler') {
       this.selectedBowler = '';
     }
@@ -1488,10 +1508,12 @@ export class ScoringComponent implements OnInit, OnDestroy {
       const id = b.player?._id || b.player;
       return id?.toString();
     });
-    return this.battingTeamPlayers.filter((p: any) => {
+    const available = this.battingTeamPlayers.filter((p: any) => {
       const playerId = this.getPlayerId(p);
       return !battedPlayerIds.includes(playerId?.toString());
     });
+    // Sort by batting order
+    return available.sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99));
   }
 
   confirmWicket() {
@@ -1624,6 +1646,23 @@ export class ScoringComponent implements OnInit, OnDestroy {
 
   prepareSecondInningsModal() {
     this.secondInningsForm = { striker: '', nonStriker: '', bowler: '' };
+    
+    // Auto-select openers based on batting order
+    const sortedBatsmen = [...this.secondBattingTeamPlayers].sort((a, b) => 
+      (a.battingOrder || 99) - (b.battingOrder || 99)
+    );
+    
+    // Pre-select batting order #1 as striker
+    const opener1 = sortedBatsmen.find(p => p.battingOrder === 1);
+    if (opener1) {
+      this.secondInningsForm.striker = this.getPlayerId(opener1);
+    }
+    
+    // Pre-select batting order #2 as non-striker
+    const opener2 = sortedBatsmen.find(p => p.battingOrder === 2);
+    if (opener2) {
+      this.secondInningsForm.nonStriker = this.getPlayerId(opener2);
+    }
   }
 
   confirmStartSecondInnings() {

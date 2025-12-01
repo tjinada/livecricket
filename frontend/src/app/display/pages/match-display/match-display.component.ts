@@ -462,24 +462,38 @@ import { HttpClient } from '@angular/common/http';
                     <ng-container *ngFor="let batsman of getBattingStats()">
                       <div 
                         class="grid grid-cols-12 gap-1 px-3 py-1.5 border-b border-blue-800/30 text-sm"
-                        [ngClass]="{'bg-yellow-900/20': isCurrentBatsman(batsman)}"
+                        [ngClass]="{
+                          'bg-yellow-900/20': isCurrentBatsman(batsman),
+                          'opacity-50': batsman.isDNB
+                        }"
                       >
                         <div class="col-span-5 flex items-center gap-1 truncate">
                           <span *ngIf="isStriker(batsman)" class="text-yellow-400 text-xs">●</span>
                           <span *ngIf="isCurrentBatsman(batsman) && !isStriker(batsman)" class="text-gray-500 text-xs">○</span>
-                          <span class="truncate" [ngClass]="{'text-yellow-300 font-semibold': isCurrentBatsman(batsman)}">
+                          <span class="truncate" [ngClass]="{
+                            'text-yellow-300 font-semibold': isCurrentBatsman(batsman),
+                            'text-gray-500': batsman.isDNB
+                          }">
                             {{ getBatsmanName(batsman) }}
                           </span>
                         </div>
-                        <div class="col-span-3 text-gray-400 text-xs truncate">{{ getShortDismissal(batsman) }}</div>
+                        <div class="col-span-3 text-xs truncate" [ngClass]="{'text-gray-600 italic': batsman.isDNB, 'text-gray-400': !batsman.isDNB}">
+                          {{ getShortDismissal(batsman) }}
+                        </div>
                         <div class="col-span-2 text-center">
-                          <span class="font-bold">{{ batsman.runs || 0 }}</span>
-                          <span class="text-gray-500 text-xs">({{ batsman.balls || 0 }})</span>
+                          <ng-container *ngIf="!batsman.isDNB">
+                            <span class="font-bold">{{ batsman.runs || 0 }}</span>
+                            <span class="text-gray-500 text-xs">({{ batsman.balls || 0 }})</span>
+                          </ng-container>
+                          <span *ngIf="batsman.isDNB" class="text-gray-600">-</span>
                         </div>
                         <div class="col-span-2 text-center text-xs">
-                          <span class="text-green-400">{{ batsman.fours || 0 }}</span>
-                          <span class="text-gray-600">/</span>
-                          <span class="text-purple-400">{{ batsman.sixes || 0 }}</span>
+                          <ng-container *ngIf="!batsman.isDNB">
+                            <span class="text-green-400">{{ batsman.fours || 0 }}</span>
+                            <span class="text-gray-600">/</span>
+                            <span class="text-purple-400">{{ batsman.sixes || 0 }}</span>
+                          </ng-container>
+                          <span *ngIf="batsman.isDNB" class="text-gray-600">-</span>
                         </div>
                       </div>
                     </ng-container>
@@ -1656,7 +1670,52 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getBattingStats(): any[] {
-    return this.currentInnings?.battingStats || [];
+    // Get all 11 batsmen in batting order with DNB for those who haven't batted
+    const battingTeamId = this.currentInnings?.battingTeam?._id || this.currentInnings?.battingTeam;
+    const team1Id = this.match?.team1?._id || this.match?.team1;
+    const isTeam1 = battingTeamId === team1Id || battingTeamId?.toString() === team1Id?.toString();
+    const squad = isTeam1 ? this.match?.squads?.team1 : this.match?.squads?.team2;
+    
+    if (!squad) return this.currentInnings?.battingStats || [];
+    
+    // Get Playing XI sorted by batting order
+    const playingXI = squad
+      .filter((p: any) => p.isPlayingXI)
+      .sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+    
+    if (playingXI.length === 0) return this.currentInnings?.battingStats || [];
+    
+    // Create a map of actual batting stats by player ID
+    const battingStatsMap = new Map<string, any>();
+    (this.currentInnings?.battingStats || []).forEach((stat: any) => {
+      const playerId = (stat.player?._id || stat.player)?.toString();
+      if (playerId) {
+        battingStatsMap.set(playerId, stat);
+      }
+    });
+    
+    // Build combined list: actual stats for those who batted, DNB placeholder for others
+    return playingXI.map((squadPlayer: any) => {
+      const playerId = (squadPlayer.player?._id || squadPlayer.player)?.toString();
+      const existingStats = battingStatsMap.get(playerId);
+      
+      if (existingStats) {
+        return existingStats;
+      }
+      
+      // DNB placeholder
+      return {
+        player: squadPlayer.player,
+        runs: null,
+        balls: null,
+        fours: 0,
+        sixes: 0,
+        isOut: false,
+        isNotOut: false,
+        isDNB: true, // Flag for "Did Not Bat"
+        battingOrder: squadPlayer.battingOrder
+      };
+    });
   }
 
   getBowlingStats(): any[] {
@@ -2010,6 +2069,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== NEW PLAYER STATS VIEW HELPERS ====================
 
   getShortDismissal(batsman: any): string {
+    // Handle DNB (Did Not Bat)
+    if (batsman.isDNB) {
+      return 'DNB';
+    }
+    
     if (!batsman.isOut) {
       if (batsman.isNotOut || this.isCurrentBatsman(batsman)) return 'not out';
       return '';
@@ -2034,7 +2098,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getYetToBatCount(): number {
-    return this.getYetToBat().length;
+    // Count DNB players from the batting stats
+    const battingStats = this.getBattingStats();
+    return battingStats.filter((b: any) => b.isDNB).length;
   }
 
   getCurrentBowlerOvers(): string {
