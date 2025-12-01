@@ -29,8 +29,8 @@ router.get('/', async (req, res, next) => {
     }
     
     const matches = await Match.find(filter)
-      .populate('team1', 'name code flagUrl')
-      .populate('team2', 'name code flagUrl')
+      .populate('team1', 'name code flagUrl flagVideo')
+      .populate('team2', 'name code flagUrl flagVideo')
       .populate('toss.winner', 'name code')
       .populate('result.winner', 'name code')
       .sort({ date: -1 });
@@ -48,14 +48,14 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const match = await Match.findById(req.params.id)
-      .populate('team1', 'name code flagUrl')
-      .populate('team2', 'name code flagUrl')
+      .populate('team1', 'name code flagUrl flagVideo')
+      .populate('team2', 'name code flagUrl flagVideo')
       .populate('toss.winner', 'name code')
       .populate('result.winner', 'name code')
       .populate('squads.team1.player', 'name role battingStyle bowlingStyle')
       .populate('squads.team2.player', 'name role battingStyle bowlingStyle')
-      .populate('innings.battingTeam', 'name code')
-      .populate('innings.bowlingTeam', 'name code')
+      .populate('innings.battingTeam', 'name code flagVideo')
+      .populate('innings.bowlingTeam', 'name code flagVideo')
       .populate('innings.currentBatsmen.striker', 'name')
       .populate('innings.currentBatsmen.nonStriker', 'name')
       .populate('innings.currentBowler', 'name')

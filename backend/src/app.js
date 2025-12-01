@@ -32,6 +32,7 @@ app.use('/api/matches', matchesRouter);
 app.use('/api/scoring', scoringRouter);
 app.use('/api/seed', require('./routes/seed'));
 app.use('/api/uploads', require('./routes/uploads'));
+app.use('/api/settings', require('./routes/settings'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -61,9 +61,14 @@ router.post('/', auth, async (req, res, next) => {
 // PUT /api/countries/:id - Update country (protected)
 router.put('/:id', auth, async (req, res, next) => {
   try {
-    const { name, code, flagUrl, background } = req.body;
+    const { name, code, flagUrl, flagVideo, background } = req.body;
     
     const updateData = { name, code, flagUrl };
+    
+    // Handle flagVideo update (animated flag for display overlay)
+    if (flagVideo !== undefined) {
+      updateData.flagVideo = flagVideo;
+    }
     
     // Handle background update
     if (background) {

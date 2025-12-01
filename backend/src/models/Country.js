@@ -20,6 +20,11 @@ const countrySchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Animated flag video for overlay on display backgrounds
+  flagVideo: {
+    type: String,
+    default: null
+  },
   // Default background for this country (used when country is batting)
   background: {
     type: {

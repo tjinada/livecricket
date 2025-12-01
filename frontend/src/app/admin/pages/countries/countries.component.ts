@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { CountryService, PlayerService } from '../../../core/services';
 import { Country } from '../../../core/models';
 
@@ -44,6 +45,7 @@ import { Country } from '../../../core/models';
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flag</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flag Video</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Players</th>
                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
@@ -63,6 +65,21 @@ import { Country } from '../../../core/models';
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-gray-500">
                     {{ country.code }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-gray-500">
+                    @if (country.flagVideo) {
+                      <div class="flex items-center gap-2">
+                        <span class="text-green-600 text-sm">✓ Set</span>
+                        <button 
+                          (click)="previewFlagVideo(country)"
+                          class="text-blue-500 hover:text-blue-700 text-xs"
+                        >
+                          Preview
+                        </button>
+                      </div>
+                    } @else {
+                      <span class="text-gray-400 text-sm">—</span>
+                    }
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-gray-500">
                     {{ getPlayerCount(country._id) }}
@@ -91,7 +108,7 @@ import { Country } from '../../../core/models';
       <!-- Add/Edit Modal -->
       @if (showModal) {
         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div class="px-6 py-4 border-b">
               <h3 class="text-lg font-semibold text-gray-800">
                 {{ editingCountry ? 'Edit Country' : 'Add Country' }}
@@ -122,7 +139,7 @@ import { Country } from '../../../core/models';
                 >
                 <p class="text-xs text-gray-500 mt-1">3-letter country code</p>
               </div>
-              <div class="mb-6">
+              <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Flag URL (Optional)</label>
                 <input 
                   type="url"
@@ -131,11 +148,105 @@ import { Country } from '../../../core/models';
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   placeholder="https://..."
                 >
+                <p class="text-xs text-gray-500 mt-1">Static flag image (PNG/JPG)</p>
+              </div>
+              
+              <!-- Flag Video Section -->
+              <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Animated Flag Video</label>
+                
+                <!-- Current Flag Video Preview -->
+                @if (form.flagVideo) {
+                  <div class="mb-3 bg-gray-900 rounded-lg p-4">
+                    <div class="flex items-start justify-between gap-4">
+                      <div class="flex-1">
+                        <video 
+                          [src]="form.flagVideo"
+                          autoplay
+                          loop
+                          muted
+                          playsinline
+                          class="h-20 w-auto rounded"
+                        ></video>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-xs text-gray-400 truncate max-w-[200px]">{{ form.flagVideo }}</p>
+                        <button 
+                          type="button"
+                          (click)="removeFlagVideo()"
+                          class="text-red-400 hover:text-red-300 text-xs mt-1"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                }
+                
+                <!-- Upload Button -->
+                <div class="flex items-center gap-3">
+                  <input 
+                    type="file"
+                    #flagVideoInput
+                    (change)="onFlagVideoSelected($event)"
+                    accept="video/mp4,video/webm"
+                    class="hidden"
+                  >
+                  <button 
+                    type="button"
+                    (click)="flagVideoInput.click()"
+                    [disabled]="uploading"
+                    class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 text-sm flex items-center gap-2"
+                  >
+                    @if (uploading) {
+                      <span class="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span>
+                      <span>Uploading...</span>
+                    } @else {
+                      <span>📁</span>
+                      <span>{{ form.flagVideo ? 'Replace Video' : 'Upload Video' }}</span>
+                    }
+                  </button>
+                  
+                  @if (uploadProgress > 0 && uploadProgress < 100) {
+                    <div class="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        class="bg-green-500 h-2 rounded-full transition-all duration-300"
+                        [style.width.%]="uploadProgress"
+                      ></div>
+                    </div>
+                  }
+                </div>
+                
+                <!-- Or Enter URL -->
+                <div class="mt-3">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="flex-1 h-px bg-gray-200"></div>
+                    <span class="text-xs text-gray-400">or enter URL</span>
+                    <div class="flex-1 h-px bg-gray-200"></div>
+                  </div>
+                  <input 
+                    type="url"
+                    [(ngModel)]="form.flagVideo"
+                    name="flagVideo"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                    placeholder="/uploads/flags/india.webm"
+                  >
+                </div>
+                
+                <p class="text-xs text-gray-500 mt-2">
+                  Accepts .mp4 or .webm (max 20MB). For transparent overlays, use WebM with alpha channel.
+                </p>
               </div>
 
               @if (error) {
                 <div class="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
                   {{ error }}
+                </div>
+              }
+              
+              @if (uploadError) {
+                <div class="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                  {{ uploadError }}
                 </div>
               }
 
@@ -149,7 +260,7 @@ import { Country } from '../../../core/models';
                 </button>
                 <button 
                   type="submit"
-                  [disabled]="saving"
+                  [disabled]="saving || uploading"
                   class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
                   {{ saving ? 'Saving...' : 'Save' }}
@@ -216,6 +327,31 @@ import { Country } from '../../../core/models';
           </div>
         </div>
       }
+      
+      <!-- Flag Video Preview Modal -->
+      @if (showPreviewModal) {
+        <div class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" (click)="closePreviewModal()">
+          <div class="bg-gray-900 rounded-lg p-6 max-w-md" (click)="$event.stopPropagation()">
+            <h3 class="text-white text-lg font-semibold mb-4">{{ previewCountryName }} Flag Video</h3>
+            <video 
+              [src]="previewVideoUrl"
+              autoplay
+              loop
+              muted
+              playsinline
+              class="max-h-64 mx-auto rounded"
+            ></video>
+            <div class="mt-4 text-center">
+              <button 
+                (click)="closePreviewModal()"
+                class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -226,9 +362,19 @@ export class CountriesComponent implements OnInit {
   
   showModal = false;
   editingCountry: Country | null = null;
-  form = { name: '', code: '', flagUrl: '' };
+  form = { name: '', code: '', flagUrl: '', flagVideo: '' };
   saving = false;
   error = '';
+
+  // Upload state
+  uploading = false;
+  uploadProgress = 0;
+  uploadError = '';
+
+  // Preview modal
+  showPreviewModal = false;
+  previewVideoUrl = '';
+  previewCountryName = '';
 
   showDeleteModal = false;
   deletingCountry: Country | null = null;
@@ -238,7 +384,8 @@ export class CountriesComponent implements OnInit {
 
   constructor(
     private countryService: CountryService,
-    private playerService: PlayerService
+    private playerService: PlayerService,
+    private http: HttpClient
   ) {}
 
   ngOnInit() {
@@ -262,13 +409,10 @@ export class CountriesComponent implements OnInit {
   }
 
   loadPlayerCounts() {
-    // Load player counts for each country
     this.playerService.getAll().subscribe({
       next: (response) => {
         if (response.success) {
-          // Reset counts
           this.playerCounts = {};
-          // Count players per country
           response.data.forEach(player => {
             const countryId = typeof player.country === 'string' 
               ? player.country 
@@ -287,21 +431,127 @@ export class CountriesComponent implements OnInit {
   openModal(country?: Country) {
     this.editingCountry = country || null;
     this.form = country 
-      ? { name: country.name, code: country.code, flagUrl: country.flagUrl || '' }
-      : { name: '', code: '', flagUrl: '' };
+      ? { name: country.name, code: country.code, flagUrl: country.flagUrl || '', flagVideo: country.flagVideo || '' }
+      : { name: '', code: '', flagUrl: '', flagVideo: '' };
     this.error = '';
+    this.uploadError = '';
+    this.uploadProgress = 0;
     this.showModal = true;
   }
 
   closeModal() {
     this.showModal = false;
     this.editingCountry = null;
-    this.form = { name: '', code: '', flagUrl: '' };
+    this.form = { name: '', code: '', flagUrl: '', flagVideo: '' };
     this.error = '';
+    this.uploadError = '';
+    this.uploadProgress = 0;
   }
 
   editCountry(country: Country) {
     this.openModal(country);
+  }
+
+  onFlagVideoSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    
+    const file = input.files[0];
+    
+    // Validate file type
+    if (!['video/mp4', 'video/webm'].includes(file.type)) {
+      this.uploadError = 'Invalid file type. Please select MP4 or WebM video.';
+      return;
+    }
+    
+    // Validate file size (20MB max)
+    if (file.size > 20 * 1024 * 1024) {
+      this.uploadError = 'File too large. Maximum size is 20MB.';
+      return;
+    }
+    
+    this.uploadFlagVideo(file);
+    
+    // Reset input so same file can be selected again
+    input.value = '';
+  }
+
+  uploadFlagVideo(file: File) {
+    this.uploading = true;
+    this.uploadError = '';
+    this.uploadProgress = 0;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Using XMLHttpRequest for progress tracking
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        this.uploadProgress = Math.round((e.loaded / e.total) * 100);
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      this.uploading = false;
+      this.uploadProgress = 0;
+      
+      if (xhr.status === 200) {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (response.success) {
+            this.form.flagVideo = response.data.url;
+          } else {
+            this.uploadError = response.message || 'Upload failed';
+          }
+        } catch {
+          this.uploadError = 'Invalid server response';
+        }
+      } else {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          this.uploadError = response.message || 'Upload failed';
+        } catch {
+          this.uploadError = 'Upload failed';
+        }
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      this.uploading = false;
+      this.uploadProgress = 0;
+      this.uploadError = 'Upload failed. Please try again.';
+    });
+
+    // Get auth token
+    const token = localStorage.getItem('token');
+    
+    // Pass country code as query parameter
+    const countryCode = this.form.code || 'flag';
+    xhr.open('POST', `/api/uploads/flag?countryCode=${encodeURIComponent(countryCode)}`);
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+    xhr.send(formData);
+  }
+
+  removeFlagVideo() {
+    this.form.flagVideo = '';
+  }
+
+  previewFlagVideo(country: Country) {
+    if (country.flagVideo) {
+      this.previewVideoUrl = country.flagVideo;
+      this.previewCountryName = country.name;
+      this.showPreviewModal = true;
+    }
+  }
+
+  closePreviewModal() {
+    this.showPreviewModal = false;
+    this.previewVideoUrl = '';
+    this.previewCountryName = '';
   }
 
   saveCountry() {
@@ -316,7 +566,8 @@ export class CountriesComponent implements OnInit {
     const data = {
       name: this.form.name.trim(),
       code: this.form.code.toUpperCase().trim(),
-      flagUrl: this.form.flagUrl?.trim() || undefined
+      flagUrl: this.form.flagUrl?.trim() || undefined,
+      flagVideo: this.form.flagVideo?.trim() || undefined
     };
 
     const request = this.editingCountry

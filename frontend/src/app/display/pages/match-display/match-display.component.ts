@@ -35,6 +35,33 @@ import { HttpClient } from '@angular/common/http';
           class="w-full h-full bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900"
         ></div>
         
+        <!-- Flag Overlays (only when using default backgrounds) -->
+        <ng-container *ngIf="showFlagOverlays">
+          <!-- Batting Team Flag (Left Side) -->
+          <video 
+            *ngIf="battingTeamFlagVideo"
+            [src]="battingTeamFlagVideo"
+            autoplay
+            loop
+            muted
+            playsinline
+            class="absolute left-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
+            style="mix-blend-mode: screen;"
+          ></video>
+          
+          <!-- Bowling Team Flag (Right Side) -->
+          <video 
+            *ngIf="bowlingTeamFlagVideo"
+            [src]="bowlingTeamFlagVideo"
+            autoplay
+            loop
+            muted
+            playsinline
+            class="absolute right-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
+            style="mix-blend-mode: screen; transform: scaleX(-1);"
+          ></video>
+        </ng-container>
+        
         <!-- Dark Overlay for readability -->
         <div class="absolute inset-0 bg-black/30"></div>
         
@@ -1216,6 +1243,12 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   displayView = 'score-summary';
   currentBackground: { type: string; url: string | null } | null = null;
   
+  // Flag overlay properties
+  showFlagOverlays = false;  // True when using default background (not match-specific)
+  defaultBackgrounds: any = {};  // Default backgrounds from settings
+  battingTeamFlagVideo: string | null = null;
+  bowlingTeamFlagVideo: string | null = null;
+  
   // Notification overlay properties
   showNotification = false;
   notificationType: 'six' | 'four' | 'wicket' | null = null;
@@ -1234,6 +1267,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.matchId = this.route.snapshot.paramMap.get('matchId') || '';
     if (this.matchId) {
+      this.loadDefaultBackgrounds();
       this.loadMatch();
       this.connectSSE();
     } else {
@@ -1270,6 +1304,20 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     });
   }
 
+  loadDefaultBackgrounds() {
+    this.http.get<{ success: boolean; data: any }>('/api/settings/backgrounds').subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.defaultBackgrounds = response.data;
+          this.updateBackground();
+        }
+      },
+      error: (err) => {
+        console.error('Error loading default backgrounds:', err);
+      }
+    });
+  }
+
   reloadMatch() {
     this.http.get<{ success: boolean; data: any }>(`/api/matches/${this.matchId}`).subscribe({
       next: (response) => {
@@ -1287,18 +1335,68 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     const viewKey = this.displayView;
     const matchViews = this.match?.backgrounds?.views;
     const matchBackground = matchViews ? matchViews[viewKey] : null;
+    
+    // Priority 1: Match-specific background (no flag overlay)
     if (matchBackground?.type !== 'none' && matchBackground?.url) {
       this.currentBackground = matchBackground;
+      this.showFlagOverlays = false;
+      this.battingTeamFlagVideo = null;
+      this.bowlingTeamFlagVideo = null;
       return;
     }
+    
+    // Priority 2: Team background (no flag overlay)
     if (this.match?.backgrounds?.useTeamBackground !== false) {
       const battingTeam = this.currentInnings?.battingTeam;
       if (battingTeam?.background?.type !== 'none' && battingTeam?.background?.url) {
         this.currentBackground = battingTeam.background;
+        this.showFlagOverlays = false;
+        this.battingTeamFlagVideo = null;
+        this.bowlingTeamFlagVideo = null;
         return;
       }
     }
+    
+    // Priority 3: Default background with flag overlays
+    const defaultBg = this.defaultBackgrounds?.[viewKey];
+    if (defaultBg?.type !== 'none' && defaultBg?.url) {
+      this.currentBackground = defaultBg;
+      this.showFlagOverlays = true;
+      this.updateFlagOverlays();
+      return;
+    }
+    
+    // Fallback: No background, but still show flag overlays if available
     this.currentBackground = { type: 'none', url: null };
+    this.showFlagOverlays = true;
+    this.updateFlagOverlays();
+  }
+
+  updateFlagOverlays() {
+    // Get flag videos from current batting and bowling teams
+    const battingTeam = this.currentInnings?.battingTeam;
+    const bowlingTeam = this.currentInnings?.bowlingTeam;
+    
+    // For batting team flag video, check if team object has flagVideo
+    this.battingTeamFlagVideo = battingTeam?.flagVideo || this.getTeamFlagVideo(battingTeam);
+    this.bowlingTeamFlagVideo = bowlingTeam?.flagVideo || this.getTeamFlagVideo(bowlingTeam);
+  }
+
+  getTeamFlagVideo(team: any): string | null {
+    if (!team) return null;
+    
+    // If team has flagVideo directly
+    if (team.flagVideo) return team.flagVideo;
+    
+    // Try to find from match teams
+    const teamId = team._id || team;
+    if (this.match?.team1?._id === teamId || this.match?.team1 === teamId) {
+      return this.match.team1?.flagVideo || null;
+    }
+    if (this.match?.team2?._id === teamId || this.match?.team2 === teamId) {
+      return this.match.team2?.flagVideo || null;
+    }
+    return null;
   }
 
   buildPlayerNameCache() {

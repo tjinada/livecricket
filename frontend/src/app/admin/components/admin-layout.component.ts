@@ -45,6 +45,13 @@ import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/rou
               >
                 Matches
               </a>
+              <a 
+                routerLink="/admin/settings" 
+                routerLinkActive="text-green-600"
+                class="text-gray-600 hover:text-gray-800"
+              >
+                Settings
+              </a>
             </nav>
           </div>
           <div class="flex items-center gap-4">

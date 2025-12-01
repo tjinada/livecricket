@@ -26,6 +26,10 @@ export const ADMIN_ROUTES: Routes = [
       {
         path: 'scoring/:matchId',
         loadComponent: () => import('./pages/scoring/scoring.component').then(m => m.ScoringComponent)
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent)
       }
     ]
   }
