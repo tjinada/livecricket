@@ -512,7 +512,7 @@ import { HttpClient } from '@angular/common/http';
 
             <!-- Bottom Stats Bar -->
             <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-t border-gray-700/50">
-              <div class="max-w-6xl mx-auto px-6 py-4">
+              <div class="max-w-6xl mx-auto px-6 py-5">
                 <div class="flex items-center justify-between">
                   
                   <!-- Current Bowler -->
@@ -521,50 +521,50 @@ import { HttpClient } from '@angular/common/http';
                       <img 
                         *ngIf="getCurrentBowlerImage()" 
                         [src]="getCurrentBowlerImage()"
-                        class="w-16 h-16 rounded-full object-cover border-3 border-green-500 shadow-lg"
+                        class="w-20 h-20 rounded-full object-cover border-4 border-green-500 shadow-lg"
                       >
-                      <div *ngIf="!getCurrentBowlerImage()" class="w-16 h-16 rounded-full bg-gray-600 flex items-center justify-center border-3 border-green-500">
-                        <span class="text-2xl">⚾</span>
+                      <div *ngIf="!getCurrentBowlerImage()" class="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center border-4 border-green-500">
+                        <span class="text-3xl">⚾</span>
                       </div>
                     </div>
                     <div>
-                      <div class="font-semibold text-2xl">{{ getCurrentBowlerName() }}</div>
-                      <div class="text-gray-400 text-lg">{{ getCurrentBowlerFullFigures() }}</div>
+                      <div class="font-semibold text-3xl">{{ getCurrentBowlerName() }}</div>
+                      <div class="text-gray-400 text-xl">{{ getCurrentBowlerFullFigures() }}</div>
                     </div>
                   </div>
 
                   <!-- This Over -->
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm text-gray-500 uppercase mr-3">This Over</span>
+                  <div class="flex items-center gap-3">
+                    <span class="text-lg text-gray-500 uppercase mr-3">This Over</span>
                     <ng-container *ngFor="let ball of getCurrentOverBalls()">
                       <div 
-                        class="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold shadow-md"
+                        class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shadow-md"
                         [ngClass]="getBallColorClass(ball)"
                       >
                         {{ ball.display === '0' ? '•' : ball.display }}
                       </div>
                     </ng-container>
                     <ng-container *ngFor="let i of getRemainingBallsInOver()">
-                      <div class="w-10 h-10 rounded-full border-2 border-gray-600 border-dashed flex items-center justify-center text-sm text-gray-600">
+                      <div class="w-12 h-12 rounded-full border-2 border-gray-600 border-dashed flex items-center justify-center text-lg text-gray-600">
                       </div>
                     </ng-container>
                   </div>
 
                   <!-- Run Rates -->
-                  <div class="flex items-center gap-8 text-base">
+                  <div class="flex items-center gap-10 text-xl">
                     <div>
                       <span class="text-gray-500">CRR </span>
-                      <span class="text-2xl font-bold text-green-400">{{ getCurrentRunRate() }}</span>
+                      <span class="text-3xl font-bold text-green-400">{{ getCurrentRunRate() }}</span>
                     </div>
                     <div *ngIf="match.currentInnings === 1">
                       <span class="text-gray-500">RRR </span>
-                      <span class="text-2xl font-bold text-orange-400">{{ getRequiredRunRate() }}</span>
+                      <span class="text-3xl font-bold text-orange-400">{{ getRequiredRunRate() }}</span>
                     </div>
-                    <div *ngIf="match.currentInnings === 1" class="pl-6 border-l border-gray-600">
+                    <div *ngIf="match.currentInnings === 1" class="pl-8 border-l border-gray-600">
                       <span class="text-gray-500">Need </span>
-                      <span class="text-yellow-400 font-bold text-xl">{{ getRunsNeeded() }}</span>
+                      <span class="text-yellow-400 font-bold text-2xl">{{ getRunsNeeded() }}</span>
                       <span class="text-gray-500"> from </span>
-                      <span class="text-yellow-400 font-bold text-xl">{{ getBallsRemaining() }}</span>
+                      <span class="text-yellow-400 font-bold text-2xl">{{ getBallsRemaining() }}</span>
                     </div>
                   </div>
                 </div>
@@ -619,50 +619,50 @@ import { HttpClient } from '@angular/common/http';
                 <div class="flex flex-col bg-gradient-to-b from-blue-900/80 to-blue-950/80 rounded-lg backdrop-blur-sm overflow-hidden">
                   
                   <!-- At the Crease Card -->
-                  <div class="bg-yellow-900/30 border-b border-yellow-600/30 px-4 py-3">
-                    <div class="text-sm text-yellow-400 uppercase tracking-wider mb-2">At The Crease</div>
+                  <div class="bg-yellow-900/30 border-b border-yellow-600/30 px-5 py-4">
+                    <div class="text-base text-yellow-400 uppercase tracking-wider mb-3">At The Crease</div>
                     <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-5">
+                      <div class="flex items-center gap-6">
                         <!-- Striker -->
                         <div class="flex items-center gap-3">
                           <div class="relative">
                             <img 
                               *ngIf="getStrikerImage()" 
                               [src]="getStrikerImage()"
-                              class="w-12 h-12 rounded-full object-cover border-3 border-yellow-400"
+                              class="w-14 h-14 rounded-full object-cover border-3 border-yellow-400"
                             >
-                            <div *ngIf="!getStrikerImage()" class="w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center border-3 border-yellow-400">
-                              <span class="text-lg">🏏</span>
+                            <div *ngIf="!getStrikerImage()" class="w-14 h-14 rounded-full bg-gray-600 flex items-center justify-center border-3 border-yellow-400">
+                              <span class="text-xl">🏏</span>
                             </div>
                           </div>
-                          <span class="font-semibold text-lg">{{ getStrikerName() }}</span>
-                          <span class="text-white font-bold text-xl">{{ getStrikerRuns() }}</span>
-                          <span class="text-gray-400 text-base">({{ getStrikerBalls() }})</span>
+                          <span class="font-semibold text-xl">{{ getStrikerName() }}</span>
+                          <span class="text-white font-bold text-2xl">{{ getStrikerRuns() }}</span>
+                          <span class="text-gray-400 text-lg">({{ getStrikerBalls() }})</span>
                         </div>
-                        <div class="w-px h-6 bg-gray-600"></div>
+                        <div class="w-px h-8 bg-gray-600"></div>
                         <!-- Non-Striker -->
                         <div class="flex items-center gap-3">
                           <img 
                             *ngIf="getNonStrikerImage()" 
                             [src]="getNonStrikerImage()"
-                            class="w-10 h-10 rounded-full object-cover border-2 border-gray-500 opacity-80"
+                            class="w-12 h-12 rounded-full object-cover border-2 border-gray-500 opacity-80"
                           >
-                          <div *ngIf="!getNonStrikerImage()" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center border-2 border-gray-500">
-                            <span class="text-base">🏏</span>
+                          <div *ngIf="!getNonStrikerImage()" class="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center border-2 border-gray-500">
+                            <span class="text-lg">🏏</span>
                           </div>
-                          <span class="text-gray-300 text-lg">{{ getNonStrikerName() }}</span>
-                          <span class="text-gray-300 text-lg">{{ getNonStrikerRuns() }}</span>
-                          <span class="text-gray-500 text-base">({{ getNonStrikerBalls() }})</span>
+                          <span class="text-gray-300 text-xl">{{ getNonStrikerName() }}</span>
+                          <span class="text-gray-300 text-xl">{{ getNonStrikerRuns() }}</span>
+                          <span class="text-gray-500 text-lg">({{ getNonStrikerBalls() }})</span>
                         </div>
                       </div>
-                      <div class="text-base text-gray-400">
+                      <div class="text-lg text-gray-400">
                         P'ship: <span class="text-white font-semibold">{{ getPartnershipRuns() }}</span> ({{ getPartnershipBalls() }})
                       </div>
                     </div>
                   </div>
                   
                   <!-- Batting Header -->
-                  <div class="grid grid-cols-12 gap-1 px-4 py-2 bg-blue-950/80 text-sm text-gray-400 uppercase">
+                  <div class="grid grid-cols-12 gap-1 px-5 py-3 bg-blue-950/80 text-base text-gray-400 uppercase">
                     <div class="col-span-5">Batsman</div>
                     <div class="col-span-3">How Out</div>
                     <div class="col-span-2 text-center">R(B)</div>
@@ -673,17 +673,17 @@ import { HttpClient } from '@angular/common/http';
                   <div class="flex-1 overflow-hidden">
                     <ng-container *ngFor="let batsman of getBattingStats()">
                       <div 
-                        class="grid grid-cols-12 gap-1 px-4 py-2 border-b border-blue-800/30 text-base"
+                        class="grid grid-cols-12 gap-1 px-5 py-3 border-b border-blue-800/30 text-lg"
                         [ngClass]="{
                           'bg-yellow-900/20': isCurrentBatsman(batsman),
                           'opacity-50': batsman.isDNB
                         }"
                       >
-                        <div class="col-span-5 flex items-center gap-2 truncate">
+                        <div class="col-span-5 flex items-center gap-3 truncate">
                           <img 
                             *ngIf="getBatsmanImage(batsman)" 
                             [src]="getBatsmanImage(batsman)"
-                            class="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                            class="w-10 h-10 rounded-full object-cover flex-shrink-0"
                             [ngClass]="{
                               'border-2 border-yellow-400': isStriker(batsman),
                               'border-2 border-gray-500': isCurrentBatsman(batsman) && !isStriker(batsman),
@@ -691,13 +691,13 @@ import { HttpClient } from '@angular/common/http';
                             }"
                           >
                           <div *ngIf="!getBatsmanImage(batsman)" 
-                            class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
+                            class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
                             [ngClass]="{
                               'border-2 border-yellow-400': isStriker(batsman),
                               'border-2 border-gray-500': isCurrentBatsman(batsman) && !isStriker(batsman),
                               'border border-gray-600': !isCurrentBatsman(batsman)
                             }">
-                            <span class="text-sm">🏏</span>
+                            <span class="text-base">🏏</span>
                           </div>
                           <span class="truncate" [ngClass]="{
                             'text-yellow-300 font-semibold': isCurrentBatsman(batsman),
@@ -706,20 +706,20 @@ import { HttpClient } from '@angular/common/http';
                             {{ getBatsmanName(batsman) }}
                           </span>
                         </div>
-                        <div class="col-span-3 text-sm truncate" [ngClass]="{'text-gray-600 italic': batsman.isDNB, 'text-gray-400': !batsman.isDNB}">
+                        <div class="col-span-3 text-base truncate" [ngClass]="{'text-gray-600 italic': batsman.isDNB, 'text-gray-400': !batsman.isDNB}">
                           {{ getShortDismissal(batsman) }}
                         </div>
                         <div class="col-span-2 text-center">
                           <ng-container *ngIf="!batsman.isDNB">
-                            <span class="font-bold text-lg">{{ batsman.runs || 0 }}</span>
-                            <span class="text-gray-500 text-sm">({{ batsman.balls || 0 }})</span>
+                            <span class="font-bold text-xl">{{ batsman.runs || 0 }}</span>
+                            <span class="text-gray-500 text-base">({{ batsman.balls || 0 }})</span>
                           </ng-container>
                           <span *ngIf="batsman.isDNB" class="text-gray-600">-</span>
                         </div>
-                        <div class="col-span-2 text-center text-sm">
+                        <div class="col-span-2 text-center text-base">
                           <ng-container *ngIf="!batsman.isDNB">
                             <span class="text-green-400">{{ batsman.fours || 0 }}</span>
-                            <span class="text-gray-600">/</span>
+                            <span class="text-gray-600"> / </span>
                             <span class="text-purple-400">{{ batsman.sixes || 0 }}</span>
                           </ng-container>
                           <span *ngIf="batsman.isDNB" class="text-gray-600">-</span>
@@ -744,26 +744,26 @@ import { HttpClient } from '@angular/common/http';
                   <div class="flex-1 bg-gradient-to-b from-gray-800/80 to-gray-900/80 rounded-lg backdrop-blur-sm overflow-hidden flex flex-col">
                     
                     <!-- Bowling Now -->
-                    <div class="bg-green-900/30 border-b border-green-700/30 px-4 py-3">
+                    <div class="bg-green-900/30 border-b border-green-700/30 px-5 py-4">
                       <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-4">
                           <img 
                             *ngIf="getCurrentBowlerImage()" 
                             [src]="getCurrentBowlerImage()"
-                            class="w-12 h-12 rounded-full object-cover border-3 border-green-400"
+                            class="w-14 h-14 rounded-full object-cover border-3 border-green-400"
                           >
-                          <div *ngIf="!getCurrentBowlerImage()" class="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center border-3 border-green-400">
-                            <span class="text-lg">⚾</span>
+                          <div *ngIf="!getCurrentBowlerImage()" class="w-14 h-14 rounded-full bg-gray-700 flex items-center justify-center border-3 border-green-400">
+                            <span class="text-xl">⚾</span>
                           </div>
-                          <span class="font-semibold text-green-300 text-lg">{{ getCurrentBowlerName() }}</span>
-                          <span class="text-white text-lg">{{ getCurrentBowlerFigures() }}</span>
-                          <span class="text-gray-400 text-base">({{ getCurrentBowlerOvers() }})</span>
+                          <span class="font-semibold text-green-300 text-xl">{{ getCurrentBowlerName() }}</span>
+                          <span class="text-white text-xl">{{ getCurrentBowlerFigures() }}</span>
+                          <span class="text-gray-400 text-lg">({{ getCurrentBowlerOvers() }})</span>
                         </div>
                         <div class="flex items-center gap-2">
-                          <span class="text-sm text-gray-500">This Over:</span>
+                          <span class="text-base text-gray-500">This Over:</span>
                           <ng-container *ngFor="let ball of getCurrentOverBalls()">
                             <div 
-                              class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+                              class="w-8 h-8 rounded-full flex items-center justify-center text-base font-bold"
                               [ngClass]="getBallColorClass(ball)"
                             >{{ ball.display === '0' ? '•' : ball.display }}</div>
                           </ng-container>
@@ -772,7 +772,7 @@ import { HttpClient } from '@angular/common/http';
                     </div>
                     
                     <!-- Bowling Header -->
-                    <div class="grid grid-cols-12 gap-1 px-4 py-2 bg-gray-900/80 text-sm text-gray-400 uppercase">
+                    <div class="grid grid-cols-12 gap-1 px-5 py-3 bg-gray-900/80 text-base text-gray-400 uppercase">
                       <div class="col-span-5">Bowler</div>
                       <div class="col-span-2 text-center">O</div>
                       <div class="col-span-2 text-center">R</div>
@@ -784,26 +784,26 @@ import { HttpClient } from '@angular/common/http';
                     <div class="flex-1 overflow-hidden">
                       <ng-container *ngFor="let bowler of getBowlingStats()">
                         <div 
-                          class="grid grid-cols-12 gap-1 px-4 py-2 border-b border-gray-700/30 text-base"
+                          class="grid grid-cols-12 gap-1 px-5 py-3 border-b border-gray-700/30 text-lg"
                           [ngClass]="{'bg-green-900/20': isCurrentBowler(bowler)}"
                         >
-                          <div class="col-span-5 flex items-center gap-2 truncate" [ngClass]="{'text-green-300 font-semibold': isCurrentBowler(bowler)}">
+                          <div class="col-span-5 flex items-center gap-3 truncate" [ngClass]="{'text-green-300 font-semibold': isCurrentBowler(bowler)}">
                             <img 
                               *ngIf="getBowlerImage(bowler)" 
                               [src]="getBowlerImage(bowler)"
-                              class="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                              class="w-10 h-10 rounded-full object-cover flex-shrink-0"
                               [ngClass]="{
                                 'border-2 border-green-400': isCurrentBowler(bowler),
                                 'border border-gray-600': !isCurrentBowler(bowler)
                               }"
                             >
                             <div *ngIf="!getBowlerImage(bowler)" 
-                              class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
+                              class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
                               [ngClass]="{
                                 'border-2 border-green-400': isCurrentBowler(bowler),
                                 'border border-gray-600': !isCurrentBowler(bowler)
                               }">
-                              <span class="text-sm">⚾</span>
+                              <span class="text-base">⚾</span>
                             </div>
                             <span class="truncate">
                               {{ getBowlerName(bowler) }}
@@ -812,7 +812,7 @@ import { HttpClient } from '@angular/common/http';
                           </div>
                           <div class="col-span-2 text-center">{{ getBowlerOversDisplay(bowler) }}</div>
                           <div class="col-span-2 text-center">{{ bowler.runs || 0 }}</div>
-                          <div class="col-span-1 text-center font-bold text-green-400 text-lg">{{ bowler.wickets || 0 }}</div>
+                          <div class="col-span-1 text-center font-bold text-green-400 text-xl">{{ bowler.wickets || 0 }}</div>
                           <div class="col-span-2 text-center text-gray-300">{{ getBowlerEconomy(bowler) }}</div>
                         </div>
                       </ng-container>
@@ -855,11 +855,11 @@ import { HttpClient } from '@angular/common/http';
 
             <!-- Bottom Bar (if chasing) -->
             <div *ngIf="match.currentInnings === 1" class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-t border-gray-700/50">
-              <div class="max-w-7xl mx-auto px-4 py-2">
-                <div class="flex items-center justify-center gap-6 text-sm">
-                  <span class="text-gray-400">Target: <span class="text-white font-bold">{{ getTarget() }}</span></span>
-                  <span class="text-gray-400">Need: <span class="text-yellow-400 font-bold">{{ getRunsNeeded() }}</span> from <span class="text-yellow-400 font-bold">{{ getBallsRemaining() }}</span> balls</span>
-                  <span class="text-gray-400">RRR: <span class="text-orange-400 font-bold">{{ getRequiredRunRate() }}</span></span>
+              <div class="max-w-7xl mx-auto px-4 py-3">
+                <div class="flex items-center justify-center gap-10 text-lg">
+                  <span class="text-gray-400">Target: <span class="text-white font-bold text-xl">{{ getTarget() }}</span></span>
+                  <span class="text-gray-400">Need: <span class="text-yellow-400 font-bold text-xl">{{ getRunsNeeded() }}</span> from <span class="text-yellow-400 font-bold text-xl">{{ getBallsRemaining() }}</span> balls</span>
+                  <span class="text-gray-400">RRR: <span class="text-orange-400 font-bold text-xl">{{ getRequiredRunRate() }}</span></span>
                 </div>
               </div>
             </div>
