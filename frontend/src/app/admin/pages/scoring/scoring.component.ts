@@ -4,9 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatchService, Match } from '../../../core/services/match.service';
 import { ScoringService, BallData } from '../../../core/services/scoring.service';
+import { PlayerService } from '../../../core/services/player.service';
+import { Player } from '../../../core/models';
 import { BackgroundSettingsComponent, BackgroundSettings } from '../../components/background-settings/background-settings.component';
 
-type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo';
+type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute';
 
 @Component({
   selector: 'app-scoring',
@@ -430,6 +432,107 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   }
                 </div>
               </div>
+
+              <!-- Playing XI -->
+              <div class="bg-white rounded-lg shadow p-4">
+                <div class="flex justify-between items-center mb-3">
+                  <h3 class="font-semibold text-gray-800">Playing XI</h3>
+                  <button 
+                    (click)="openSubstituteModal()"
+                    class="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    🔄 Substitute
+                  </button>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <!-- Team 1 -->
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-600 mb-2 pb-1 border-b">
+                      {{ match.team1?.name }}
+                      @if (isTeam1Batting()) {
+                        <span class="text-green-600 text-xs ml-1">(Batting)</span>
+                      } @else {
+                        <span class="text-blue-600 text-xs ml-1">(Bowling)</span>
+                      }
+                    </h4>
+                    <div class="space-y-1">
+                      @for (player of getTeam1PlayingXI(); track getPlayerId(player); let i = $index) {
+                        <div 
+                          class="flex items-center gap-2 text-sm py-1 px-2 rounded"
+                          [class.bg-green-50]="isPlayerOnField(player, 'team1')"
+                          [class.bg-red-50]="isPlayerOut(player)"
+                        >
+                          <span class="text-gray-400 text-xs w-4">{{ player.battingOrder || (i + 1) }}</span>
+                          <span 
+                            class="flex-1 truncate"
+                            [class.font-medium]="isPlayerOnField(player, 'team1')"
+                            [class.text-green-700]="isPlayerOnField(player, 'team1')"
+                            [class.text-red-400]="isPlayerOut(player)"
+                            [class.line-through]="isPlayerOut(player)"
+                          >
+                            {{ getSquadPlayerName(player) }}
+                          </span>
+                          @if (isStriker(player)) {
+                            <span class="text-green-600 text-xs font-medium">striker</span>
+                          }
+                          @if (isNonStriker(player)) {
+                            <span class="text-gray-500 text-xs">non-striker</span>
+                          }
+                          @if (isBowling(player)) {
+                            <span class="text-blue-600 text-xs font-medium">bowling</span>
+                          }
+                          @if (isPlayerOut(player)) {
+                            <span class="text-red-500 text-xs">out</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                  <!-- Team 2 -->
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-600 mb-2 pb-1 border-b">
+                      {{ match.team2?.name }}
+                      @if (!isTeam1Batting()) {
+                        <span class="text-green-600 text-xs ml-1">(Batting)</span>
+                      } @else {
+                        <span class="text-blue-600 text-xs ml-1">(Bowling)</span>
+                      }
+                    </h4>
+                    <div class="space-y-1">
+                      @for (player of getTeam2PlayingXI(); track getPlayerId(player); let i = $index) {
+                        <div 
+                          class="flex items-center gap-2 text-sm py-1 px-2 rounded"
+                          [class.bg-green-50]="isPlayerOnField(player, 'team2')"
+                          [class.bg-red-50]="isPlayerOut(player)"
+                        >
+                          <span class="text-gray-400 text-xs w-4">{{ player.battingOrder || (i + 1) }}</span>
+                          <span 
+                            class="flex-1 truncate"
+                            [class.font-medium]="isPlayerOnField(player, 'team2')"
+                            [class.text-green-700]="isPlayerOnField(player, 'team2')"
+                            [class.text-red-400]="isPlayerOut(player)"
+                            [class.line-through]="isPlayerOut(player)"
+                          >
+                            {{ getSquadPlayerName(player) }}
+                          </span>
+                          @if (isStriker(player)) {
+                            <span class="text-green-600 text-xs font-medium">striker</span>
+                          }
+                          @if (isNonStriker(player)) {
+                            <span class="text-gray-500 text-xs">non-striker</span>
+                          }
+                          @if (isBowling(player)) {
+                            <span class="text-blue-600 text-xs font-medium">bowling</span>
+                          }
+                          @if (isPlayerOut(player)) {
+                            <span class="text-red-500 text-xs">out</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Right Column: Scoring Controls -->
@@ -535,6 +638,13 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                     class="w-full h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium disabled:opacity-50"
                   >
                     ↩ Undo Last Ball
+                  </button>
+                  <button 
+                    (click)="openSubstituteModal()"
+                    [disabled]="processing"
+                    class="w-full h-10 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    🔄 Substitute Player
                   </button>
                   <button 
                     (click)="openModal('endInnings')"
@@ -1022,6 +1132,91 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
         </div>
       }
 
+      <!-- Substitute Player Modal -->
+      @if (activeModal === 'substitute') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">Substitute Player</h3>
+            </div>
+            <div class="p-4 space-y-4">
+              <p class="text-sm text-gray-500">Replace a player in the playing XI with another player from the country.</p>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Team</label>
+                <select 
+                  [(ngModel)]="substituteForm.team"
+                  (change)="onSubstituteTeamChange()"
+                  class="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Select Team</option>
+                  <option value="team1">{{ match?.team1?.name }}</option>
+                  <option value="team2">{{ match?.team2?.name }}</option>
+                </select>
+              </div>
+
+              @if (substituteForm.team) {
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Player Out</label>
+                  <select 
+                    [(ngModel)]="substituteForm.playerOut"
+                    (change)="onPlayerOutChange()"
+                    class="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">Select Player to Replace</option>
+                    @for (player of getPlayingXIForTeam(substituteForm.team); track getPlayerId(player)) {
+                      <option [value]="getPlayerId(player)">
+                        {{ getSquadPlayerName(player) }}
+                      </option>
+                    }
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Player In</label>
+                  @if (loadingSubstitutes) {
+                    <div class="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-500">
+                      Loading available players...
+                    </div>
+                  } @else {
+                    <select 
+                      [(ngModel)]="substituteForm.playerIn"
+                      class="w-full px-3 py-2 border rounded-lg"
+                      [disabled]="!substituteForm.playerOut"
+                    >
+                      <option value="">Select Replacement Player</option>
+                      @for (player of availableSubstitutes; track player._id) {
+                        <option [value]="player._id">
+                          {{ player.name }}
+                        </option>
+                      }
+                    </select>
+                    @if (availableSubstitutes.length === 0 && substituteForm.team) {
+                      <p class="text-xs text-orange-600 mt-1">No other players available from this country</p>
+                    }
+                  }
+                </div>
+              }
+            </div>
+            <div class="p-4 border-t flex justify-end gap-3">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button 
+                (click)="confirmSubstitute()"
+                [disabled]="processing || !substituteForm.team || !substituteForm.playerOut || !substituteForm.playerIn"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {{ processing ? 'Substituting...' : 'Confirm Substitute' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- Background Settings Modal -->
       @if (showBackgroundSettings) {
         <app-background-settings
@@ -1052,6 +1247,15 @@ export class ScoringComponent implements OnInit, OnDestroy {
     newBatsman: ''
   };
   wicketError = '';
+
+  // Substitute form
+  substituteForm = {
+    team: '' as 'team1' | 'team2' | '',
+    playerOut: '',
+    playerIn: ''
+  };
+  availableSubstitutes: Player[] = [];
+  loadingSubstitutes = false;
 
   // Extras form
   extrasForm = {
@@ -1092,7 +1296,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private matchService: MatchService,
-    private scoringService: ScoringService
+    private scoringService: ScoringService,
+    private playerService: PlayerService
   ) {}
 
   ngOnInit() {
@@ -1592,6 +1797,167 @@ export class ScoringComponent implements OnInit, OnDestroy {
   isLastWicket(): boolean {
     // It's the last wicket if 9 wickets have already fallen (this will be the 10th)
     return (this.currentInnings?.totalWickets || 0) >= 9;
+  }
+
+  // Substitute player methods
+  openSubstituteModal(): void {
+    this.substituteForm = { team: '', playerOut: '', playerIn: '' };
+    this.availableSubstitutes = [];
+    this.activeModal = 'substitute';
+  }
+
+  onSubstituteTeamChange(): void {
+    this.substituteForm.playerOut = '';
+    this.substituteForm.playerIn = '';
+    this.availableSubstitutes = [];
+    
+    if (this.substituteForm.team) {
+      this.loadAvailableSubstitutes();
+    }
+  }
+
+  onPlayerOutChange(): void {
+    this.substituteForm.playerIn = '';
+  }
+
+  loadAvailableSubstitutes(): void {
+    const countryId = this.substituteForm.team === 'team1' 
+      ? (this.match?.team1?._id || '') 
+      : (this.match?.team2?._id || '');
+    
+    if (!countryId) {
+      this.availableSubstitutes = [];
+      return;
+    }
+
+    this.loadingSubstitutes = true;
+    this.playerService.getAll({ country: countryId, isActive: true }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          // Filter out players already in the squad
+          const squad = this.getSquadForTeam(this.substituteForm.team);
+          const squadPlayerIds = squad.map((p: any) => this.getPlayerId(p));
+          this.availableSubstitutes = response.data
+            .filter((player: Player) => !squadPlayerIds.includes(player._id))
+            .sort((a: Player, b: Player) => a.name.localeCompare(b.name));
+        }
+        this.loadingSubstitutes = false;
+      },
+      error: () => {
+        this.availableSubstitutes = [];
+        this.loadingSubstitutes = false;
+      }
+    });
+  }
+
+  getSquadForTeam(team: 'team1' | 'team2' | ''): any[] {
+    if (!this.match || !team) return [];
+    const squad = team === 'team1' ? this.match.squads?.team1 : this.match.squads?.team2;
+    return squad || [];
+  }
+
+  getPlayingXIForTeam(team: 'team1' | 'team2' | ''): any[] {
+    return this.getSquadForTeam(team).filter((p: any) => p.isPlayingXI);
+  }
+
+  // Playing XI display helpers
+  isTeam1Batting(): boolean {
+    if (!this.match || !this.currentInnings) return false;
+    const battingTeamId = this.currentInnings.battingTeam?._id || this.currentInnings.battingTeam;
+    const team1Id = this.match.team1?._id || this.match.team1;
+    return battingTeamId === team1Id || battingTeamId?.toString() === team1Id?.toString();
+  }
+
+  getTeam1PlayingXI(): any[] {
+    const squad = this.match?.squads?.team1?.filter((p: any) => p.isPlayingXI) || [];
+    return squad.sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+  }
+
+  getTeam2PlayingXI(): any[] {
+    const squad = this.match?.squads?.team2?.filter((p: any) => p.isPlayingXI) || [];
+    return squad.sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+  }
+
+  isPlayerOnField(player: any, team: 'team1' | 'team2'): boolean {
+    const playerId = this.getPlayerId(player);
+    if (!playerId || !this.currentInnings) return false;
+    
+    const isTeam1Batting = this.isTeam1Batting();
+    const isBattingTeam = (team === 'team1' && isTeam1Batting) || (team === 'team2' && !isTeam1Batting);
+    
+    if (isBattingTeam) {
+      // Check if player is one of the current batsmen
+      const strikerId = this.currentInnings.currentBatsmen?.striker?._id || this.currentInnings.currentBatsmen?.striker;
+      const nonStrikerId = this.currentInnings.currentBatsmen?.nonStriker?._id || this.currentInnings.currentBatsmen?.nonStriker;
+      return playerId === strikerId?.toString() || playerId === nonStrikerId?.toString();
+    } else {
+      // Check if player is the current bowler
+      const bowlerId = this.currentInnings.currentBowler?._id || this.currentInnings.currentBowler;
+      return playerId === bowlerId?.toString();
+    }
+  }
+
+  isStriker(player: any): boolean {
+    const playerId = this.getPlayerId(player);
+    if (!playerId || !this.currentInnings) return false;
+    const strikerId = this.currentInnings.currentBatsmen?.striker?._id || this.currentInnings.currentBatsmen?.striker;
+    return playerId === strikerId?.toString();
+  }
+
+  isNonStriker(player: any): boolean {
+    const playerId = this.getPlayerId(player);
+    if (!playerId || !this.currentInnings) return false;
+    const nonStrikerId = this.currentInnings.currentBatsmen?.nonStriker?._id || this.currentInnings.currentBatsmen?.nonStriker;
+    return playerId === nonStrikerId?.toString();
+  }
+
+  isBowling(player: any): boolean {
+    const playerId = this.getPlayerId(player);
+    if (!playerId || !this.currentInnings) return false;
+    const bowlerId = this.currentInnings.currentBowler?._id || this.currentInnings.currentBowler;
+    return playerId === bowlerId?.toString();
+  }
+
+  isPlayerOut(player: any): boolean {
+    const playerId = this.getPlayerId(player);
+    if (!playerId || !this.currentInnings) return false;
+    
+    // Check if player has a dismissal in batting stats
+    const battingStat = this.currentInnings.battingStats?.find((bs: any) => {
+      const bsPlayerId = bs.player?._id || bs.player;
+      return bsPlayerId === playerId || bsPlayerId?.toString() === playerId;
+    });
+    
+    return battingStat?.dismissal?.type ? true : false;
+  }
+
+  confirmSubstitute(): void {
+    if (!this.substituteForm.team || !this.substituteForm.playerOut || !this.substituteForm.playerIn) {
+      return;
+    }
+
+    this.processing = true;
+    this.error = '';
+
+    this.matchService.substitutePlayer(this.matchId, {
+      team: this.substituteForm.team,
+      playerOut: this.substituteForm.playerOut,
+      playerIn: this.substituteForm.playerIn
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.closeModal();
+          this.reloadMatch();
+        } else {
+          this.error = response.message || 'Failed to substitute player';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to substitute player';
+        this.processing = false;
+      }
+    });
   }
 
   isFirstInningsCompleteAwaitingSecond(): boolean {

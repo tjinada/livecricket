@@ -569,6 +569,138 @@ function broadcastToMatch(matchId, event, data) {
 // Export broadcast function for use in scoring routes
 router.broadcastToMatch = broadcastToMatch;
 
+// PUT /api/matches/:id/substitute - Substitute a player in the squad (protected)
+router.put('/:id/substitute', auth, async (req, res, next) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+    
+    if (match.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot substitute in a completed match'
+      });
+    }
+    
+    const { team, playerOut, playerIn } = req.body;
+    
+    if (!team || !playerOut || !playerIn) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team, playerOut, and playerIn are required'
+      });
+    }
+    
+    if (team !== 'team1' && team !== 'team2') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid team'
+      });
+    }
+    
+    const squad = match.squads[team];
+    
+    // Find the player to replace
+    const playerOutIndex = squad.findIndex(p => 
+      p.player.toString() === playerOut
+    );
+    
+    if (playerOutIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Player to replace not found in squad'
+      });
+    }
+    
+    // Check if playerIn is already in the squad
+    const playerInExists = squad.some(p => p.player.toString() === playerIn);
+    if (playerInExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'Replacement player is already in the squad'
+      });
+    }
+    
+    // Get the outgoing player's details
+    const outgoingPlayer = squad[playerOutIndex];
+    const battingOrder = outgoingPlayer.battingOrder;
+    const wasPlayingXI = outgoingPlayer.isPlayingXI;
+    
+    // Replace the player in the squad
+    squad[playerOutIndex] = {
+      player: playerIn,
+      isPlayingXI: wasPlayingXI,
+      battingOrder: battingOrder
+    };
+    
+    // Update current innings if player is on field
+    if (match.status === 'live' && match.innings && match.innings.length > 0) {
+      const currentInnings = match.innings[match.currentInnings];
+      
+      if (currentInnings) {
+        // Check if the player being replaced is currently batting
+        if (currentInnings.currentBatsmen?.striker?.toString() === playerOut) {
+          currentInnings.currentBatsmen.striker = playerIn;
+        }
+        if (currentInnings.currentBatsmen?.nonStriker?.toString() === playerOut) {
+          currentInnings.currentBatsmen.nonStriker = playerIn;
+        }
+        
+        // Check if the player being replaced is currently bowling
+        if (currentInnings.currentBowler?.toString() === playerOut) {
+          currentInnings.currentBowler = playerIn;
+        }
+        
+        // Update batting stats if player has batted
+        const battingStatIndex = currentInnings.battingStats?.findIndex(
+          bs => bs.player?.toString() === playerOut
+        );
+        if (battingStatIndex !== -1 && battingStatIndex !== undefined) {
+          currentInnings.battingStats[battingStatIndex].player = playerIn;
+        }
+        
+        // Update bowling stats if player has bowled
+        const bowlingStatIndex = currentInnings.bowlingStats?.findIndex(
+          bs => bs.player?.toString() === playerOut
+        );
+        if (bowlingStatIndex !== -1 && bowlingStatIndex !== undefined) {
+          currentInnings.bowlingStats[bowlingStatIndex].player = playerIn;
+        }
+        
+        // Update partnership reference
+        if (currentInnings.partnership?.batsman1?.toString() === playerOut) {
+          currentInnings.partnership.batsman1 = playerIn;
+        }
+        if (currentInnings.partnership?.batsman2?.toString() === playerOut) {
+          currentInnings.partnership.batsman2 = playerIn;
+        }
+      }
+    }
+    
+    await match.save();
+    
+    // Populate and return
+    await match.populate('squads.team1.player', 'name role battingStyle bowlingStyle headshotPath');
+    await match.populate('squads.team2.player', 'name role battingStyle bowlingStyle headshotPath');
+    
+    // Broadcast update to SSE clients
+    broadcastToMatch(req.params.id, 'squad-change', { team, playerOut, playerIn });
+    
+    res.json({
+      success: true,
+      data: match
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/matches/:id/notification - Send display notifications
 router.post('/:id/notification', async (req, res, next) => {
   try {

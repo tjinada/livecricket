@@ -126,4 +126,8 @@ export class MatchService {
   sendNotification(id: string, type: string, data: any): Observable<ApiResponse<any>> {
     return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${id}/notification`, { type, data });
   }
+
+  substitutePlayer(id: string, data: { team: 'team1' | 'team2', playerOut: string, playerIn: string }): Observable<ApiResponse<Match>> {
+    return this.http.put<ApiResponse<Match>>(`${this.apiUrl}/${id}/substitute`, data);
+  }
 }
