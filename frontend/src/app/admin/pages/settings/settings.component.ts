@@ -13,6 +13,7 @@ interface DefaultBackgrounds {
   'player-stats': ViewBackground;
   'overall-summary': ViewBackground;
   'projections': ViewBackground;
+  'partnership': ViewBackground;
 }
 
 @Component({
@@ -184,14 +185,16 @@ export class SettingsComponent implements OnInit {
     { key: 'score-summary', label: 'Live Score View' },
     { key: 'player-stats', label: 'Player Stats View' },
     { key: 'overall-summary', label: 'Match Summary View' },
-    { key: 'projections', label: 'Projections View' }
+    { key: 'projections', label: 'Projections View' },
+    { key: 'partnership', label: 'Partnership View' }
   ];
 
   backgrounds: DefaultBackgrounds = {
     'score-summary': { type: 'none', url: null },
     'player-stats': { type: 'none', url: null },
     'overall-summary': { type: 'none', url: null },
-    'projections': { type: 'none', url: null }
+    'projections': { type: 'none', url: null },
+    'partnership': { type: 'none', url: null }
   };
 
   loading = true;
@@ -218,7 +221,8 @@ export class SettingsComponent implements OnInit {
             'score-summary': response.data['score-summary'] || { type: 'none', url: null },
             'player-stats': response.data['player-stats'] || { type: 'none', url: null },
             'overall-summary': response.data['overall-summary'] || { type: 'none', url: null },
-            'projections': response.data['projections'] || { type: 'none', url: null }
+            'projections': response.data['projections'] || { type: 'none', url: null },
+            'partnership': response.data['partnership'] || { type: 'none', url: null }
           };
         }
         this.loading = false;
