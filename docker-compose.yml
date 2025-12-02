@@ -13,6 +13,8 @@ services:
       - JWT_EXPIRES_IN=24h
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-cricket123}
+    volumes:
+      - uploads_data:/app/public/uploads
     depends_on:
       mongo:
         condition: service_healthy
@@ -38,6 +40,7 @@ services:
 
 volumes:
   mongo_data:
+  uploads_data:
 
 networks:
   livecricket-network:
