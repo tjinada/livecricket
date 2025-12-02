@@ -1880,7 +1880,23 @@ export class ScoringComponent implements OnInit, OnDestroy {
   }
 
   thirdUmpireOut() {
-    this.matchService.sendNotification(this.matchId, 'third-umpire-decision', { decision: 'out' }).subscribe({
+    // Get current striker's info for the OUT decision display
+    const striker = this.currentInnings?.currentBatsmen?.striker;
+    const strikerStats = this.currentInnings?.battingStats?.find((b: any) => {
+      const id = b.player?._id || b.player;
+      const strikerId = striker?._id || striker;
+      return id === strikerId || id?.toString() === strikerId?.toString();
+    });
+    
+    const dismissedData: any = {
+      decision: 'out',
+      dismissedName: striker?.name || strikerStats?.player?.name || 'Batsman',
+      dismissedImage: this.buildPlayerImageUrl(striker?.headshotPath || strikerStats?.player?.headshotPath),
+      dismissedRuns: strikerStats?.runs || 0,
+      dismissedBalls: strikerStats?.balls || 0
+    };
+    
+    this.matchService.sendNotification(this.matchId, 'third-umpire-decision', dismissedData).subscribe({
       next: () => {
         this.thirdUmpireActive = false;
       },
@@ -1919,5 +1935,11 @@ export class ScoringComponent implements OnInit, OnDestroy {
         this.error = err.error?.message || 'Failed to dismiss message';
       }
     });
+  }
+
+  // Helper to build ESPN image URL from headshotPath
+  buildPlayerImageUrl(headshotPath: string | undefined): string | null {
+    if (!headshotPath) return null;
+    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${headshotPath}`;
   }
 }

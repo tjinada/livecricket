@@ -101,6 +101,9 @@ import { HttpClient } from '@angular/common/http';
                 [src]="notificationData?.batsmanImage"
                 class="w-32 h-32 rounded-full object-cover border-4 border-yellow-500 shadow-2xl"
               >
+              <div *ngIf="!notificationData?.batsmanImage" class="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center border-4 border-yellow-500">
+                <span class="text-5xl">🏏</span>
+              </div>
               <div>
                 <div class="text-4xl font-bold text-white">{{ notificationData?.batsmanName }}</div>
                 <div class="text-2xl text-yellow-400 mt-2">
@@ -144,6 +147,9 @@ import { HttpClient } from '@angular/common/http';
                 [src]="notificationData?.batsmanImage"
                 class="w-28 h-28 rounded-full object-cover border-4 border-green-500 shadow-2xl"
               >
+              <div *ngIf="!notificationData?.batsmanImage" class="w-28 h-28 rounded-full bg-gray-700 flex items-center justify-center border-4 border-green-500">
+                <span class="text-4xl">🏏</span>
+              </div>
               <div>
                 <div class="text-3xl font-bold text-white">{{ notificationData?.batsmanName }}</div>
                 <div class="text-xl text-green-400 mt-1">
@@ -188,6 +194,9 @@ import { HttpClient } from '@angular/common/http';
                 [src]="notificationData?.dismissedImage"
                 class="w-36 h-36 rounded-full object-cover border-4 border-red-500 shadow-2xl grayscale"
               >
+              <div *ngIf="!notificationData?.dismissedImage" class="w-36 h-36 rounded-full bg-gray-700 flex items-center justify-center border-4 border-red-500">
+                <span class="text-6xl">🏏</span>
+              </div>
               <div>
                 <div class="text-5xl font-bold text-white">{{ notificationData?.dismissedName }}</div>
                 <div class="text-3xl text-red-400 mt-3">
@@ -269,8 +278,21 @@ import { HttpClient } from '@angular/common/http';
             
             <!-- Batsman info (if out) -->
             <div *ngIf="thirdUmpireDecision === 'out' && notificationData?.dismissedName" 
-                 class="mt-8 bg-black/60 backdrop-blur-md rounded-2xl px-10 py-6 inline-block border border-red-500/40">
-              <div class="text-3xl font-bold text-white">{{ notificationData?.dismissedName }}</div>
+                 class="mt-8 bg-black/60 backdrop-blur-md rounded-2xl px-10 py-6 inline-flex items-center gap-6 border border-red-500/40">
+              <img 
+                *ngIf="notificationData?.dismissedImage" 
+                [src]="notificationData?.dismissedImage"
+                class="w-32 h-32 rounded-full object-cover border-4 border-red-500 shadow-2xl grayscale"
+              >
+              <div *ngIf="!notificationData?.dismissedImage" class="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center border-4 border-red-500">
+                <span class="text-5xl">🏏</span>
+              </div>
+              <div>
+                <div class="text-4xl font-bold text-white">{{ notificationData?.dismissedName }}</div>
+                <div *ngIf="notificationData?.dismissedRuns !== undefined" class="text-2xl text-red-400 mt-2">
+                  {{ notificationData?.dismissedRuns }} ({{ notificationData?.dismissedBalls }})
+                </div>
+              </div>
             </div>
           </div>
         </div>
