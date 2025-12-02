@@ -994,81 +994,81 @@ import { HttpClient } from '@angular/common/http';
               <div class="max-w-5xl mx-auto w-full">
                 
                 <!-- Two Innings Side by Side -->
-                <div class="grid grid-cols-2 gap-6 mb-6">
+                <div class="grid grid-cols-2 gap-8 mb-8">
                   
                   <!-- 1st Innings (Completed) -->
-                  <div class="bg-gray-800/60 rounded-lg p-6 backdrop-blur-sm">
-                    <div class="flex items-center justify-between mb-5">
-                      <div class="flex items-center gap-3">
-                        <div class="w-14 h-10 bg-gradient-to-br from-gray-600 to-gray-700 rounded flex items-center justify-center text-base font-bold">
+                  <div class="bg-gray-800/60 rounded-xl p-8 backdrop-blur-sm">
+                    <div class="flex items-center justify-between mb-6">
+                      <div class="flex items-center gap-4">
+                        <div class="w-16 h-12 bg-gradient-to-br from-gray-600 to-gray-700 rounded-lg flex items-center justify-center text-lg font-bold">
                           {{ getTeamCode(match.innings[0]?.battingTeam) }}
                         </div>
                         <div>
-                          <div class="font-bold text-lg">{{ getTeamName(match.innings[0]?.battingTeam) }}</div>
-                          <div class="text-gray-500 text-sm uppercase">1st Innings</div>
+                          <div class="font-bold text-2xl">{{ getTeamName(match.innings[0]?.battingTeam) }}</div>
+                          <div class="text-gray-500 text-base uppercase">1st Innings</div>
                         </div>
                       </div>
                       <div class="text-right">
-                        <div class="text-4xl font-bold">{{ match.innings[0]?.totalRuns || 0 }}/{{ match.innings[0]?.totalWickets || 0 }}</div>
-                        <div class="text-gray-500 text-base">({{ getInningsOvers(match.innings[0]) }} ov)</div>
+                        <div class="text-5xl font-bold">{{ match.innings[0]?.totalRuns || 0 }}/{{ match.innings[0]?.totalWickets || 0 }}</div>
+                        <div class="text-gray-500 text-lg">({{ getInningsOvers(match.innings[0]) }} ov)</div>
                       </div>
                     </div>
-                    <div class="space-y-2">
+                    <div class="space-y-3">
                       <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[0], 3)">
-                        <div class="flex justify-between items-center text-base">
-                          <div class="flex items-center gap-3">
+                        <div class="flex justify-between items-center text-lg">
+                          <div class="flex items-center gap-4">
                             <img 
                               *ngIf="getTopBatsmanImage(batsman)" 
                               [src]="getTopBatsmanImage(batsman)"
-                              class="w-8 h-8 rounded-full object-cover border-2 border-gray-600"
+                              class="w-10 h-10 rounded-full object-cover border-2 border-gray-600"
                             >
-                            <div *ngIf="!getTopBatsmanImage(batsman)" class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center border-2 border-gray-600">
-                              <span class="text-sm">🏏</span>
+                            <div *ngIf="!getTopBatsmanImage(batsman)" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center border-2 border-gray-600">
+                              <span class="text-base">🏏</span>
                             </div>
-                            <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                            <span class="text-gray-300 text-xl">{{ getShortPlayerName(batsman.player) }}</span>
                           </div>
-                          <span><span class="font-bold text-lg">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
+                          <span><span class="font-bold text-2xl">{{ batsman.runs }}</span> <span class="text-gray-500 text-lg">({{ batsman.balls }})</span></span>
                         </div>
                       </ng-container>
                     </div>
                   </div>
 
                   <!-- 2nd Innings (In Progress) -->
-                  <div class="bg-gradient-to-br from-blue-900/60 to-blue-950/60 rounded-lg p-6 backdrop-blur-sm border border-blue-700/30">
-                    <div class="flex items-center justify-between mb-5">
-                      <div class="flex items-center gap-3">
-                        <div class="w-14 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded flex items-center justify-center text-base font-bold">
+                  <div class="bg-gradient-to-br from-blue-900/60 to-blue-950/60 rounded-xl p-8 backdrop-blur-sm border border-blue-700/30">
+                    <div class="flex items-center justify-between mb-6">
+                      <div class="flex items-center gap-4">
+                        <div class="w-16 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center text-lg font-bold">
                           {{ getTeamCode(match.innings[1]?.battingTeam) }}
                         </div>
                         <div>
-                          <div class="font-bold text-blue-300 text-lg">{{ getTeamName(match.innings[1]?.battingTeam) }}</div>
-                          <div class="text-blue-400 text-sm uppercase">2nd Innings • Batting</div>
+                          <div class="font-bold text-blue-300 text-2xl">{{ getTeamName(match.innings[1]?.battingTeam) }}</div>
+                          <div class="text-blue-400 text-base uppercase">2nd Innings • Batting</div>
                         </div>
                       </div>
                       <div class="text-right">
-                        <div class="text-4xl font-bold text-white">{{ match.innings[1]?.totalRuns || 0 }}/{{ match.innings[1]?.totalWickets || 0 }}</div>
-                        <div class="text-blue-400 text-base">({{ getInningsOvers(match.innings[1]) }} ov)</div>
+                        <div class="text-5xl font-bold text-white">{{ match.innings[1]?.totalRuns || 0 }}/{{ match.innings[1]?.totalWickets || 0 }}</div>
+                        <div class="text-blue-400 text-lg">({{ getInningsOvers(match.innings[1]) }} ov)</div>
                       </div>
                     </div>
-                    <div class="space-y-2">
+                    <div class="space-y-3">
                       <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[1], 3)">
-                        <div class="flex justify-between items-center text-base">
-                          <div class="flex items-center gap-3">
+                        <div class="flex justify-between items-center text-lg">
+                          <div class="flex items-center gap-4">
                             <img 
                               *ngIf="getTopBatsmanImage(batsman)" 
                               [src]="getTopBatsmanImage(batsman)"
-                              class="w-8 h-8 rounded-full object-cover"
-                              [ngClass]="{'border-2 border-yellow-400': isBatsmanCurrentlyBatting(batsman, 1), 'border-2 border-gray-600': !isBatsmanCurrentlyBatting(batsman, 1)}"
+                              class="w-10 h-10 rounded-full object-cover"
+                              [ngClass]="{'border-3 border-yellow-400': isBatsmanCurrentlyBatting(batsman, 1), 'border-2 border-gray-600': !isBatsmanCurrentlyBatting(batsman, 1)}"
                             >
                             <div *ngIf="!getTopBatsmanImage(batsman)" 
-                              class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center"
-                              [ngClass]="{'border-2 border-yellow-400': isBatsmanCurrentlyBatting(batsman, 1), 'border-2 border-gray-600': !isBatsmanCurrentlyBatting(batsman, 1)}">
-                              <span class="text-sm">🏏</span>
+                              class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center"
+                              [ngClass]="{'border-3 border-yellow-400': isBatsmanCurrentlyBatting(batsman, 1), 'border-2 border-gray-600': !isBatsmanCurrentlyBatting(batsman, 1)}">
+                              <span class="text-base">🏏</span>
                             </div>
-                            <span class="text-gray-200">{{ getShortPlayerName(batsman.player) }}</span>
-                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 1)" class="text-yellow-400 text-sm">*</span>
+                            <span class="text-gray-200 text-xl">{{ getShortPlayerName(batsman.player) }}</span>
+                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 1)" class="text-yellow-400 text-base">*</span>
                           </div>
-                          <span><span class="font-bold text-lg">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
+                          <span><span class="font-bold text-2xl">{{ batsman.runs }}</span> <span class="text-gray-500 text-lg">({{ batsman.balls }})</span></span>
                         </div>
                       </ng-container>
                     </div>
@@ -1076,35 +1076,35 @@ import { HttpClient } from '@angular/common/http';
                 </div>
 
                 <!-- Win Probability Bar -->
-                <div class="bg-gray-800/60 rounded-lg p-5 mb-4 backdrop-blur-sm">
-                  <div class="flex items-center gap-5">
-                    <div class="text-right w-40">
-                      <div class="font-semibold text-base">{{ getTeamName(match.innings[1]?.battingTeam) }}</div>
-                      <div class="text-2xl font-bold text-cyan-400">{{ getWinProbability() }}%</div>
+                <div class="bg-gray-800/60 rounded-xl p-6 mb-6 backdrop-blur-sm">
+                  <div class="flex items-center gap-6">
+                    <div class="text-right w-48">
+                      <div class="font-semibold text-xl">{{ getTeamName(match.innings[1]?.battingTeam) }}</div>
+                      <div class="text-3xl font-bold text-cyan-400">{{ getWinProbability() }}%</div>
                     </div>
-                    <div class="flex-1 h-4 bg-gray-700 rounded-full overflow-hidden">
+                    <div class="flex-1 h-5 bg-gray-700 rounded-full overflow-hidden">
                       <div 
                         class="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-500"
                         [style.width.%]="getWinProbability()"
                       ></div>
                     </div>
-                    <div class="w-40">
-                      <div class="font-semibold text-base">{{ getTeamName(match.innings[0]?.battingTeam) }}</div>
-                      <div class="text-2xl font-bold text-orange-400">{{ 100 - getWinProbability() }}%</div>
+                    <div class="w-48">
+                      <div class="font-semibold text-xl">{{ getTeamName(match.innings[0]?.battingTeam) }}</div>
+                      <div class="text-3xl font-bold text-orange-400">{{ 100 - getWinProbability() }}%</div>
                     </div>
                   </div>
                 </div>
 
                 <!-- Chase Equation -->
-                <div class="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg px-8 py-5 text-center backdrop-blur-sm border border-yellow-700/30">
-                  <div class="text-3xl font-bold">
+                <div class="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-xl px-10 py-6 text-center backdrop-blur-sm border border-yellow-700/30">
+                  <div class="text-4xl font-bold">
                     <span class="text-gray-300">{{ getTeamName(match.innings[1]?.battingTeam) }} need </span>
                     <span class="text-yellow-400">{{ getRunsNeeded() }}</span>
                     <span class="text-gray-300"> runs from </span>
                     <span class="text-yellow-400">{{ getBallsRemaining() }}</span>
                     <span class="text-gray-300"> balls</span>
                   </div>
-                  <div class="text-gray-400 mt-3 text-lg">
+                  <div class="text-gray-400 mt-4 text-xl">
                     Required Rate: <span class="text-orange-400 font-bold">{{ getRequiredRunRate() }}</span> • 
                     Current Rate: <span class="text-cyan-400 font-bold">{{ getSummaryRunRate(1) }}</span>
                   </div>
