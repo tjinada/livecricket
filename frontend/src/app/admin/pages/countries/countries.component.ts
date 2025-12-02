@@ -161,10 +161,11 @@ import { Country } from '../../../core/models';
                     <div class="flex items-start justify-between gap-4">
                       <div class="flex-1">
                         <video 
-                          [src]="form.flagVideo"
+                          #editVideoPlayer
+                          [src]="form.flagVideo + '?t=' + cacheBreaker"
                           autoplay
                           loop
-                          [muted]="true"
+                          muted
                           playsinline
                           class="h-20 w-auto rounded"
                         ></video>
@@ -329,15 +330,16 @@ import { Country } from '../../../core/models';
       }
       
       <!-- Flag Video Preview Modal -->
-      @if (showPreviewModal) {
+      @if (showPreviewModal && previewVideoUrl) {
         <div class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" (click)="closePreviewModal()">
           <div class="bg-gray-900 rounded-lg p-6 max-w-md" (click)="$event.stopPropagation()">
             <h3 class="text-white text-lg font-semibold mb-4">{{ previewCountryName }} Flag Video</h3>
             <video 
-              [src]="previewVideoUrl"
+              #previewVideoPlayer
+              [src]="previewVideoUrl + '?t=' + cacheBreaker"
               autoplay
               loop
-              [muted]="true"
+              muted
               playsinline
               class="max-h-64 mx-auto rounded"
             ></video>
@@ -375,6 +377,9 @@ export class CountriesComponent implements OnInit {
   showPreviewModal = false;
   previewVideoUrl = '';
   previewCountryName = '';
+  
+  // Cache breaker for video reload
+  cacheBreaker = Date.now();
 
   showDeleteModal = false;
   deletingCountry: Country | null = null;
@@ -394,6 +399,7 @@ export class CountriesComponent implements OnInit {
 
   loadCountries() {
     this.loading = true;
+    this.cacheBreaker = Date.now(); // Refresh cache breaker when loading
     this.countryService.getAll().subscribe({
       next: (response) => {
         if (response.success) {
@@ -436,6 +442,7 @@ export class CountriesComponent implements OnInit {
     this.error = '';
     this.uploadError = '';
     this.uploadProgress = 0;
+    this.cacheBreaker = Date.now(); // Refresh cache breaker for video
     this.showModal = true;
   }
 
@@ -502,6 +509,7 @@ export class CountriesComponent implements OnInit {
           const response = JSON.parse(xhr.responseText);
           if (response.success) {
             this.form.flagVideo = response.data.url;
+            this.cacheBreaker = Date.now(); // Refresh cache breaker for new video
           } else {
             this.uploadError = response.message || 'Upload failed';
           }
@@ -544,6 +552,7 @@ export class CountriesComponent implements OnInit {
     if (country.flagVideo) {
       this.previewVideoUrl = country.flagVideo;
       this.previewCountryName = country.name;
+      this.cacheBreaker = Date.now(); // Refresh cache breaker for preview
       this.showPreviewModal = true;
     }
   }
