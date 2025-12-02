@@ -1553,6 +1553,261 @@ import { HttpClient } from '@angular/common/http';
           <div class="fixed bottom-4 right-4 bg-black/50 px-3 py-1 rounded text-xs text-gray-400 backdrop-blur-sm">
             {{ getViewName() }}
           </div>
+
+          <!-- ==================== PARTNERSHIP VIEW ==================== -->
+          <div *ngIf="displayView === 'partnership'" class="h-full flex flex-col relative">
+            
+            <!-- Player Image Overlays (like flag overlays) -->
+            <div class="absolute inset-0 z-0 pointer-events-none">
+              <!-- Striker Image (Left Side) -->
+              <div 
+                *ngIf="getStrikerImage()" 
+                class="absolute left-0 bottom-0 h-full w-1/2 flex items-end justify-start overflow-hidden"
+              >
+                <img 
+                  [src]="getStrikerImage()"
+                  class="h-[90%] w-auto object-contain object-bottom opacity-30"
+                  style="filter: grayscale(30%); mix-blend-mode: luminosity;"
+                >
+              </div>
+              
+              <!-- Non-Striker Image (Right Side) -->
+              <div 
+                *ngIf="getNonStrikerImage()" 
+                class="absolute right-0 bottom-0 h-full w-1/2 flex items-end justify-end overflow-hidden"
+              >
+                <img 
+                  [src]="getNonStrikerImage()"
+                  class="h-[90%] w-auto object-contain object-bottom opacity-30"
+                  style="filter: grayscale(30%); mix-blend-mode: luminosity; transform: scaleX(-1);"
+                >
+              </div>
+              
+              <!-- Center gradient overlay for better text readability -->
+              <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 25%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.4) 75%, rgba(0,0,0,0.7) 100%);"></div>
+            </div>
+
+            <!-- Top Header Bar -->
+            <div class="relative z-10 bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
+              <div class="max-w-6xl mx-auto px-6 py-3">
+                <div class="flex items-center justify-between">
+                  <!-- Match Info -->
+                  <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full">
+                      <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                      <span class="text-xs font-bold uppercase tracking-wider">Live</span>
+                    </div>
+                    <div>
+                      <h1 class="text-lg font-bold tracking-wide">
+                        <span class="text-blue-400">{{ getBattingTeamName() }}</span>
+                        <span class="text-gray-500 mx-2">vs</span>
+                        <span class="text-gray-300">{{ getBowlingTeamName() }}</span>
+                      </h1>
+                      <p class="text-xs text-gray-500">{{ match.format }} Match • {{ getInningsLabel() }}</p>
+                    </div>
+                  </div>
+                  
+                  <!-- Score Display -->
+                  <div class="flex items-center gap-4">
+                    <div class="w-14 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center text-lg font-bold">
+                      {{ getBattingTeamCode() }}
+                    </div>
+                    <div class="text-4xl font-black">{{ currentInnings?.totalRuns || 0 }}/{{ currentInnings?.totalWickets || 0 }}</div>
+                    <div class="text-gray-400 text-lg">({{ getOversDisplay() }} ov)</div>
+                  </div>
+                  
+                  <!-- Partnership Label -->
+                  <div class="bg-yellow-600/80 px-4 py-2 rounded-lg">
+                    <div class="text-xs uppercase tracking-wider text-yellow-200">Partnership</div>
+                    <div class="text-2xl font-black text-white">{{ getPartnershipRuns() }} <span class="text-lg font-normal text-yellow-200">({{ getPartnershipBalls() }})</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main Content - Two Player Cards Side by Side -->
+            <div class="relative z-10 flex-1 flex items-center justify-center px-8 py-6">
+              <div class="w-full max-w-6xl grid grid-cols-2 gap-8">
+                
+                <!-- STRIKER (Left Side) -->
+                <div class="bg-gradient-to-br from-yellow-900/80 via-yellow-950/80 to-gray-900/80 backdrop-blur-md rounded-2xl p-8 border-2 border-yellow-500/50 shadow-2xl">
+                  
+                  <!-- Striker Badge -->
+                  <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                      <span class="w-4 h-4 bg-yellow-400 rounded-full animate-pulse"></span>
+                      <span class="text-yellow-400 text-xl font-bold uppercase tracking-wider">Striker</span>
+                    </div>
+                    <div class="bg-yellow-500/20 px-3 py-1 rounded-full border border-yellow-500/40">
+                      <span class="text-yellow-300 text-sm font-semibold">On Strike</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Player Info -->
+                  <div class="flex items-center gap-6 mb-8">
+                    <div class="relative">
+                      <img 
+                        *ngIf="getStrikerImage()" 
+                        [src]="getStrikerImage()"
+                        class="w-28 h-28 rounded-full object-cover border-4 border-yellow-400 shadow-xl"
+                      >
+                      <div *ngIf="!getStrikerImage()" class="w-28 h-28 rounded-full bg-gray-700 flex items-center justify-center border-4 border-yellow-400">
+                        <span class="text-5xl">🏏</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-4xl font-black text-white mb-2">{{ getPlayerName(currentInnings?.currentBatsmen?.striker) }}</div>
+                      <div class="text-gray-400 text-lg">{{ getStrikerBattingStyle() }}</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Big Score -->
+                  <div class="text-center mb-8">
+                    <div class="text-8xl font-black text-white" style="text-shadow: 0 4px 20px rgba(234, 179, 8, 0.4);">{{ getStrikerRuns() }}</div>
+                    <div class="text-3xl text-gray-400 mt-2">{{ getStrikerBalls() }} balls</div>
+                  </div>
+                  
+                  <!-- Stats Grid -->
+                  <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-black/40 rounded-xl p-4 text-center">
+                      <div class="text-green-400 text-3xl font-bold">{{ getStrikerStats()?.fours || 0 }}</div>
+                      <div class="text-gray-500 text-sm uppercase mt-1">Fours</div>
+                    </div>
+                    <div class="bg-black/40 rounded-xl p-4 text-center">
+                      <div class="text-purple-400 text-3xl font-bold">{{ getStrikerStats()?.sixes || 0 }}</div>
+                      <div class="text-gray-500 text-sm uppercase mt-1">Sixes</div>
+                    </div>
+                    <div class="bg-black/40 rounded-xl p-4 text-center">
+                      <div class="text-cyan-400 text-3xl font-bold">{{ getStrikerSR() }}</div>
+                      <div class="text-gray-500 text-sm uppercase mt-1">SR</div>
+                    </div>
+                    <div class="bg-black/40 rounded-xl p-4 text-center">
+                      <div class="text-gray-300 text-3xl font-bold">{{ getStrikerDots() }}</div>
+                      <div class="text-gray-500 text-sm uppercase mt-1">Dots</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- NON-STRIKER (Right Side) -->
+                <div class="bg-gradient-to-br from-gray-800/80 via-gray-850/80 to-gray-900/80 backdrop-blur-md rounded-2xl p-8 border-2 border-gray-600/50 shadow-2xl">
+                  
+                  <!-- Non-Striker Badge -->
+                  <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                      <span class="w-4 h-4 bg-gray-500 rounded-full"></span>
+                      <span class="text-gray-400 text-xl font-bold uppercase tracking-wider">Non-Striker</span>
+                    </div>
+                    <div class="bg-gray-600/20 px-3 py-1 rounded-full border border-gray-500/40">
+                      <span class="text-gray-400 text-sm font-semibold">Waiting</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Player Info -->
+                  <div class="flex items-center gap-6 mb-8">
+                    <div class="relative">
+                      <img 
+                        *ngIf="getNonStrikerImage()" 
+                        [src]="getNonStrikerImage()"
+                        class="w-28 h-28 rounded-full object-cover border-4 border-gray-500 shadow-xl opacity-90"
+                      >
+                      <div *ngIf="!getNonStrikerImage()" class="w-28 h-28 rounded-full bg-gray-700 flex items-center justify-center border-4 border-gray-500">
+                        <span class="text-5xl">🏏</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-4xl font-black text-gray-200 mb-2">{{ getPlayerName(currentInnings?.currentBatsmen?.nonStriker) }}</div>
+                      <div class="text-gray-500 text-lg">{{ getNonStrikerBattingStyle() }}</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Big Score -->
+                  <div class="text-center mb-8">
+                    <div class="text-8xl font-black text-gray-300">{{ getNonStrikerRuns() }}</div>
+                    <div class="text-3xl text-gray-500 mt-2">{{ getNonStrikerBalls() }} balls</div>
+                  </div>
+                  
+                  <!-- Stats Grid -->
+                  <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-black/40 rounded-xl p-4 text-center">
+                      <div class="text-green-400 text-3xl font-bold">{{ getNonStrikerStats()?.fours || 0 }}</div>
+                      <div class="text-gray-500 text-sm uppercase mt-1">Fours</div>
+                    </div>
+                    <div class="bg-black/40 rounded-xl p-4 text-center">
+                      <div class="text-purple-400 text-3xl font-bold">{{ getNonStrikerStats()?.sixes || 0 }}</div>
+                      <div class="text-gray-500 text-sm uppercase mt-1">Sixes</div>
+                    </div>
+                    <div class="bg-black/40 rounded-xl p-4 text-center">
+                      <div class="text-cyan-400 text-3xl font-bold">{{ getNonStrikerSR() }}</div>
+                      <div class="text-gray-500 text-sm uppercase mt-1">SR</div>
+                    </div>
+                    <div class="bg-black/40 rounded-xl p-4 text-center">
+                      <div class="text-gray-300 text-3xl font-bold">{{ getNonStrikerDots() }}</div>
+                      <div class="text-gray-500 text-sm uppercase mt-1">Dots</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom Stats Bar -->
+            <div class="relative z-10 bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-t border-gray-700/50">
+              <div class="max-w-6xl mx-auto px-6 py-4">
+                <div class="flex items-center justify-between">
+                  
+                  <!-- Current Bowler -->
+                  <div class="flex items-center gap-4">
+                    <img 
+                      *ngIf="getCurrentBowlerImage()" 
+                      [src]="getCurrentBowlerImage()"
+                      class="w-16 h-16 rounded-full object-cover border-3 border-green-500"
+                    >
+                    <div *ngIf="!getCurrentBowlerImage()" class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center border-3 border-green-500">
+                      <span class="text-2xl">⚾</span>
+                    </div>
+                    <div>
+                      <div class="text-sm text-gray-500 uppercase">Bowling</div>
+                      <div class="font-semibold text-xl">{{ getCurrentBowlerName() }}</div>
+                      <div class="text-gray-400">{{ getCurrentBowlerFullFigures() }}</div>
+                    </div>
+                  </div>
+
+                  <!-- This Over -->
+                  <div class="flex items-center gap-3">
+                    <span class="text-base text-gray-500 uppercase mr-2">This Over</span>
+                    <ng-container *ngFor="let ball of getCurrentOverBalls()">
+                      <div 
+                        class="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold shadow-md"
+                        [ngClass]="getBallColorClass(ball)"
+                      >
+                        {{ ball.display === '0' ? '•' : ball.display }}
+                      </div>
+                    </ng-container>
+                    <ng-container *ngFor="let i of getRemainingBallsInOver()">
+                      <div class="w-10 h-10 rounded-full border-2 border-gray-600 border-dashed"></div>
+                    </ng-container>
+                  </div>
+
+                  <!-- Run Rates -->
+                  <div class="flex items-center gap-8 text-lg">
+                    <div>
+                      <span class="text-gray-500">CRR </span>
+                      <span class="text-2xl font-bold text-green-400">{{ getCurrentRunRate() }}</span>
+                    </div>
+                    <div *ngIf="match.currentInnings === 1">
+                      <span class="text-gray-500">RRR </span>
+                      <span class="text-2xl font-bold text-orange-400">{{ getRequiredRunRate() }}</span>
+                    </div>
+                    <div *ngIf="match.currentInnings === 1" class="pl-6 border-l border-gray-600">
+                      <span class="text-gray-500">Need </span>
+                      <span class="text-yellow-400 font-bold text-xl">{{ getRunsNeeded() }}</span>
+                      <span class="text-gray-500"> from </span>
+                      <span class="text-yellow-400 font-bold text-xl">{{ getBallsRemaining() }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1915,7 +2170,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       'score-summary': 'Live Score',
       'player-stats': 'Scorecard',
       'overall-summary': 'Match Summary',
-      'projections': 'Projections'
+      'projections': 'Projections',
+      'partnership': 'Partnership'
     };
     return names[this.displayView] || 'Live Score';
   }
@@ -2806,5 +3062,75 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     const endX = 60 + (data[data.length - 1].over * this.getXScale());
     const linePoints = data.map(p => `${60 + (p.over * this.getXScale())},${350 - (p.runs * this.getYScale())}`).join(' ');
     return `${startX},${baseY} ${linePoints} ${endX},${baseY}`;
+  }
+
+  // ==================== PARTNERSHIP VIEW HELPERS ====================
+
+  getStrikerDots(): number {
+    const stats = this.getStrikerStats();
+    if (!stats) return 0;
+    // If dotBalls is tracked
+    if (stats.dotBalls !== undefined) return stats.dotBalls;
+    // Otherwise calculate: balls - (runs scored on balls) roughly
+    // Simplified: balls - (fours*1 + sixes*1 + other scoring shots)
+    // For simplicity, just count non-boundary non-zero balls
+    const balls = stats.balls || 0;
+    const fours = stats.fours || 0;
+    const sixes = stats.sixes || 0;
+    const runs = stats.runs || 0;
+    // Rough estimate: dots = balls - boundary balls - singles/doubles/triples balls
+    // More accurate: dots = balls where 0 runs scored
+    // Without ball-by-ball data, estimate based on runs
+    const boundaryBalls = fours + sixes;
+    const nonBoundaryRuns = runs - (fours * 4) - (sixes * 6);
+    const nonBoundaryBalls = balls - boundaryBalls;
+    // Assume non-boundary runs came from non-boundary balls (1-3 runs each)
+    const scoringNonBoundaryBalls = nonBoundaryRuns > 0 ? Math.min(nonBoundaryRuns, nonBoundaryBalls) : 0;
+    const dotBalls = Math.max(0, nonBoundaryBalls - scoringNonBoundaryBalls);
+    return dotBalls;
+  }
+
+  getNonStrikerDots(): number {
+    const stats = this.getNonStrikerStats();
+    if (!stats) return 0;
+    if (stats.dotBalls !== undefined) return stats.dotBalls;
+    const balls = stats.balls || 0;
+    const fours = stats.fours || 0;
+    const sixes = stats.sixes || 0;
+    const runs = stats.runs || 0;
+    const boundaryBalls = fours + sixes;
+    const nonBoundaryRuns = runs - (fours * 4) - (sixes * 6);
+    const nonBoundaryBalls = balls - boundaryBalls;
+    const scoringNonBoundaryBalls = nonBoundaryRuns > 0 ? Math.min(nonBoundaryRuns, nonBoundaryBalls) : 0;
+    const dotBalls = Math.max(0, nonBoundaryBalls - scoringNonBoundaryBalls);
+    return dotBalls;
+  }
+
+  getStrikerBattingStyle(): string {
+    const striker = this.currentInnings?.currentBatsmen?.striker;
+    if (!striker) return '';
+    // Try to get batting style from player object
+    if (striker.battingStyle) return striker.battingStyle;
+    // Try to find in squad
+    const playerId = striker._id || striker;
+    const squad = this.match?.squads?.team1?.concat(this.match?.squads?.team2 || []) || [];
+    const squadPlayer = squad.find((p: any) => {
+      const id = p.player?._id || p.player;
+      return id === playerId || id?.toString() === playerId?.toString();
+    });
+    return squadPlayer?.player?.battingStyle || '';
+  }
+
+  getNonStrikerBattingStyle(): string {
+    const nonStriker = this.currentInnings?.currentBatsmen?.nonStriker;
+    if (!nonStriker) return '';
+    if (nonStriker.battingStyle) return nonStriker.battingStyle;
+    const playerId = nonStriker._id || nonStriker;
+    const squad = this.match?.squads?.team1?.concat(this.match?.squads?.team2 || []) || [];
+    const squadPlayer = squad.find((p: any) => {
+      const id = p.player?._id || p.player;
+      return id === playerId || id?.toString() === playerId?.toString();
+    });
+    return squadPlayer?.player?.battingStyle || '';
   }
 }

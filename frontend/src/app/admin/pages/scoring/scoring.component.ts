@@ -106,6 +106,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <option value="player-stats">Player Stats</option>
               <option value="overall-summary">Overall Summary</option>
               <option value="projections">Projections</option>
+              <option value="partnership">Partnership</option>
             </select>
           </div>
 
@@ -572,6 +573,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   <option value="player-stats">Player Stats</option>
                   <option value="overall-summary">Overall Summary</option>
                   <option value="projections">Projections</option>
+                  <option value="partnership">Partnership</option>
                 </select>
               </div>
 

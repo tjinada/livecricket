@@ -376,7 +376,7 @@ router.put('/:id/display-view', auth, async (req, res, next) => {
   try {
     const { view } = req.body;
     
-    const validViews = ['score-summary', 'player-stats', 'overall-summary', 'projections'];
+    const validViews = ['score-summary', 'player-stats', 'overall-summary', 'projections', 'partnership'];
     if (!validViews.includes(view)) {
       return res.status(400).json({
         success: false,
@@ -478,7 +478,7 @@ router.put('/:id/backgrounds', auth, async (req, res, next) => {
     
     // Update view-specific backgrounds
     if (views) {
-      const validViews = ['score-summary', 'player-stats', 'overall-summary', 'projections'];
+      const validViews = ['score-summary', 'player-stats', 'overall-summary', 'projections', 'partnership'];
       
       for (const view of validViews) {
         if (views[view]) {

@@ -196,7 +196,8 @@ const viewBackgroundsSchema = new mongoose.Schema({
   'score-summary': backgroundSchema,
   'player-stats': backgroundSchema,
   'overall-summary': backgroundSchema,
-  'projections': backgroundSchema
+  'projections': backgroundSchema,
+  'partnership': backgroundSchema
 }, { _id: false });
 
 // Main Match Schema
@@ -273,7 +274,7 @@ const matchSchema = new mongoose.Schema({
   },
   displayView: {
     type: String,
-    enum: ['score-summary', 'player-stats', 'overall-summary', 'projections'],
+    enum: ['score-summary', 'player-stats', 'overall-summary', 'projections', 'partnership'],
     default: 'score-summary'
   },
   // Background configuration per view
