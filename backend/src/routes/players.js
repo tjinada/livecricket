@@ -1,6 +1,7 @@
 const express = require('express');
 const { Player, Match, Country } = require('../models');
 const auth = require('../middleware/auth');
+const { addImageUrl } = require('../utils/imageUrl');
 
 // ESPN Cricinfo to our schema mapping utilities
 const mapRole = (playingRoles) => {
@@ -71,12 +72,7 @@ const mapBowlingStyle = (styles) => {
   return 'none';
 };
 
-const buildImageUrl = (headshotImageUrl) => {
-  if (!headshotImageUrl) return null;
-  // ESPN relative path: /lsci/db/PICTURES/CMS/348500/348599.png
-  // Full URL: https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci/db/PICTURES/CMS/348500/348599.png
-  return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x${headshotImageUrl}`;
-};
+
 
 const router = express.Router();
 
@@ -103,9 +99,12 @@ router.get('/', async (req, res, next) => {
       .populate('country', 'name code flagUrl')
       .sort({ name: 1 });
     
+    // Add image URLs to each player
+    const playersWithImages = players.map(player => addImageUrl(player));
+    
     res.json({
       success: true,
-      data: players
+      data: playersWithImages
     });
   } catch (error) {
     next(error);
@@ -127,7 +126,7 @@ router.get('/:id', async (req, res, next) => {
     
     res.json({
       success: true,
-      data: player
+      data: addImageUrl(player)
     });
   } catch (error) {
     next(error);
@@ -154,7 +153,7 @@ router.post('/', auth, async (req, res, next) => {
     
     res.status(201).json({
       success: true,
-      data: player
+      data: addImageUrl(player)
     });
   } catch (error) {
     next(error);
@@ -181,7 +180,7 @@ router.put('/:id', auth, async (req, res, next) => {
     
     res.json({
       success: true,
-      data: player
+      data: addImageUrl(player)
     });
   } catch (error) {
     next(error);
@@ -316,7 +315,7 @@ router.post('/bulk-import', auth, async (req, res, next) => {
           role: mapRole(espnPlayer.playingRoles),
           battingStyle: mapBattingStyle(espnPlayer.longBattingStyles),
           bowlingStyle: mapBowlingStyle(espnPlayer.longBowlingStyles),
-          imageUrl: buildImageUrl(espnPlayer.headshotImageUrl),
+          headshotPath: espnPlayer.headshotImageUrl || espnPlayer.imageUrl || espnPlayer.image?.url || null,
           espnId: espnPlayer.id, // Store ESPN ID for reference
           isActive: true
         };

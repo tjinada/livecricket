@@ -21,7 +21,8 @@ export interface Player {
   battingStyle: BattingStyle;
   bowlingStyle: BowlingStyle;
   isActive: boolean;
-  imageUrl?: string | null;
+  headshotPath?: string | null;
+  imageUrl?: string | null;  // Full quality original image
   espnId?: number | null;
   createdAt?: string;
   updatedAt?: string;

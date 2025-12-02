@@ -50,7 +50,7 @@ const playerSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  imageUrl: {
+  headshotPath: {
     type: String,
     default: null
   },
