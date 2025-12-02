@@ -8,6 +8,7 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const scoringEngine = require('../services/scoringEngine');
 const { Match } = require('../models');
+const { buildImageUrl } = require('../utils/imageUrl');
 
 const router = express.Router();
 
@@ -48,7 +49,7 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
       if (result.ball.isSix) {
         // Get batsman details for display
         const match = await Match.findById(matchId)
-          .populate('innings.battingStats.player', 'name');
+          .populate('innings.battingStats.player', 'name headshotPath');
         
         const currentInnings = match?.innings?.[match.currentInnings];
         const batsmanStats = currentInnings?.battingStats?.find(
@@ -57,6 +58,7 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
         
         broadcastToMatch(matchId, 'six', {
           batsmanName: batsmanStats?.player?.name || 'Batsman',
+          batsmanImage: buildImageUrl(batsmanStats?.player?.headshotPath) || null,
           batsmanRuns: batsmanStats?.runs || 0,
           batsmanBalls: batsmanStats?.balls || 0,
           totalScore: result.innings.totalRuns,
@@ -68,10 +70,10 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
       if (result.ball.isWicket) {
         // Get detailed wicket info for display
         const match = await Match.findById(matchId)
-          .populate('innings.battingStats.player', 'name')
-          .populate('innings.battingStats.dismissal.bowler', 'name')
-          .populate('innings.battingStats.dismissal.fielder', 'name')
-          .populate('innings.bowlingStats.player', 'name');
+          .populate('innings.battingStats.player', 'name headshotPath')
+          .populate('innings.battingStats.dismissal.bowler', 'name headshotPath')
+          .populate('innings.battingStats.dismissal.fielder', 'name headshotPath')
+          .populate('innings.bowlingStats.player', 'name headshotPath');
         
         const currentInnings = match?.innings?.[match.currentInnings];
         
@@ -88,10 +90,12 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
         
         broadcastToMatch(matchId, 'wicket', {
           dismissedName: dismissedStats?.player?.name || 'Batsman',
+          dismissedImage: buildImageUrl(dismissedStats?.player?.headshotPath) || null,
           dismissedRuns: dismissedStats?.runs || 0,
           dismissedBalls: dismissedStats?.balls || 0,
           dismissalType: result.ball.wicket?.type || 'out',
           bowlerName: bowlerStats?.player?.name || 'Bowler',
+          bowlerImage: buildImageUrl(bowlerStats?.player?.headshotPath) || null,
           bowlerWickets: bowlerStats?.wickets || 0,
           fielderName: result.ball.wicket?.fielder ? 
             (currentInnings?.bowlingStats?.find(s => s.player?._id?.toString() === result.ball.wicket?.fielder?.toString())?.player?.name) : null,
@@ -103,7 +107,7 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
       // Special event: FOUR hit!
       if (result.ball.isFour) {
         const match = await Match.findById(matchId)
-          .populate('innings.battingStats.player', 'name');
+          .populate('innings.battingStats.player', 'name headshotPath');
         
         const currentInnings = match?.innings?.[match.currentInnings];
         const batsmanStats = currentInnings?.battingStats?.find(
@@ -112,6 +116,7 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
         
         broadcastToMatch(matchId, 'four', {
           batsmanName: batsmanStats?.player?.name || 'Batsman',
+          batsmanImage: buildImageUrl(batsmanStats?.player?.headshotPath) || null,
           batsmanRuns: batsmanStats?.runs || 0,
           batsmanBalls: batsmanStats?.balls || 0,
           totalScore: result.innings.totalRuns,

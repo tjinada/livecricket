@@ -52,18 +52,18 @@ router.get('/:id', async (req, res, next) => {
       .populate('team2', 'name code flagUrl flagVideo')
       .populate('toss.winner', 'name code')
       .populate('result.winner', 'name code')
-      .populate('squads.team1.player', 'name role battingStyle bowlingStyle')
-      .populate('squads.team2.player', 'name role battingStyle bowlingStyle')
+      .populate('squads.team1.player', 'name role battingStyle bowlingStyle headshotPath')
+      .populate('squads.team2.player', 'name role battingStyle bowlingStyle headshotPath')
       .populate('innings.battingTeam', 'name code flagVideo')
       .populate('innings.bowlingTeam', 'name code flagVideo')
-      .populate('innings.currentBatsmen.striker', 'name')
-      .populate('innings.currentBatsmen.nonStriker', 'name')
-      .populate('innings.currentBowler', 'name')
-      .populate('innings.battingStats.player', 'name')
-      .populate('innings.battingStats.dismissal.bowler', 'name')
-      .populate('innings.battingStats.dismissal.fielder', 'name')
-      .populate('innings.bowlingStats.player', 'name')
-      .populate('innings.fallOfWickets.player', 'name');
+      .populate('innings.currentBatsmen.striker', 'name headshotPath')
+      .populate('innings.currentBatsmen.nonStriker', 'name headshotPath')
+      .populate('innings.currentBowler', 'name headshotPath')
+      .populate('innings.battingStats.player', 'name headshotPath')
+      .populate('innings.battingStats.dismissal.bowler', 'name headshotPath')
+      .populate('innings.battingStats.dismissal.fielder', 'name headshotPath')
+      .populate('innings.bowlingStats.player', 'name headshotPath')
+      .populate('innings.fallOfWickets.player', 'name headshotPath');
     
     if (!match) {
       return res.status(404).json({
@@ -208,8 +208,8 @@ router.put('/:id/squad', auth, async (req, res, next) => {
     
     await match.save();
     
-    await match.populate('squads.team1.player', 'name role battingStyle bowlingStyle');
-    await match.populate('squads.team2.player', 'name role battingStyle bowlingStyle');
+    await match.populate('squads.team1.player', 'name role battingStyle bowlingStyle headshotPath');
+    await match.populate('squads.team2.player', 'name role battingStyle bowlingStyle headshotPath');
     
     res.json({
       success: true,

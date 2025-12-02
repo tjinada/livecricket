@@ -95,10 +95,17 @@ import { HttpClient } from '@angular/common/http';
             </div>
             
             <!-- Batsman info -->
-            <div class="mt-8 bg-black/60 backdrop-blur-md rounded-2xl px-8 py-4 inline-block border border-yellow-500/30">
-              <div class="text-3xl font-bold text-white">{{ notificationData?.batsmanName }}</div>
-              <div class="text-xl text-yellow-400 mt-1">
-                {{ notificationData?.batsmanRuns }} ({{ notificationData?.batsmanBalls }})
+            <div class="mt-8 bg-black/60 backdrop-blur-md rounded-2xl px-8 py-4 inline-flex items-center gap-6 border border-yellow-500/30">
+              <img 
+                *ngIf="notificationData?.batsmanImage" 
+                [src]="notificationData?.batsmanImage"
+                class="w-32 h-32 rounded-full object-cover border-4 border-yellow-500 shadow-2xl"
+              >
+              <div>
+                <div class="text-4xl font-bold text-white">{{ notificationData?.batsmanName }}</div>
+                <div class="text-2xl text-yellow-400 mt-2">
+                  {{ notificationData?.batsmanRuns }} ({{ notificationData?.batsmanBalls }})
+                </div>
               </div>
             </div>
             
@@ -131,10 +138,17 @@ import { HttpClient } from '@angular/common/http';
             </div>
             
             <!-- Batsman info -->
-            <div class="mt-6 bg-black/60 backdrop-blur-md rounded-xl px-6 py-3 inline-block border border-green-500/30">
-              <div class="text-2xl font-bold text-white">{{ notificationData?.batsmanName }}</div>
-              <div class="text-lg text-green-400 mt-1">
-                {{ notificationData?.batsmanRuns }} ({{ notificationData?.batsmanBalls }})
+            <div class="mt-6 bg-black/60 backdrop-blur-md rounded-xl px-6 py-3 inline-flex items-center gap-5 border border-green-500/30">
+              <img 
+                *ngIf="notificationData?.batsmanImage" 
+                [src]="notificationData?.batsmanImage"
+                class="w-28 h-28 rounded-full object-cover border-4 border-green-500 shadow-2xl"
+              >
+              <div>
+                <div class="text-3xl font-bold text-white">{{ notificationData?.batsmanName }}</div>
+                <div class="text-xl text-green-400 mt-1">
+                  {{ notificationData?.batsmanRuns }} ({{ notificationData?.batsmanBalls }})
+                </div>
               </div>
             </div>
             
@@ -168,22 +182,29 @@ import { HttpClient } from '@angular/common/http';
             </div>
             
             <!-- Dismissed batsman info -->
-            <div class="mt-8 bg-black/70 backdrop-blur-md rounded-2xl px-10 py-6 inline-block border border-red-500/40">
-              <div class="text-4xl font-bold text-white">{{ notificationData?.dismissedName }}</div>
-              <div class="text-2xl text-red-400 mt-2">
-                {{ notificationData?.dismissedRuns }} ({{ notificationData?.dismissedBalls }})
-              </div>
-              
-              <!-- Dismissal details -->
-              <div class="mt-4 text-xl text-gray-300">
-                <span *ngIf="notificationData?.dismissalType === 'bowled'">b {{ notificationData?.bowlerName }}</span>
-                <span *ngIf="notificationData?.dismissalType === 'caught'">
-                  c <span *ngIf="notificationData?.fielderName">{{ notificationData?.fielderName }}</span> b {{ notificationData?.bowlerName }}
-                </span>
-                <span *ngIf="notificationData?.dismissalType === 'lbw'">lbw b {{ notificationData?.bowlerName }}</span>
-                <span *ngIf="notificationData?.dismissalType === 'run-out'">run out</span>
-                <span *ngIf="notificationData?.dismissalType === 'stumped'">st b {{ notificationData?.bowlerName }}</span>
-                <span *ngIf="notificationData?.dismissalType === 'hit-wicket'">hit wicket b {{ notificationData?.bowlerName }}</span>
+            <div class="mt-8 bg-black/70 backdrop-blur-md rounded-2xl px-12 py-8 inline-flex items-center gap-8 border border-red-500/40">
+              <img 
+                *ngIf="notificationData?.dismissedImage" 
+                [src]="notificationData?.dismissedImage"
+                class="w-36 h-36 rounded-full object-cover border-4 border-red-500 shadow-2xl grayscale"
+              >
+              <div>
+                <div class="text-5xl font-bold text-white">{{ notificationData?.dismissedName }}</div>
+                <div class="text-3xl text-red-400 mt-3">
+                  {{ notificationData?.dismissedRuns }} ({{ notificationData?.dismissedBalls }})
+                </div>
+                
+                <!-- Dismissal details -->
+                <div class="mt-4 text-2xl text-gray-300">
+                  <span *ngIf="notificationData?.dismissalType === 'bowled'">b {{ notificationData?.bowlerName }}</span>
+                  <span *ngIf="notificationData?.dismissalType === 'caught'">
+                    c <span *ngIf="notificationData?.fielderName">{{ notificationData?.fielderName }}</span> b {{ notificationData?.bowlerName }}
+                  </span>
+                  <span *ngIf="notificationData?.dismissalType === 'lbw'">lbw b {{ notificationData?.bowlerName }}</span>
+                  <span *ngIf="notificationData?.dismissalType === 'run-out'">run out</span>
+                  <span *ngIf="notificationData?.dismissalType === 'stumped'">st b {{ notificationData?.bowlerName }}</span>
+                  <span *ngIf="notificationData?.dismissalType === 'hit-wicket'">hit wicket b {{ notificationData?.bowlerName }}</span>
+                </div>
               </div>
             </div>
             
@@ -403,7 +424,17 @@ import { HttpClient } from '@angular/common/http';
                 <div class="flex items-center gap-14">
                   <!-- Striker -->
                   <div class="flex items-center gap-4">
-                    <span class="text-yellow-400 text-2xl">●</span>
+                    <div class="relative">
+                      <img 
+                        *ngIf="getStrikerImage()" 
+                        [src]="getStrikerImage()"
+                        class="w-16 h-16 rounded-full object-cover border-3 border-yellow-400 shadow-lg"
+                      >
+                      <div *ngIf="!getStrikerImage()" class="w-16 h-16 rounded-full bg-gray-600 flex items-center justify-center border-3 border-yellow-400">
+                        <span class="text-2xl">🏏</span>
+                      </div>
+                      <span class="absolute -bottom-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs text-black font-bold">●</span>
+                    </div>
                     <div>
                       <div class="font-bold text-2xl text-white">{{ getStrikerName() }}</div>
                       <div class="text-gray-400 text-sm">Striker</div>
@@ -418,7 +449,16 @@ import { HttpClient } from '@angular/common/http';
                   
                   <!-- Non-Striker -->
                   <div class="flex items-center gap-4">
-                    <span class="text-gray-500 text-2xl">○</span>
+                    <div class="relative">
+                      <img 
+                        *ngIf="getNonStrikerImage()" 
+                        [src]="getNonStrikerImage()"
+                        class="w-14 h-14 rounded-full object-cover border-2 border-gray-500 shadow-lg opacity-90"
+                      >
+                      <div *ngIf="!getNonStrikerImage()" class="w-14 h-14 rounded-full bg-gray-700 flex items-center justify-center border-2 border-gray-500">
+                        <span class="text-xl">🏏</span>
+                      </div>
+                    </div>
                     <div>
                       <div class="font-semibold text-xl text-gray-300">{{ getNonStrikerName() }}</div>
                       <div class="text-gray-500 text-sm">Non-striker</div>
@@ -477,8 +517,15 @@ import { HttpClient } from '@angular/common/http';
                   
                   <!-- Current Bowler -->
                   <div class="flex items-center gap-4">
-                    <div class="w-12 h-9 bg-gray-600 rounded flex items-center justify-center text-sm font-bold">
-                      {{ getBowlingTeamCode() }}
+                    <div class="relative">
+                      <img 
+                        *ngIf="getCurrentBowlerImage()" 
+                        [src]="getCurrentBowlerImage()"
+                        class="w-14 h-14 rounded-full object-cover border-2 border-green-500 shadow-lg"
+                      >
+                      <div *ngIf="!getCurrentBowlerImage()" class="w-14 h-14 rounded-full bg-gray-600 flex items-center justify-center border-2 border-green-500">
+                        <span class="text-lg">⚾</span>
+                      </div>
                     </div>
                     <div>
                       <div class="font-semibold text-xl">{{ getCurrentBowlerName() }}</div>
@@ -578,7 +625,16 @@ import { HttpClient } from '@angular/common/http';
                       <div class="flex items-center gap-4">
                         <!-- Striker -->
                         <div class="flex items-center gap-2">
-                          <span class="text-yellow-400">●</span>
+                          <div class="relative">
+                            <img 
+                              *ngIf="getStrikerImage()" 
+                              [src]="getStrikerImage()"
+                              class="w-8 h-8 rounded-full object-cover border-2 border-yellow-400"
+                            >
+                            <div *ngIf="!getStrikerImage()" class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center border-2 border-yellow-400">
+                              <span class="text-xs">🏏</span>
+                            </div>
+                          </div>
                           <span class="font-semibold">{{ getStrikerName() }}</span>
                           <span class="text-white font-bold">{{ getStrikerRuns() }}</span>
                           <span class="text-gray-400 text-sm">({{ getStrikerBalls() }})</span>
@@ -586,7 +642,14 @@ import { HttpClient } from '@angular/common/http';
                         <div class="w-px h-4 bg-gray-600"></div>
                         <!-- Non-Striker -->
                         <div class="flex items-center gap-2">
-                          <span class="text-gray-500">○</span>
+                          <img 
+                            *ngIf="getNonStrikerImage()" 
+                            [src]="getNonStrikerImage()"
+                            class="w-7 h-7 rounded-full object-cover border border-gray-500 opacity-80"
+                          >
+                          <div *ngIf="!getNonStrikerImage()" class="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center border border-gray-500">
+                            <span class="text-xs">🏏</span>
+                          </div>
                           <span class="text-gray-300">{{ getNonStrikerName() }}</span>
                           <span class="text-gray-300">{{ getNonStrikerRuns() }}</span>
                           <span class="text-gray-500 text-sm">({{ getNonStrikerBalls() }})</span>
@@ -616,9 +679,26 @@ import { HttpClient } from '@angular/common/http';
                           'opacity-50': batsman.isDNB
                         }"
                       >
-                        <div class="col-span-5 flex items-center gap-1 truncate">
-                          <span *ngIf="isStriker(batsman)" class="text-yellow-400 text-xs">●</span>
-                          <span *ngIf="isCurrentBatsman(batsman) && !isStriker(batsman)" class="text-gray-500 text-xs">○</span>
+                        <div class="col-span-5 flex items-center gap-1.5 truncate">
+                          <img 
+                            *ngIf="getBatsmanImage(batsman)" 
+                            [src]="getBatsmanImage(batsman)"
+                            class="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                            [ngClass]="{
+                              'border-2 border-yellow-400': isStriker(batsman),
+                              'border border-gray-500': isCurrentBatsman(batsman) && !isStriker(batsman),
+                              'border border-gray-600 opacity-60': batsman.isDNB
+                            }"
+                          >
+                          <div *ngIf="!getBatsmanImage(batsman)" 
+                            class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
+                            [ngClass]="{
+                              'border-2 border-yellow-400': isStriker(batsman),
+                              'border border-gray-500': isCurrentBatsman(batsman) && !isStriker(batsman),
+                              'border border-gray-600': !isCurrentBatsman(batsman)
+                            }">
+                            <span class="text-xs">🏏</span>
+                          </div>
                           <span class="truncate" [ngClass]="{
                             'text-yellow-300 font-semibold': isCurrentBatsman(batsman),
                             'text-gray-500': batsman.isDNB
@@ -667,7 +747,14 @@ import { HttpClient } from '@angular/common/http';
                     <div class="bg-green-900/30 border-b border-green-700/30 px-3 py-2">
                       <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                          <span class="text-xs text-green-400 uppercase">Bowling</span>
+                          <img 
+                            *ngIf="getCurrentBowlerImage()" 
+                            [src]="getCurrentBowlerImage()"
+                            class="w-8 h-8 rounded-full object-cover border-2 border-green-400"
+                          >
+                          <div *ngIf="!getCurrentBowlerImage()" class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center border-2 border-green-400">
+                            <span class="text-sm">⚾</span>
+                          </div>
                           <span class="font-semibold text-green-300">{{ getCurrentBowlerName() }}</span>
                           <span class="text-white">{{ getCurrentBowlerFigures() }}</span>
                           <span class="text-gray-400 text-sm">({{ getCurrentBowlerOvers() }})</span>
@@ -700,10 +787,28 @@ import { HttpClient } from '@angular/common/http';
                           class="grid grid-cols-12 gap-1 px-3 py-1.5 border-b border-gray-700/30 text-sm"
                           [ngClass]="{'bg-green-900/20': isCurrentBowler(bowler)}"
                         >
-                          <div class="col-span-5 truncate" [ngClass]="{'text-green-300 font-semibold': isCurrentBowler(bowler)}">
-                            <span *ngIf="isCurrentBowler(bowler)" class="text-green-400 mr-1">*</span>
-                            {{ getBowlerName(bowler) }}
-                            <span *ngIf="getBestBowler()?.player === bowler.player" class="text-yellow-400 ml-1">🎯</span>
+                          <div class="col-span-5 flex items-center gap-1.5 truncate" [ngClass]="{'text-green-300 font-semibold': isCurrentBowler(bowler)}">
+                            <img 
+                              *ngIf="getBowlerImage(bowler)" 
+                              [src]="getBowlerImage(bowler)"
+                              class="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                              [ngClass]="{
+                                'border-2 border-green-400': isCurrentBowler(bowler),
+                                'border border-gray-600': !isCurrentBowler(bowler)
+                              }"
+                            >
+                            <div *ngIf="!getBowlerImage(bowler)" 
+                              class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
+                              [ngClass]="{
+                                'border-2 border-green-400': isCurrentBowler(bowler),
+                                'border border-gray-600': !isCurrentBowler(bowler)
+                              }">
+                              <span class="text-xs">⚾</span>
+                            </div>
+                            <span class="truncate">
+                              {{ getBowlerName(bowler) }}
+                            </span>
+                            <span *ngIf="getBestBowler()?.player === bowler.player" class="text-yellow-400 ml-1 flex-shrink-0">🎯</span>
                           </div>
                           <div class="col-span-2 text-center">{{ getBowlerOversDisplay(bowler) }}</div>
                           <div class="col-span-2 text-center">{{ bowler.runs || 0 }}</div>
@@ -805,7 +910,17 @@ import { HttpClient } from '@angular/common/http';
                       <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[0], 3)">
                         <div class="flex justify-between items-center">
                           <div class="flex items-center gap-2">
-                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 0)" class="text-yellow-400">🏏</span>
+                            <img 
+                              *ngIf="getTopBatsmanImage(batsman)" 
+                              [src]="getTopBatsmanImage(batsman)"
+                              class="w-7 h-7 rounded-full object-cover"
+                              [ngClass]="{'border-2 border-yellow-400': isBatsmanCurrentlyBatting(batsman, 0), 'border border-gray-600': !isBatsmanCurrentlyBatting(batsman, 0)}"
+                            >
+                            <div *ngIf="!getTopBatsmanImage(batsman)" 
+                              class="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center"
+                              [ngClass]="{'border-2 border-yellow-400': isBatsmanCurrentlyBatting(batsman, 0), 'border border-gray-600': !isBatsmanCurrentlyBatting(batsman, 0)}">
+                              <span class="text-xs">🏏</span>
+                            </div>
                             <span class="font-medium">{{ getShortPlayerName(batsman.player) }}</span>
                             <span *ngIf="isBatsmanCurrentlyBatting(batsman, 0)" class="text-yellow-400 text-xs">*</span>
                           </div>
@@ -824,7 +939,17 @@ import { HttpClient } from '@angular/common/http';
                     <div class="space-y-2">
                       <ng-container *ngFor="let bowler of getSummaryBowlers(0, 3)">
                         <div class="flex justify-between items-center">
-                          <span class="font-medium">{{ getShortPlayerName(bowler.player) }}</span>
+                          <div class="flex items-center gap-2">
+                            <img 
+                              *ngIf="getTopBowlerImage(bowler)" 
+                              [src]="getTopBowlerImage(bowler)"
+                              class="w-7 h-7 rounded-full object-cover border border-gray-600"
+                            >
+                            <div *ngIf="!getTopBowlerImage(bowler)" class="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center border border-gray-600">
+                              <span class="text-xs">⚾</span>
+                            </div>
+                            <span class="font-medium">{{ getShortPlayerName(bowler.player) }}</span>
+                          </div>
                           <span class="text-gray-300">{{ bowler.wickets }}-{{ bowler.runs }} ({{ getBowlerOversDisplay(bowler) }})</span>
                         </div>
                       </ng-container>
@@ -891,7 +1016,17 @@ import { HttpClient } from '@angular/common/http';
                     <div class="space-y-1">
                       <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[0], 3)">
                         <div class="flex justify-between items-center text-sm">
-                          <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                          <div class="flex items-center gap-2">
+                            <img 
+                              *ngIf="getTopBatsmanImage(batsman)" 
+                              [src]="getTopBatsmanImage(batsman)"
+                              class="w-6 h-6 rounded-full object-cover border border-gray-600"
+                            >
+                            <div *ngIf="!getTopBatsmanImage(batsman)" class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center border border-gray-600">
+                              <span class="text-xs">🏏</span>
+                            </div>
+                            <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                          </div>
                           <span><span class="font-bold">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
                         </div>
                       </ng-container>
@@ -918,9 +1053,20 @@ import { HttpClient } from '@angular/common/http';
                     <div class="space-y-1">
                       <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[1], 3)">
                         <div class="flex justify-between items-center text-sm">
-                          <div class="flex items-center gap-1">
-                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 1)" class="text-yellow-400 text-xs">🏏</span>
+                          <div class="flex items-center gap-2">
+                            <img 
+                              *ngIf="getTopBatsmanImage(batsman)" 
+                              [src]="getTopBatsmanImage(batsman)"
+                              class="w-6 h-6 rounded-full object-cover"
+                              [ngClass]="{'border-2 border-yellow-400': isBatsmanCurrentlyBatting(batsman, 1), 'border border-gray-600': !isBatsmanCurrentlyBatting(batsman, 1)}"
+                            >
+                            <div *ngIf="!getTopBatsmanImage(batsman)" 
+                              class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center"
+                              [ngClass]="{'border-2 border-yellow-400': isBatsmanCurrentlyBatting(batsman, 1), 'border border-gray-600': !isBatsmanCurrentlyBatting(batsman, 1)}">
+                              <span class="text-xs">🏏</span>
+                            </div>
                             <span class="text-gray-200">{{ getShortPlayerName(batsman.player) }}</span>
+                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 1)" class="text-yellow-400 text-xs">*</span>
                           </div>
                           <span><span class="font-bold">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
                         </div>
@@ -1002,7 +1148,17 @@ import { HttpClient } from '@angular/common/http';
                     <div class="space-y-1 mb-3">
                       <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[0], 3)">
                         <div class="flex justify-between items-center text-sm">
-                          <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                          <div class="flex items-center gap-2">
+                            <img 
+                              *ngIf="getTopBatsmanImage(batsman)" 
+                              [src]="getTopBatsmanImage(batsman)"
+                              class="w-6 h-6 rounded-full object-cover border border-gray-600"
+                            >
+                            <div *ngIf="!getTopBatsmanImage(batsman)" class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center border border-gray-600">
+                              <span class="text-xs">🏏</span>
+                            </div>
+                            <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                          </div>
                           <span><span class="font-bold">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
                         </div>
                       </ng-container>
@@ -1010,7 +1166,17 @@ import { HttpClient } from '@angular/common/http';
                     <div class="border-t border-gray-700 pt-3">
                       <div class="text-xs text-gray-500 uppercase mb-1">Best Bowler</div>
                       <div *ngIf="getSummaryBowlers(0, 1)[0] as bowler" class="flex justify-between items-center text-sm">
-                        <span class="text-gray-300">{{ getShortPlayerName(bowler.player) }}</span>
+                        <div class="flex items-center gap-2">
+                          <img 
+                            *ngIf="getTopBowlerImage(bowler)" 
+                            [src]="getTopBowlerImage(bowler)"
+                            class="w-6 h-6 rounded-full object-cover border border-cyan-500"
+                          >
+                          <div *ngIf="!getTopBowlerImage(bowler)" class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center border border-cyan-500">
+                            <span class="text-xs">⚾</span>
+                          </div>
+                          <span class="text-gray-300">{{ getShortPlayerName(bowler.player) }}</span>
+                        </div>
                         <span class="text-cyan-400 font-semibold">{{ bowler.wickets }}-{{ bowler.runs }} ({{ getBowlerOversDisplay(bowler) }})</span>
                       </div>
                     </div>
@@ -1036,7 +1202,17 @@ import { HttpClient } from '@angular/common/http';
                     <div class="space-y-1 mb-3">
                       <ng-container *ngFor="let batsman of getTopBatsmen(match.innings[1], 3)">
                         <div class="flex justify-between items-center text-sm">
-                          <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                          <div class="flex items-center gap-2">
+                            <img 
+                              *ngIf="getTopBatsmanImage(batsman)" 
+                              [src]="getTopBatsmanImage(batsman)"
+                              class="w-6 h-6 rounded-full object-cover border border-gray-600"
+                            >
+                            <div *ngIf="!getTopBatsmanImage(batsman)" class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center border border-gray-600">
+                              <span class="text-xs">🏏</span>
+                            </div>
+                            <span class="text-gray-300">{{ getShortPlayerName(batsman.player) }}</span>
+                          </div>
                           <span><span class="font-bold">{{ batsman.runs }}</span> <span class="text-gray-500">({{ batsman.balls }})</span></span>
                         </div>
                       </ng-container>
@@ -1044,7 +1220,17 @@ import { HttpClient } from '@angular/common/http';
                     <div class="border-t border-gray-700 pt-3">
                       <div class="text-xs text-gray-500 uppercase mb-1">Best Bowler</div>
                       <div *ngIf="getSummaryBowlers(1, 1)[0] as bowler" class="flex justify-between items-center text-sm">
-                        <span class="text-gray-300">{{ getShortPlayerName(bowler.player) }}</span>
+                        <div class="flex items-center gap-2">
+                          <img 
+                            *ngIf="getTopBowlerImage(bowler)" 
+                            [src]="getTopBowlerImage(bowler)"
+                            class="w-6 h-6 rounded-full object-cover border border-cyan-500"
+                          >
+                          <div *ngIf="!getTopBowlerImage(bowler)" class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center border border-cyan-500">
+                            <span class="text-xs">⚾</span>
+                          </div>
+                          <span class="text-gray-300">{{ getShortPlayerName(bowler.player) }}</span>
+                        </div>
                         <span class="text-cyan-400 font-semibold">{{ bowler.wickets }}-{{ bowler.runs }} ({{ getBowlerOversDisplay(bowler) }})</span>
                       </div>
                     </div>
@@ -1379,6 +1565,10 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   
   private eventSource: EventSource | null = null;
   private playerNameCache: Map<string, string> = new Map();
+  private playerImageCache: Map<string, string> = new Map();
+  
+  // ESPN CDN base URL for player images
+  private readonly ESPN_CDN_BASE = 'https://img1.hscicdn.com/image/upload';
 
   constructor(
     private route: ActivatedRoute,
@@ -1522,40 +1712,33 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   buildPlayerNameCache() {
     if (!this.match) return;
+    const cachePlayer = (player: any) => {
+      if (!player) return;
+      const playerId = player._id || player;
+      if (playerId && player.name) {
+        this.playerNameCache.set(playerId.toString(), player.name);
+      }
+      if (playerId && player.headshotPath) {
+        // Store the full URL in cache
+        const fullUrl = this.buildImageUrl(player.headshotPath);
+        if (fullUrl) {
+          this.playerImageCache.set(playerId.toString(), fullUrl);
+        }
+      }
+    };
     const cacheFromSquad = (squad: any[]) => {
       if (!squad) return;
-      squad.forEach(p => {
-        const playerId = p.player?._id || p.player;
-        const playerName = p.player?.name;
-        if (playerId && playerName) {
-          this.playerNameCache.set(playerId.toString(), playerName);
-        }
-      });
+      squad.forEach(p => cachePlayer(p.player));
     };
     cacheFromSquad(this.match.squads?.team1);
     cacheFromSquad(this.match.squads?.team2);
     this.match.innings?.forEach((inn: any) => {
-      inn.battingStats?.forEach((bs: any) => {
-        const playerId = bs.player?._id || bs.player;
-        const playerName = bs.player?.name;
-        if (playerId && playerName) {
-          this.playerNameCache.set(playerId.toString(), playerName);
-        }
-      });
-      inn.bowlingStats?.forEach((bs: any) => {
-        const playerId = bs.player?._id || bs.player;
-        const playerName = bs.player?.name;
-        if (playerId && playerName) {
-          this.playerNameCache.set(playerId.toString(), playerName);
-        }
-      });
-      inn.fallOfWickets?.forEach((fow: any) => {
-        const playerId = fow.player?._id || fow.player;
-        const playerName = fow.player?.name;
-        if (playerId && playerName) {
-          this.playerNameCache.set(playerId.toString(), playerName);
-        }
-      });
+      cachePlayer(inn.currentBatsmen?.striker);
+      cachePlayer(inn.currentBatsmen?.nonStriker);
+      cachePlayer(inn.currentBowler);
+      inn.battingStats?.forEach((bs: any) => cachePlayer(bs.player));
+      inn.bowlingStats?.forEach((bs: any) => cachePlayer(bs.player));
+      inn.fallOfWickets?.forEach((fow: any) => cachePlayer(fow.player));
     });
   }
 
@@ -1722,6 +1905,37 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     return this.playerNameCache.get(playerId?.toString()) || 'Unknown';
   }
 
+  getPlayerImage(player: any): string | null {
+    if (!player) return null;
+    
+    // Check for headshotPath and build full URL
+    if (player.headshotPath) {
+      return this.buildImageUrl(player.headshotPath);
+    }
+    
+    // Check for already-built imageUrl
+    if (player.imageUrl) {
+      return player.imageUrl;
+    }
+    
+    // Try to find in cache if player is just an ID
+    const playerId = player._id || player;
+    return this.playerImageCache.get(playerId?.toString()) || null;
+  }
+
+  // Build full ESPN CDN URL from relative path
+  private buildImageUrl(headshotPath: string): string | null {
+    if (!headshotPath) return null;
+    
+    // If it's already a full URL, return as-is
+    if (headshotPath.startsWith('http')) {
+      return headshotPath;
+    }
+    
+    // Build full URL from relative path
+    return `${this.ESPN_CDN_BASE}${headshotPath}`;
+  }
+
   // ==================== LIVE SCORE VIEW HELPERS ====================
 
   getBattingTeamCode(): string {
@@ -1774,6 +1988,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     return name?.split(' ').pop() || 'Unknown';
   }
 
+  getStrikerImage(): string | null {
+    const striker = this.currentInnings?.currentBatsmen?.striker;
+    return this.getPlayerImage(striker);
+  }
+
   getStrikerRuns(): number {
     return this.getStrikerStats()?.runs || 0;
   }
@@ -1792,6 +2011,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     const nonStriker = this.currentInnings?.currentBatsmen?.nonStriker;
     const name = this.getPlayerName(nonStriker);
     return name?.split(' ').pop() || 'Unknown';
+  }
+
+  getNonStrikerImage(): string | null {
+    const nonStriker = this.currentInnings?.currentBatsmen?.nonStriker;
+    return this.getPlayerImage(nonStriker);
   }
 
   getNonStrikerRuns(): number {
@@ -1862,6 +2086,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     const bowler = this.currentInnings?.currentBowler;
     const name = this.getPlayerName(bowler);
     return name?.split(' ').pop() || 'Unknown';
+  }
+
+  getCurrentBowlerImage(): string | null {
+    const bowler = this.currentInnings?.currentBowler;
+    return this.getPlayerImage(bowler);
   }
 
   getCurrentBowlerFigures(): string {
@@ -2007,8 +2236,16 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     return this.getPlayerName(batsman.player);
   }
 
+  getBatsmanImage(batsman: any): string | null {
+    return this.getPlayerImage(batsman.player);
+  }
+
   getBowlerName(bowler: any): string {
     return this.getPlayerName(bowler.player);
+  }
+
+  getBowlerImage(bowler: any): string | null {
+    return this.getPlayerImage(bowler.player);
   }
 
   isCurrentBatsman(batsman: any): boolean {
@@ -2135,6 +2372,14 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     return [...innings.battingStats]
       .sort((a: any, b: any) => (b.runs || 0) - (a.runs || 0))
       .slice(0, count);
+  }
+
+  getTopBatsmanImage(batsman: any): string | null {
+    return this.getPlayerImage(batsman.player);
+  }
+
+  getTopBowlerImage(bowler: any): string | null {
+    return this.getPlayerImage(bowler.player);
   }
 
   getTopBowlersForInnings(inningsIndex: number, count: number): any[] {
