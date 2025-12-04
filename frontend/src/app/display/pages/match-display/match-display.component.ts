@@ -1058,16 +1058,10 @@ import { HttpClient } from '@angular/common/http';
                     </ng-container>
                     
                     <!-- Extras Row -->
-                    <div class="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-800/50 border-b border-gray-700/50">
+                    <div class="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-800/50">
                       <div class="col-span-5 text-gray-400 text-xl">Extras</div>
                       <div class="col-span-4 text-lg text-gray-500">{{ getExtrasBreakdownForInnings(0) }}</div>
                       <div class="col-span-3 text-right font-bold text-yellow-400 text-3xl">{{ getSummaryExtras(0) }}</div>
-                    </div>
-                    
-                    <!-- Total Row -->
-                    <div class="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-900/80 font-bold">
-                      <div class="col-span-9 text-gray-300 text-xl">TOTAL ({{ match.innings[0]?.totalWickets || 0 }} wkts, {{ getInningsOvers(match.innings[0]) }} ov)</div>
-                      <div class="col-span-3 text-right text-4xl text-white">{{ match.innings[0]?.totalRuns || 0 }}</div>
                     </div>
                   </div>
                   
@@ -1171,16 +1165,10 @@ import { HttpClient } from '@angular/common/http';
                       </ng-container>
                       
                       <!-- Extras Row -->
-                      <div class="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-800/50 border-b border-gray-700/50">
+                      <div class="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-800/50">
                         <div class="col-span-5 text-gray-400 text-xl">Extras</div>
                         <div class="col-span-4 text-lg text-gray-500">{{ getExtrasBreakdownForInnings(1) }}</div>
                         <div class="col-span-3 text-right font-bold text-yellow-400 text-3xl">{{ getSummaryExtras(1) }}</div>
-                      </div>
-                      
-                      <!-- Total Row -->
-                      <div class="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-900/80 font-bold">
-                        <div class="col-span-9 text-gray-300 text-xl">TOTAL ({{ match.innings[1]?.totalWickets || 0 }} wkts, {{ getInningsOvers(match.innings[1]) }} ov)</div>
-                        <div class="col-span-3 text-right text-4xl text-white">{{ match.innings[1]?.totalRuns || 0 }}</div>
                       </div>
                     </ng-container>
                     
