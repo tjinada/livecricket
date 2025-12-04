@@ -560,27 +560,13 @@ import { HttpClient } from '@angular/common/http';
                   </div>
                 </div>
                 
-                <!-- Partnership & Target Info -->
-                <div class="mt-4 pt-4 border-t border-gray-600/50 flex items-center justify-between">
-                  <!-- Partnership (left) -->
+                <!-- Partnership Info -->
+                <div class="mt-4 pt-4 border-t border-gray-600/50">
                   <div>
                     <span class="text-gray-500 text-lg">Partnership: </span>
                     <span class="text-white font-semibold text-xl">{{ getPartnershipRuns() }}</span>
                     <span class="text-gray-500 text-lg"> ({{ getPartnershipBalls() }} balls)</span>
                   </div>
-                  
-                  <!-- Target Chase Info (center, only in 2nd innings) -->
-                  <div *ngIf="isSecondInnings()" class="flex items-center gap-3 bg-yellow-500/20 px-6 py-2 rounded-xl border border-yellow-500/40">
-                    <span class="text-yellow-400 font-bold text-xl">Need</span>
-                    <span class="text-white font-black text-2xl">{{ getRunsNeeded() }}</span>
-                    <span class="text-yellow-400 font-bold text-xl">from</span>
-                    <span class="text-white font-black text-2xl">{{ getBallsRemaining() }}</span>
-                    <span class="text-yellow-400 font-bold text-xl">balls</span>
-                    <span class="text-gray-400 text-lg">({{ getOversRemaining() }} ov)</span>
-                  </div>
-                  
-                  <!-- Spacer for balance when no target info -->
-                  <div *ngIf="!isSecondInnings()"></div>
                 </div>
               </div>
 
@@ -649,15 +635,9 @@ import { HttpClient } from '@angular/common/http';
                         <span class="text-gray-500">CRR </span>
                         <span class="text-3xl font-bold text-green-400">{{ getCurrentRunRate() }}</span>
                       </div>
-                      <div *ngIf="match.currentInnings === 1">
+                      <div *ngIf="isSecondInnings()">
                         <span class="text-gray-500">RRR </span>
                         <span class="text-3xl font-bold text-orange-400">{{ getRequiredRunRate() }}</span>
-                      </div>
-                      <div *ngIf="match.currentInnings === 1" class="pl-4 border-l border-gray-600">
-                        <span class="text-gray-500">Need </span>
-                        <span class="text-yellow-400 font-bold text-2xl">{{ getRunsNeeded() }}</span>
-                        <span class="text-gray-500"> from </span>
-                        <span class="text-yellow-400 font-bold text-2xl">{{ getBallsRemaining() }}</span>
                       </div>
                     </div>
                   </div>
