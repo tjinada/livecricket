@@ -933,38 +933,42 @@ import { HttpClient } from '@angular/common/http';
             
             <!-- Top Header Bar -->
             <div class="bg-gradient-to-r from-purple-900/95 via-purple-800/95 to-purple-900/95 backdrop-blur-sm border-b border-purple-600/40">
-              <div class="max-w-7xl mx-auto px-6 py-2">
-                <div class="flex items-center justify-center gap-10">
+              <div class="w-full px-8 py-4">
+                <div class="flex items-center justify-center gap-16">
                   <!-- Team 1 -->
-                  <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-4">
                     <img 
                       *ngIf="getTeamFlag(match.innings[0]?.battingTeam)"
                       [src]="getTeamFlag(match.innings[0]?.battingTeam)"
-                      class="w-10 h-7 object-cover rounded shadow-lg border border-white/20"
+                      class="w-14 h-10 object-cover rounded shadow-lg border border-white/20"
                     >
                     <div *ngIf="!getTeamFlag(match.innings[0]?.battingTeam)" 
-                      class="w-10 h-7 bg-gradient-to-br from-blue-600 to-blue-800 rounded flex items-center justify-center text-sm font-bold">
+                      class="w-14 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded flex items-center justify-center text-lg font-bold">
                       {{ getTeamCode(match.innings[0]?.battingTeam) }}
                     </div>
-                    <span class="text-xl font-bold text-yellow-300">{{ getTeamName(match.innings[0]?.battingTeam) }}</span>
+                    <span class="text-3xl font-bold text-yellow-300">{{ getTeamName(match.innings[0]?.battingTeam) }}</span>
                   </div>
                   
                   <!-- Match Title -->
-                  <div class="text-center px-6">
-                    <h1 class="text-xl font-black text-white tracking-wide">{{ match.format }} {{ match.matchType || 'Match' }}</h1>
-                    <div class="text-xs text-purple-300">{{ match.status === 'completed' ? 'Completed' : 'In Progress' }}</div>
+                  <div class="text-center px-8">
+                    <h1 class="text-3xl font-black text-white tracking-wide">{{ match.format }} {{ match.matchType || 'Match' }}</h1>
+                    <div class="flex items-center justify-center gap-3 mt-1">
+                      <span *ngIf="match.status === 'live'" class="bg-red-600 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">● LIVE</span>
+                      <span *ngIf="match.status === 'completed'" class="bg-green-600 text-white text-sm font-bold px-3 py-1 rounded-full">COMPLETED</span>
+                      <span *ngIf="match.status !== 'completed' && match.status !== 'live'" class="text-purple-300 text-lg">{{ match.status === 'upcoming' ? 'Upcoming' : 'In Progress' }}</span>
+                    </div>
                   </div>
                   
                   <!-- Team 2 -->
-                  <div class="flex items-center gap-3">
-                    <span class="text-xl font-bold text-cyan-300">{{ getTeamName(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam) }}</span>
+                  <div class="flex items-center gap-4">
+                    <span class="text-3xl font-bold text-cyan-300">{{ getTeamName(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam) }}</span>
                     <img 
                       *ngIf="getTeamFlag(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam)"
                       [src]="getTeamFlag(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam)"
-                      class="w-10 h-7 object-cover rounded shadow-lg border border-white/20"
+                      class="w-14 h-10 object-cover rounded shadow-lg border border-white/20"
                     >
                     <div *ngIf="!getTeamFlag(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam)" 
-                      class="w-10 h-7 bg-gradient-to-br from-cyan-600 to-cyan-800 rounded flex items-center justify-center text-sm font-bold">
+                      class="w-14 h-10 bg-gradient-to-br from-cyan-600 to-cyan-800 rounded flex items-center justify-center text-lg font-bold">
                       {{ getTeamCode(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam) }}
                     </div>
                   </div>
@@ -1200,10 +1204,10 @@ import { HttpClient } from '@angular/common/http';
 
             <!-- Bottom Bar: Match Status / Chase Info -->
             <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-t border-gray-700/50">
-              <div class="w-full px-10 py-4">
+              <div class="w-full px-10 py-5">
                 <!-- Match Completed Result -->
                 <div *ngIf="match.status === 'completed'" class="text-center">
-                  <div class="text-4xl font-bold">
+                  <div class="text-5xl font-bold">
                     <span *ngIf="match.result?.winner" class="text-white">{{ getTeamName(match.result.winner) }}</span>
                     <span *ngIf="match.result?.winner" class="text-green-400"> won by {{ match.result.winMargin }}</span>
                     <span *ngIf="!match.result?.winner" class="text-yellow-400">{{ match.result?.winMargin || 'Match Tied' }}</span>
@@ -1211,34 +1215,20 @@ import { HttpClient } from '@angular/common/http';
                 </div>
                 
                 <!-- Chase Equation (2nd innings in progress) -->
-                <div *ngIf="match.status !== 'completed' && match.currentInnings === 1" class="flex items-center justify-center gap-12">
-                  <div class="text-2xl">
+                <div *ngIf="match.status !== 'completed' && match.currentInnings === 1" class="flex items-center justify-center">
+                  <div class="text-3xl">
                     <span class="text-gray-400">{{ getTeamName(match.innings[1]?.battingTeam) }} need </span>
-                    <span class="text-yellow-400 font-black text-5xl">{{ getRunsNeeded() }}</span>
+                    <span class="text-yellow-400 font-black text-6xl">{{ getRunsNeeded() }}</span>
                     <span class="text-gray-400"> from </span>
-                    <span class="text-yellow-400 font-black text-5xl">{{ getBallsRemaining() }}</span>
+                    <span class="text-yellow-400 font-black text-6xl">{{ getBallsRemaining() }}</span>
                     <span class="text-gray-400"> balls</span>
-                  </div>
-                  <div class="w-px h-12 bg-gray-600"></div>
-                  <div class="text-xl">
-                    <span class="text-gray-500">RRR: </span>
-                    <span class="text-orange-400 font-bold text-4xl">{{ getRequiredRunRate() }}</span>
-                  </div>
-                  <div class="text-xl">
-                    <span class="text-gray-500">CRR: </span>
-                    <span class="text-cyan-400 font-bold text-4xl">{{ getSummaryRunRate(1) }}</span>
                   </div>
                 </div>
                 
                 <!-- First Innings in Progress -->
-                <div *ngIf="match.status !== 'completed' && match.currentInnings === 0" class="flex items-center justify-center gap-10">
-                  <div class="text-2xl text-gray-400">
+                <div *ngIf="match.status !== 'completed' && match.currentInnings === 0" class="flex items-center justify-center">
+                  <div class="text-3xl text-gray-400">
                     {{ getTeamName(match.innings[0]?.bowlingTeam) }} to bat next
-                  </div>
-                  <div class="w-px h-10 bg-gray-600"></div>
-                  <div class="text-xl">
-                    <span class="text-gray-500">CRR: </span>
-                    <span class="text-cyan-400 font-bold text-4xl">{{ getSummaryRunRate(0) }}</span>
                   </div>
                 </div>
               </div>
