@@ -1902,7 +1902,20 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   updateFlagOverlays() {
-    // Get flag videos from current batting and bowling teams
+    // For overall-summary view, use static team positions (Team1 left, Team2 right)
+    // to match the two-column layout
+    if (this.displayView === 'overall-summary') {
+      // Left side: First innings batting team
+      const leftTeam = this.match?.innings?.[0]?.battingTeam;
+      // Right side: Second innings batting team OR first innings bowling team
+      const rightTeam = this.match?.innings?.[1]?.battingTeam || this.match?.innings?.[0]?.bowlingTeam;
+      
+      this.battingTeamFlagVideo = leftTeam?.flagVideo || this.getTeamFlagVideo(leftTeam);
+      this.bowlingTeamFlagVideo = rightTeam?.flagVideo || this.getTeamFlagVideo(rightTeam);
+      return;
+    }
+    
+    // For all other views, use current innings batting/bowling teams
     const battingTeam = this.currentInnings?.battingTeam;
     const bowlingTeam = this.currentInnings?.bowlingTeam;
     
