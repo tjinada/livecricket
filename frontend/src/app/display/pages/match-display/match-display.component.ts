@@ -544,8 +544,8 @@ import { HttpClient } from '@angular/common/http';
               <div class="w-full px-6 py-4">
                 <div class="flex items-center">
                   
-                  <!-- Left: Previous Overs (flex-1 to balance with right) -->
-                  <div class="flex-1 flex items-center justify-end gap-4 pr-6">
+                  <!-- Left: Previous Overs -->
+                  <div class="flex-1 flex items-center justify-end gap-4 pr-4">
                     <span class="text-sm text-gray-500 uppercase">Previous</span>
                     <ng-container *ngFor="let over of getPreviousOvers(); let i = index">
                       <div class="flex items-center gap-1">
@@ -566,11 +566,11 @@ import { HttpClient } from '@angular/common/http';
                   </div>
 
                   <!-- Separator -->
-                  <div class="w-px h-10 bg-gray-600 mx-6"></div>
+                  <div class="w-px h-10 bg-gray-600 mx-8"></div>
 
-                  <!-- Center: This Over (fixed width, always centered) -->
-                  <div class="flex items-center gap-3 px-4">
-                    <span class="text-base text-gray-500 uppercase mr-2">This Over</span>
+                  <!-- Center: This Over (emphasized) -->
+                  <div class="flex items-center gap-3 px-6 py-2 bg-gray-800/50 rounded-xl border border-gray-700/50">
+                    <span class="text-base text-gray-400 uppercase font-semibold mr-2">This Over</span>
                     <ng-container *ngFor="let ball of getCurrentOverBalls()">
                       <div 
                         class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shadow-md"
@@ -586,10 +586,10 @@ import { HttpClient } from '@angular/common/http';
                   </div>
 
                   <!-- Separator -->
-                  <div class="w-px h-10 bg-gray-600 mx-6"></div>
+                  <div class="w-px h-10 bg-gray-600 mx-8"></div>
 
-                  <!-- Right: Last Wicket + Run Rates (flex-1 to balance with left) -->
-                  <div class="flex-1 flex items-center justify-start gap-6 pl-6">
+                  <!-- Right: Last Wicket + Run Rates -->
+                  <div class="flex-1 flex items-center justify-start gap-6 pl-4">
                     <!-- Last Wicket -->
                     <div *ngIf="getLastWicket()" class="flex items-center gap-2 bg-red-900/40 rounded-lg px-4 py-2 border border-red-600/40">
                       <span class="text-red-400 text-sm">Last Wkt:</span>
