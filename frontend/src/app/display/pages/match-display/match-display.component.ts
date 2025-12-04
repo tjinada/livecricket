@@ -384,27 +384,27 @@ import { HttpClient } from '@angular/common/http';
             
             <!-- Top Header Bar -->
             <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
-              <div class="max-w-6xl mx-auto px-6 py-3">
+              <div class="max-w-7xl mx-auto px-10 py-6">
                 <div class="flex items-center justify-between">
                   <!-- Match Info -->
-                  <div class="flex items-center gap-4">
+                  <div class="flex items-center gap-8">
                     <!-- Live Badge -->
-                    <div class="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full">
-                      <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                      <span class="text-xs font-bold uppercase tracking-wider">Live</span>
+                    <div class="flex items-center gap-3 bg-red-600 px-5 py-2.5 rounded-full">
+                      <span class="w-3.5 h-3.5 bg-white rounded-full animate-pulse"></span>
+                      <span class="text-base font-bold uppercase tracking-wider">Live</span>
                     </div>
                     <!-- Match Title -->
                     <div>
-                      <h1 class="text-lg font-bold tracking-wide">
+                      <h1 class="text-3xl font-bold tracking-wide">
                         <span class="text-blue-400">{{ getBattingTeamName() }}</span>
-                        <span class="text-gray-500 mx-2">vs</span>
+                        <span class="text-gray-500 mx-3">vs</span>
                         <span class="text-gray-300">{{ getBowlingTeamName() }}</span>
                       </h1>
-                      <p class="text-xs text-gray-500">{{ match.format }} Match • {{ getInningsLabel() }}</p>
+                      <p class="text-base text-gray-500 mt-1">{{ match.format }} Match • {{ getInningsLabel() }}</p>
                     </div>
                   </div>
                   <!-- Format Badge -->
-                  <div class="bg-gray-700/50 px-4 py-1 rounded text-sm font-medium">
+                  <div class="bg-gray-700/50 px-8 py-3 rounded-lg text-xl font-semibold">
                     {{ match.format }}
                   </div>
                 </div>
