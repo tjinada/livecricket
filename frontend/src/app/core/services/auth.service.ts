@@ -2,10 +2,18 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
-import { ApiResponse } from '../models';
 
-interface LoginResponse {
-  token: string;
+interface AuthResponse {
+  success: boolean;
+  token?: string;
+  message?: string;
+}
+
+interface TokenPayload {
+  sub: string;
+  role: string;
+  iat: number;
+  exp: number;
 }
 
 @Injectable({
@@ -19,12 +27,12 @@ export class AuthService {
     private router: Router
   ) {}
 
-  login(username: string, password: string): Observable<ApiResponse<LoginResponse>> {
-    return this.http.post<ApiResponse<LoginResponse>>('/api/auth/login', { username, password })
+  login(username: string, password: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>('/api/auth/login', { username, password })
       .pipe(
         tap(response => {
-          if (response.success && response.data.token) {
-            this.setToken(response.data.token);
+          if (response.success && response.token) {
+            this.setToken(response.token);
           }
         })
       );
@@ -47,16 +55,40 @@ export class AuthService {
     const token = this.getToken();
     if (!token) return false;
     
-    // Check if token is expired
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.exp * 1000 > Date.now();
+      const payload = this.decodeToken(token);
+      if (!payload) return false;
+      
+      // Check if token is expired (with 60 second buffer)
+      return payload.exp * 1000 > Date.now() + 60000;
     } catch {
       return false;
     }
   }
 
-  verify(): Observable<ApiResponse<{ valid: boolean }>> {
-    return this.http.get<ApiResponse<{ valid: boolean }>>('/api/auth/verify');
+  getTokenExpirationTime(): Date | null {
+    const token = this.getToken();
+    if (!token) return null;
+    
+    try {
+      const payload = this.decodeToken(token);
+      return payload ? new Date(payload.exp * 1000) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private decodeToken(token: string): TokenPayload | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      return JSON.parse(atob(parts[1]));
+    } catch {
+      return null;
+    }
+  }
+
+  verify(): Observable<{ success: boolean; valid: boolean }> {
+    return this.http.get<{ success: boolean; valid: boolean }>('/api/auth/verify');
   }
 }

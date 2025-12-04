@@ -1773,6 +1773,14 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   private playerNameCache: Map<string, string> = new Map();
   private playerImageCache: Map<string, string> = new Map();
   
+  // SSE connection state
+  isConnected = true;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 10;
+  private reconnectTimeout: any = null;
+  private lastHeartbeat = Date.now();
+  private heartbeatCheckInterval: any = null;
+  
   // ESPN CDN base URL for player images
   private readonly ESPN_CDN_BASE = 'https://img1.hscicdn.com/image/upload';
 
@@ -1797,6 +1805,12 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     this.disconnectSSE();
     if (this.notificationTimeout) {
       clearTimeout(this.notificationTimeout);
+    }
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    if (this.heartbeatCheckInterval) {
+      clearInterval(this.heartbeatCheckInterval);
     }
   }
 
@@ -1962,27 +1976,54 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   connectSSE() {
+    // Clean up any existing connection
+    this.disconnectSSE();
+    
+    console.log('SSE: Connecting to live updates...');
     this.eventSource = new EventSource(`/api/matches/${this.matchId}/live`);
+    
+    // Connection opened successfully
+    this.eventSource.addEventListener('connected', (event: any) => {
+      console.log('SSE: Connected successfully');
+      this.isConnected = true;
+      this.reconnectAttempts = 0;
+      this.lastHeartbeat = Date.now();
+      this.startHeartbeatCheck();
+    });
+    
+    // Handle heartbeat to track connection health
+    this.eventSource.addEventListener('heartbeat', (event: any) => {
+      this.lastHeartbeat = Date.now();
+      this.isConnected = true;
+    });
+    
     const events = ['score-update', 'over-complete', 'innings-complete', 
-                    'innings-start', 'match-complete', 'batsmen-change', 'bowler-change', 'background-change'];
+                    'innings-start', 'match-complete', 'batsmen-change', 'bowler-change', 
+                    'background-change', 'squad-change', 'zoom-change'];
     events.forEach(event => {
-      this.eventSource!.addEventListener(event, () => this.reloadMatch());
+      this.eventSource!.addEventListener(event, () => {
+        this.lastHeartbeat = Date.now();
+        this.reloadMatch();
+      });
     });
     
     // Special notification events
     this.eventSource.addEventListener('six', (event: any) => {
+      this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
       this.showBigNotification('six', data);
       this.reloadMatch();
     });
     
     this.eventSource.addEventListener('four', (event: any) => {
+      this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
       this.showBigNotification('four', data);
       this.reloadMatch();
     });
     
     this.eventSource.addEventListener('wicket', (event: any) => {
+      this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
       this.showBigNotification('wicket', data);
       this.reloadMatch();
@@ -1990,25 +2031,30 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     
     // Third Umpire events
     this.eventSource.addEventListener('third-umpire-start', (event: any) => {
+      this.lastHeartbeat = Date.now();
       this.showThirdUmpireOverlay();
     });
     
     this.eventSource.addEventListener('third-umpire-decision', (event: any) => {
+      this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
       this.showThirdUmpireDecision(data.decision);
     });
     
     // Custom message events
     this.eventSource.addEventListener('custom-message', (event: any) => {
+      this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
       this.showCustomMessage(data.message);
     });
     
     this.eventSource.addEventListener('custom-message-dismiss', () => {
+      this.lastHeartbeat = Date.now();
       this.dismissNotification();
     });
     
     this.eventSource.addEventListener('view-change', (event: any) => {
+      this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
       if (data.view) {
         this.displayView = data.view;
@@ -2016,7 +2062,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       }
       this.reloadMatch();
     });
+    
     this.eventSource.addEventListener('match-state', (event: any) => {
+      this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
       if (data.displayView) {
         this.displayView = data.displayView;
@@ -2024,10 +2072,57 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       }
       this.reloadMatch();
     });
-    this.eventSource.onerror = () => {
+    
+    // Handle connection errors with exponential backoff
+    this.eventSource.onerror = (error) => {
+      console.error('SSE: Connection error', error);
+      this.isConnected = false;
       this.disconnectSSE();
-      setTimeout(() => this.connectSSE(), 3000);
+      this.scheduleReconnect();
     };
+  }
+  
+  private startHeartbeatCheck() {
+    // Clear any existing interval
+    if (this.heartbeatCheckInterval) {
+      clearInterval(this.heartbeatCheckInterval);
+    }
+    
+    // Check every 45 seconds if we've received a heartbeat (server sends every 30s)
+    this.heartbeatCheckInterval = setInterval(() => {
+      const timeSinceLastHeartbeat = Date.now() - this.lastHeartbeat;
+      
+      // If no heartbeat for 60 seconds, connection is likely dead
+      if (timeSinceLastHeartbeat > 60000) {
+        console.warn('SSE: No heartbeat received, reconnecting...');
+        this.isConnected = false;
+        this.disconnectSSE();
+        this.scheduleReconnect();
+      }
+    }, 45000);
+  }
+  
+  private scheduleReconnect() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('SSE: Max reconnect attempts reached');
+      return;
+    }
+    
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+    this.reconnectAttempts++;
+    
+    console.log(`SSE: Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    
+    this.reconnectTimeout = setTimeout(() => {
+      // Reload match data first to catch up on any missed updates
+      this.reloadMatch();
+      this.connectSSE();
+    }, delay);
   }
   
   showBigNotification(type: 'six' | 'four' | 'wicket', data: any) {
@@ -2092,6 +2187,10 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   disconnectSSE() {
+    if (this.heartbeatCheckInterval) {
+      clearInterval(this.heartbeatCheckInterval);
+      this.heartbeatCheckInterval = null;
+    }
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;

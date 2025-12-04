@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -63,7 +63,7 @@ export class LoginComponent {
   loading = false;
 
   constructor(
-    private http: HttpClient,
+    private authService: AuthService,
     private router: Router
   ) {}
 
@@ -71,13 +71,9 @@ export class LoginComponent {
     this.error = '';
     this.loading = true;
 
-    this.http.post<{ success: boolean; token: string; message?: string }>('/api/auth/login', {
-      username: this.username,
-      password: this.password
-    }).subscribe({
+    this.authService.login(this.username, this.password).subscribe({
       next: (response) => {
         if (response.success && response.token) {
-          localStorage.setItem('token', response.token);
           this.router.navigate(['/admin']);
         }
       },

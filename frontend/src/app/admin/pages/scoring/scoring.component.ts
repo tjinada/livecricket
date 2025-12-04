@@ -26,6 +26,23 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
             <h1 class="text-lg font-bold text-gray-800">Live Scoring</h1>
           </div>
           <div class="flex items-center gap-3">
+            <!-- Connection Status Indicator -->
+            <div 
+              class="flex items-center gap-1.5 px-2 py-1 rounded text-xs"
+              [ngClass]="{
+                'bg-green-100 text-green-700': isDisplayConnected,
+                'bg-red-100 text-red-700 animate-pulse': !isDisplayConnected
+              }"
+            >
+              <span 
+                class="w-2 h-2 rounded-full"
+                [ngClass]="{
+                  'bg-green-500': isDisplayConnected,
+                  'bg-red-500': !isDisplayConnected
+                }"
+              ></span>
+              {{ isDisplayConnected ? 'Live' : 'Reconnecting...' }}
+            </div>
             <a 
               [href]="'/display/' + matchId" 
               target="_blank"
@@ -1279,6 +1296,10 @@ export class ScoringComponent implements OnInit, OnDestroy {
 
   // SSE connection
   private eventSource: EventSource | null = null;
+  isDisplayConnected = true;
+  private reconnectAttempts = 0;
+  private lastHeartbeat = Date.now();
+  private heartbeatCheckInterval: any = null;
 
   // Player name cache
   private playerNameCache: Map<string, string> = new Map();
@@ -1310,6 +1331,9 @@ export class ScoringComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.disconnectSSE();
+    if (this.heartbeatCheckInterval) {
+      clearInterval(this.heartbeatCheckInterval);
+    }
   }
 
   loadMatch() {
@@ -1400,26 +1424,44 @@ export class ScoringComponent implements OnInit, OnDestroy {
     }
 
     this.eventSource = new EventSource(`/api/matches/${this.matchId}/live`);
+    
+    // Track connection state
+    this.eventSource.addEventListener('connected', () => {
+      this.isDisplayConnected = true;
+      this.reconnectAttempts = 0;
+      this.lastHeartbeat = Date.now();
+      this.startHeartbeatCheck();
+    });
+    
+    // Handle heartbeat
+    this.eventSource.addEventListener('heartbeat', () => {
+      this.lastHeartbeat = Date.now();
+      this.isDisplayConnected = true;
+    });
 
-    this.eventSource.addEventListener('match-state', (event: any) => {
+    this.eventSource.addEventListener('match-state', () => {
+      this.lastHeartbeat = Date.now();
       this.reloadMatch();
     });
 
-    this.eventSource.addEventListener('score-update', (event: any) => {
+    this.eventSource.addEventListener('score-update', () => {
+      this.lastHeartbeat = Date.now();
       this.reloadMatch();
     });
 
-    this.eventSource.addEventListener('wicket', (event: any) => {
+    this.eventSource.addEventListener('wicket', () => {
+      this.lastHeartbeat = Date.now();
       this.reloadMatch();
     });
 
-    this.eventSource.addEventListener('over-complete', (event: any) => {
+    this.eventSource.addEventListener('over-complete', () => {
+      this.lastHeartbeat = Date.now();
       this.reloadMatch();
     });
 
-    this.eventSource.addEventListener('innings-complete', (event: any) => {
+    this.eventSource.addEventListener('innings-complete', () => {
+      this.lastHeartbeat = Date.now();
       this.reloadMatch().then(() => {
-        // Check if first innings just completed and we need to start second innings
         if (this.match && 
             this.match.currentInnings === 0 && 
             this.match.innings && 
@@ -1431,25 +1473,63 @@ export class ScoringComponent implements OnInit, OnDestroy {
       });
     });
 
-    this.eventSource.addEventListener('innings-start', (event: any) => {
+    this.eventSource.addEventListener('innings-start', () => {
+      this.lastHeartbeat = Date.now();
       this.reloadMatch();
     });
 
-    this.eventSource.addEventListener('match-complete', (event: any) => {
+    this.eventSource.addEventListener('match-complete', () => {
+      this.lastHeartbeat = Date.now();
       this.reloadMatch();
     });
 
-    this.eventSource.addEventListener('batsmen-change', (event: any) => {
+    this.eventSource.addEventListener('batsmen-change', () => {
+      this.lastHeartbeat = Date.now();
       this.reloadMatch();
     });
 
-    this.eventSource.addEventListener('bowler-change', (event: any) => {
+    this.eventSource.addEventListener('bowler-change', () => {
+      this.lastHeartbeat = Date.now();
       this.reloadMatch();
     });
 
     this.eventSource.onerror = () => {
-      setTimeout(() => this.connectSSE(), 3000);
+      this.isDisplayConnected = false;
+      this.scheduleReconnect();
     };
+  }
+  
+  private startHeartbeatCheck() {
+    if (this.heartbeatCheckInterval) {
+      clearInterval(this.heartbeatCheckInterval);
+    }
+    
+    // Check every 45 seconds if we've received a heartbeat (server sends every 30s)
+    this.heartbeatCheckInterval = setInterval(() => {
+      const timeSinceLastHeartbeat = Date.now() - this.lastHeartbeat;
+      
+      // If no heartbeat for 60 seconds, connection is likely dead
+      if (timeSinceLastHeartbeat > 60000) {
+        this.isDisplayConnected = false;
+        this.disconnectSSE();
+        this.scheduleReconnect();
+      }
+    }, 45000);
+  }
+  
+  private scheduleReconnect() {
+    if (this.reconnectAttempts >= 10) {
+      return;
+    }
+    
+    // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+    this.reconnectAttempts++;
+    
+    setTimeout(() => {
+      this.reloadMatch();
+      this.connectSSE();
+    }, delay);
   }
 
   disconnectSSE() {

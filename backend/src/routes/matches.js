@@ -7,6 +7,26 @@ const router = express.Router();
 // Store SSE clients for live updates
 const sseClients = new Map();
 
+// Heartbeat interval (30 seconds) - keeps connections alive
+const HEARTBEAT_INTERVAL = 30000;
+
+// Send heartbeat to all connected clients
+setInterval(() => {
+  sseClients.forEach((clients, matchId) => {
+    clients.forEach((client, clientId) => {
+      try {
+        client.write(`event: heartbeat\ndata: ${JSON.stringify({ timestamp: Date.now() })}\n\n`);
+      } catch (error) {
+        // Client disconnected, remove from list
+        clients.delete(clientId);
+        if (clients.size === 0) {
+          sseClients.delete(matchId);
+        }
+      }
+    });
+  });
+}, HEARTBEAT_INTERVAL);
+
 // GET /api/matches - List matches with filters
 router.get('/', async (req, res, next) => {
   try {
