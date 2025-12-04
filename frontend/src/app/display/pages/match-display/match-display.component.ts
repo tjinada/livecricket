@@ -433,21 +433,53 @@ import { HttpClient } from '@angular/common/http';
                   <span class="text-5xl font-semibold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">{{ getBattingTeamName() }}</span>
                 </div>
                 
-                <!-- Big Score with subtle backdrop -->
-                <div class="relative">
-                  <!-- Subtle dark pill behind score -->
-                  <div class="absolute inset-0 -inset-x-12 -inset-y-4 bg-black/40 rounded-3xl blur-xl"></div>
-                  <div class="relative text-center">
-                    <div class="flex items-baseline justify-center gap-3">
-                      <span class="font-black tracking-tight text-white" style="font-size: 14rem; line-height: 1; text-shadow: 0 6px 30px rgba(0,0,0,0.8), 0 3px 15px rgba(0,0,0,0.9), 0 0 80px rgba(255,255,255,0.15);">{{ currentInnings?.totalRuns || 0 }}</span>
-                      <span class="text-7xl font-light text-gray-400">/</span>
-                      <span class="font-bold text-gray-200" style="font-size: 9rem; line-height: 1; text-shadow: 0 3px 15px rgba(0,0,0,0.7);">{{ currentInnings?.totalWickets || 0 }}</span>
-                    </div>
-                    <!-- Bigger & Bolder Overs Display -->
-                    <div class="text-5xl text-white mt-6 font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">
-                      <span class="text-gray-300">(</span>{{ getOversDisplay() }} overs<span class="text-gray-300">)</span>
+                <!-- Score Row with Flanking Chase Info (2nd innings only) -->
+                <div class="flex items-center justify-center gap-8">
+                  
+                  <!-- LEFT: Need X runs (2nd innings only) -->
+                  <div 
+                    *ngIf="isSecondInnings()" 
+                    class="flex flex-col items-center justify-center bg-gradient-to-br from-yellow-600/30 to-orange-700/30 backdrop-blur-md px-8 py-6 rounded-2xl border-2 border-yellow-500/50 shadow-2xl min-w-[200px]"
+                    style="box-shadow: 0 0 40px rgba(234, 179, 8, 0.2);"
+                  >
+                    <span class="text-yellow-400 text-xl font-semibold uppercase tracking-wider mb-2">Need</span>
+                    <span class="text-white font-black text-6xl" style="text-shadow: 0 4px 20px rgba(234, 179, 8, 0.5);">{{ getRunsNeeded() }}</span>
+                    <span class="text-yellow-300 text-lg font-medium mt-1">runs to win</span>
+                  </div>
+                  
+                  <!-- Invisible spacer for layout balance (1st innings) -->
+                  <div *ngIf="!isSecondInnings()" class="min-w-[200px]"></div>
+                  
+                  <!-- Big Score with subtle backdrop -->
+                  <div class="relative">
+                    <!-- Subtle dark pill behind score -->
+                    <div class="absolute inset-0 -inset-x-12 -inset-y-4 bg-black/40 rounded-3xl blur-xl"></div>
+                    <div class="relative text-center">
+                      <div class="flex items-baseline justify-center gap-3">
+                        <span class="font-black tracking-tight text-white" style="font-size: 14rem; line-height: 1; text-shadow: 0 6px 30px rgba(0,0,0,0.8), 0 3px 15px rgba(0,0,0,0.9), 0 0 80px rgba(255,255,255,0.15);">{{ currentInnings?.totalRuns || 0 }}</span>
+                        <span class="text-7xl font-light text-gray-400">/</span>
+                        <span class="font-bold text-gray-200" style="font-size: 9rem; line-height: 1; text-shadow: 0 3px 15px rgba(0,0,0,0.7);">{{ currentInnings?.totalWickets || 0 }}</span>
+                      </div>
+                      <!-- Bigger & Bolder Overs Display -->
+                      <div class="text-5xl text-white mt-6 font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">
+                        <span class="text-gray-300">(</span>{{ getOversDisplay() }} overs<span class="text-gray-300">)</span>
+                      </div>
                     </div>
                   </div>
+                  
+                  <!-- RIGHT: X balls remaining (2nd innings only) -->
+                  <div 
+                    *ngIf="isSecondInnings()" 
+                    class="flex flex-col items-center justify-center bg-gradient-to-br from-cyan-600/30 to-blue-700/30 backdrop-blur-md px-8 py-6 rounded-2xl border-2 border-cyan-500/50 shadow-2xl min-w-[200px]"
+                    style="box-shadow: 0 0 40px rgba(6, 182, 212, 0.2);"
+                  >
+                    <span class="text-cyan-400 text-xl font-semibold uppercase tracking-wider mb-2">From</span>
+                    <span class="text-white font-black text-6xl" style="text-shadow: 0 4px 20px rgba(6, 182, 212, 0.5);">{{ getBallsRemaining() }}</span>
+                    <span class="text-cyan-300 text-lg font-medium mt-1">balls</span>
+                  </div>
+                  
+                  <!-- Invisible spacer for layout balance (1st innings) -->
+                  <div *ngIf="!isSecondInnings()" class="min-w-[200px]"></div>
                 </div>
               </div>
 
@@ -1491,29 +1523,29 @@ import { HttpClient } from '@angular/common/http';
               <!-- Striker Image (Left Side) -->
               <div 
                 *ngIf="getStrikerImage()" 
-                class="absolute left-0 bottom-0 h-full w-1/2 flex items-end justify-start overflow-hidden"
+                class="absolute left-0 top-0 h-full w-1/2 flex items-start justify-start overflow-hidden"
               >
                 <img 
                   [src]="getStrikerImage()"
-                  class="h-[90%] w-auto object-contain object-bottom opacity-30"
-                  style="filter: grayscale(30%); mix-blend-mode: luminosity;"
+                  class="h-full w-auto object-cover object-top opacity-50"
+                  style="filter: grayscale(20%); mix-blend-mode: normal;"
                 >
               </div>
               
               <!-- Non-Striker Image (Right Side) -->
               <div 
                 *ngIf="getNonStrikerImage()" 
-                class="absolute right-0 bottom-0 h-full w-1/2 flex items-end justify-end overflow-hidden"
+                class="absolute right-0 top-0 h-full w-1/2 flex items-start justify-end overflow-hidden"
               >
                 <img 
                   [src]="getNonStrikerImage()"
-                  class="h-[90%] w-auto object-contain object-bottom opacity-30"
-                  style="filter: grayscale(30%); mix-blend-mode: luminosity; transform: scaleX(-1);"
+                  class="h-full w-auto object-cover object-top opacity-50"
+                  style="filter: grayscale(20%); mix-blend-mode: normal; transform: scaleX(-1);"
                 >
               </div>
               
               <!-- Center gradient overlay for better text readability -->
-              <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 25%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.4) 75%, rgba(0,0,0,0.7) 100%);"></div>
+              <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.6) 25%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.6) 75%, rgba(0,0,0,0.5) 100%);"></div>
             </div>
 
             <!-- Top Header Bar -->
