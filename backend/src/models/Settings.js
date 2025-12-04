@@ -46,10 +46,11 @@ const SETTING_KEYS = {
 /*
   Structure of DEFAULT_BACKGROUNDS value:
   {
-    'score-summary': { type: 'video', url: '/uploads/backgrounds/...' },
-    'player-stats': { type: 'image', url: '/uploads/backgrounds/...' },
-    'overall-summary': { type: 'video', url: '/uploads/backgrounds/...' },
-    'projections': { type: 'video', url: '/uploads/backgrounds/...' }
+    'live-score': { type: 'video', url: '/uploads/backgrounds/...' },
+    'live-match-summary': { type: 'image', url: '/uploads/backgrounds/...' },
+    'run-rate-graph': { type: 'video', url: '/uploads/backgrounds/...' },
+    'current-partnership': { type: 'video', url: '/uploads/backgrounds/...' },
+    'final-match-summary': { type: 'video', url: '/uploads/backgrounds/...' }
   }
 */
 

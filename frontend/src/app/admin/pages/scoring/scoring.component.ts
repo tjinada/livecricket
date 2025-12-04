@@ -121,11 +121,11 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               (change)="changeDisplayView()"
               class="w-full px-3 py-2 border rounded-lg"
             >
-              <option value="score-summary">Score Summary</option>
-              <option value="player-stats">Player Stats</option>
-              <option value="overall-summary">Overall Summary</option>
-              <option value="projections">Projections</option>
-              <option value="partnership">Partnership</option>
+              <option value="live-score">Live Score</option>
+              <option value="live-match-summary">Live Match Summary</option>
+              <option value="run-rate-graph">Run Rate Graph</option>
+              <option value="current-partnership">Current Partnership</option>
+              <option value="final-match-summary">Final Match Summary</option>
             </select>
           </div>
 
@@ -696,11 +696,11 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   (change)="changeDisplayView()"
                   class="w-full px-3 py-2 border rounded-lg"
                 >
-                  <option value="score-summary">Score Summary</option>
-                  <option value="player-stats">Player Stats</option>
-                  <option value="overall-summary">Overall Summary</option>
-                  <option value="projections">Projections</option>
-                  <option value="partnership">Partnership</option>
+                  <option value="live-score">Live Score</option>
+                  <option value="live-match-summary">Live Match Summary</option>
+                  <option value="run-rate-graph">Run Rate Graph</option>
+                  <option value="current-partnership">Current Partnership</option>
+                  <option value="final-match-summary">Final Match Summary</option>
                 </select>
               </div>
 
@@ -1252,7 +1252,7 @@ export class ScoringComponent implements OnInit, OnDestroy {
   loading = true;
   processing = false;
   error = '';
-  displayView = 'score-summary';
+  displayView = 'live-score';
 
   activeModal: ModalType = 'none';
 
@@ -1342,7 +1342,7 @@ export class ScoringComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.success) {
           this.match = response.data;
-          this.displayView = this.match.displayView || 'score-summary';
+          this.displayView = this.match.displayView || 'live-score';
           this.buildPlayerNameCache();
           
           // Auto-open bowler selection if needed
@@ -1364,7 +1364,7 @@ export class ScoringComponent implements OnInit, OnDestroy {
         next: (response) => {
           if (response.success) {
             this.match = response.data;
-            this.displayView = this.match.displayView || 'score-summary';
+            this.displayView = this.match.displayView || 'live-score';
             this.buildPlayerNameCache();
             
             // Auto-open bowler selection if needed

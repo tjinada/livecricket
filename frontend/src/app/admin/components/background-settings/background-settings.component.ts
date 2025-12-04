@@ -11,14 +11,15 @@ export interface ViewBackground {
 export interface BackgroundSettings {
   useTeamBackground: boolean;
   views?: {
-    'score-summary'?: ViewBackground;
-    'player-stats'?: ViewBackground;
-    'overall-summary'?: ViewBackground;
-    'projections'?: ViewBackground;
+    'live-score'?: ViewBackground;
+    'live-match-summary'?: ViewBackground;
+    'run-rate-graph'?: ViewBackground;
+    'current-partnership'?: ViewBackground;
+    'final-match-summary'?: ViewBackground;
   };
 }
 
-type ViewKey = 'score-summary' | 'player-stats' | 'overall-summary' | 'projections';
+type ViewKey = 'live-score' | 'live-match-summary' | 'run-rate-graph' | 'current-partnership' | 'final-match-summary';
 
 @Component({
   selector: 'app-background-settings',
@@ -264,20 +265,22 @@ export class BackgroundSettingsComponent implements OnInit {
     views: {}
   };
 
-  viewKeys: ViewKey[] = ['score-summary', 'player-stats', 'overall-summary', 'projections'];
+  viewKeys: ViewKey[] = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary'];
 
   viewSettings: Record<ViewKey, ViewBackground> = {
-    'score-summary': { type: 'none', url: null },
-    'player-stats': { type: 'none', url: null },
-    'overall-summary': { type: 'none', url: null },
-    'projections': { type: 'none', url: null }
+    'live-score': { type: 'none', url: null },
+    'live-match-summary': { type: 'none', url: null },
+    'run-rate-graph': { type: 'none', url: null },
+    'current-partnership': { type: 'none', url: null },
+    'final-match-summary': { type: 'none', url: null }
   };
 
   uploadProgress: Record<ViewKey, UploadProgress | null> = {
-    'score-summary': null,
-    'player-stats': null,
-    'overall-summary': null,
-    'projections': null
+    'live-score': null,
+    'live-match-summary': null,
+    'run-rate-graph': null,
+    'current-partnership': null,
+    'final-match-summary': null
   };
 
   constructor(private uploadService: UploadService) {}
@@ -298,20 +301,22 @@ export class BackgroundSettingsComponent implements OnInit {
 
   getViewLabel(view: ViewKey): string {
     const labels: Record<ViewKey, string> = {
-      'score-summary': 'Live Score View',
-      'player-stats': 'Scorecard View',
-      'overall-summary': 'Match Summary View',
-      'projections': 'Projections View'
+      'live-score': 'Live Score',
+      'live-match-summary': 'Live Match Summary',
+      'run-rate-graph': 'Run Rate Graph',
+      'current-partnership': 'Current Partnership',
+      'final-match-summary': 'Final Match Summary'
     };
     return labels[view];
   }
 
   getViewDescription(view: ViewKey): string {
     const descriptions: Record<ViewKey, string> = {
-      'score-summary': 'TV-style overlay showing current score',
-      'player-stats': 'Full batting and bowling scorecard',
-      'overall-summary': 'Both innings summary side by side',
-      'projections': 'Run rate chart and win probability'
+      'live-score': 'TV-style overlay showing current score',
+      'live-match-summary': 'Full batting and bowling scorecard',
+      'run-rate-graph': 'Run rate chart and projections',
+      'current-partnership': 'Current batsmen partnership details',
+      'final-match-summary': 'Both innings summary side by side'
     };
     return descriptions[view];
   }

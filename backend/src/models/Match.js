@@ -193,11 +193,11 @@ const backgroundSchema = new mongoose.Schema({
 
 // Sub-schema for view-specific backgrounds
 const viewBackgroundsSchema = new mongoose.Schema({
-  'score-summary': backgroundSchema,
-  'player-stats': backgroundSchema,
-  'overall-summary': backgroundSchema,
-  'projections': backgroundSchema,
-  'partnership': backgroundSchema
+  'live-score': backgroundSchema,
+  'live-match-summary': backgroundSchema,
+  'run-rate-graph': backgroundSchema,
+  'current-partnership': backgroundSchema,
+  'final-match-summary': backgroundSchema
 }, { _id: false });
 
 // Main Match Schema
@@ -274,8 +274,8 @@ const matchSchema = new mongoose.Schema({
   },
   displayView: {
     type: String,
-    enum: ['score-summary', 'player-stats', 'overall-summary', 'projections', 'partnership'],
-    default: 'score-summary'
+    enum: ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary'],
+    default: 'live-score'
   },
   // Background configuration per view
   // Priority: match-specific > batting team default > none

@@ -9,11 +9,11 @@ interface ViewBackground {
 }
 
 interface DefaultBackgrounds {
-  'score-summary': ViewBackground;
-  'player-stats': ViewBackground;
-  'overall-summary': ViewBackground;
-  'projections': ViewBackground;
-  'partnership': ViewBackground;
+  'live-score': ViewBackground;
+  'live-match-summary': ViewBackground;
+  'run-rate-graph': ViewBackground;
+  'current-partnership': ViewBackground;
+  'final-match-summary': ViewBackground;
 }
 
 @Component({
@@ -182,19 +182,19 @@ interface DefaultBackgrounds {
 })
 export class SettingsComponent implements OnInit {
   views = [
-    { key: 'score-summary', label: 'Live Score View' },
-    { key: 'player-stats', label: 'Player Stats View' },
-    { key: 'overall-summary', label: 'Match Summary View' },
-    { key: 'projections', label: 'Projections View' },
-    { key: 'partnership', label: 'Partnership View' }
+    { key: 'live-score', label: 'Live Score' },
+    { key: 'live-match-summary', label: 'Live Match Summary' },
+    { key: 'run-rate-graph', label: 'Run Rate Graph' },
+    { key: 'current-partnership', label: 'Current Partnership' },
+    { key: 'final-match-summary', label: 'Final Match Summary' }
   ];
 
   backgrounds: DefaultBackgrounds = {
-    'score-summary': { type: 'none', url: null },
-    'player-stats': { type: 'none', url: null },
-    'overall-summary': { type: 'none', url: null },
-    'projections': { type: 'none', url: null },
-    'partnership': { type: 'none', url: null }
+    'live-score': { type: 'none', url: null },
+    'live-match-summary': { type: 'none', url: null },
+    'run-rate-graph': { type: 'none', url: null },
+    'current-partnership': { type: 'none', url: null },
+    'final-match-summary': { type: 'none', url: null }
   };
 
   loading = true;
@@ -218,11 +218,11 @@ export class SettingsComponent implements OnInit {
       next: (response) => {
         if (response.success && response.data) {
           this.backgrounds = {
-            'score-summary': response.data['score-summary'] || { type: 'none', url: null },
-            'player-stats': response.data['player-stats'] || { type: 'none', url: null },
-            'overall-summary': response.data['overall-summary'] || { type: 'none', url: null },
-            'projections': response.data['projections'] || { type: 'none', url: null },
-            'partnership': response.data['partnership'] || { type: 'none', url: null }
+            'live-score': response.data['live-score'] || { type: 'none', url: null },
+            'live-match-summary': response.data['live-match-summary'] || { type: 'none', url: null },
+            'run-rate-graph': response.data['run-rate-graph'] || { type: 'none', url: null },
+            'current-partnership': response.data['current-partnership'] || { type: 'none', url: null },
+            'final-match-summary': response.data['final-match-summary'] || { type: 'none', url: null }
           };
         }
         this.loading = false;

@@ -380,7 +380,7 @@ import { HttpClient } from '@angular/common/http';
         <div *ngIf="!loading && !error && match" class="h-full flex flex-col">
         
           <!-- ==================== LIVE SCORE VIEW ==================== -->
-          <div *ngIf="displayView === 'score-summary'" class="h-full flex flex-col">
+          <div *ngIf="displayView === 'live-score'" class="h-full flex flex-col">
             
             <!-- Top Header Bar -->
             <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
@@ -648,7 +648,7 @@ import { HttpClient } from '@angular/common/http';
           </div>
 
           <!-- ==================== PLAYER STATS VIEW (Card-Based Grid) ==================== -->
-          <div *ngIf="displayView === 'player-stats'" class="h-full flex flex-col">
+          <div *ngIf="displayView === 'live-match-summary'" class="h-full flex flex-col">
             
             <!-- Top Header Bar with Score -->
             <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
@@ -940,7 +940,7 @@ import { HttpClient } from '@angular/common/http';
           </div>
 
           <!-- ==================== MATCH SUMMARY VIEW (Side-by-Side Full Scorecard) ==================== -->
-          <div *ngIf="displayView === 'overall-summary'" class="h-full flex flex-col">
+          <div *ngIf="displayView === 'final-match-summary'" class="h-full flex flex-col">
             
             <!-- Top Header Bar (matches score-summary style) -->
             <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
@@ -1237,7 +1237,7 @@ import { HttpClient } from '@angular/common/http';
           </div>
 
           <!-- ==================== PROJECTIONS VIEW ==================== -->
-          <div *ngIf="displayView === 'projections'" class="h-full flex flex-row p-4 gap-4 overflow-hidden">
+          <div *ngIf="displayView === 'run-rate-graph'" class="h-full flex flex-row p-4 gap-4 overflow-hidden">
             
             <!-- Left Side: Graph (takes ~75% of width) -->
             <div class="flex-1 flex flex-col min-w-0">
@@ -1496,7 +1496,7 @@ import { HttpClient } from '@angular/common/http';
           </div>
 
           <!-- ==================== PARTNERSHIP VIEW ==================== -->
-          <div *ngIf="displayView === 'partnership'" class="h-full flex flex-col relative">
+          <div *ngIf="displayView === 'current-partnership'" class="h-full flex flex-col relative">
             
             <!-- Player Image Overlays (like flag overlays) -->
             <div class="absolute inset-0 z-0 pointer-events-none">
@@ -1759,7 +1759,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   match: any = null;
   loading = true;
   error = '';
-  displayView = 'score-summary';
+  displayView = 'live-score';
   currentBackground: { type: string; url: string | null } | null = null;
   
   // Flag overlay properties
@@ -1831,7 +1831,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.success) {
           this.match = response.data;
-          this.displayView = this.match.displayView || 'score-summary';
+          this.displayView = this.match.displayView || 'live-score';
           this.buildPlayerNameCache();
           this.updateBackground();
         } else {
@@ -1866,7 +1866,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.success) {
           this.match = response.data;
-          this.displayView = this.match.displayView || 'score-summary';
+          this.displayView = this.match.displayView || 'live-score';
           this.buildPlayerNameCache();
           this.updateBackground();
         }
@@ -2220,11 +2220,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   getViewName(): string {
     const names: Record<string, string> = {
-      'score-summary': 'Live Score',
-      'player-stats': 'Scorecard',
-      'overall-summary': 'Match Summary',
-      'projections': 'Projections',
-      'partnership': 'Partnership'
+      'live-score': 'Live Score',
+      'live-match-summary': 'Live Match Summary',
+      'run-rate-graph': 'Run Rate Graph',
+      'current-partnership': 'Current Partnership',
+      'final-match-summary': 'Final Match Summary'
     };
     return names[this.displayView] || 'Live Score';
   }
