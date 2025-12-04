@@ -998,7 +998,7 @@ import { HttpClient } from '@angular/common/http';
                   </div>
                   
                   <!-- Batting List Header -->
-                  <div class="grid grid-cols-12 gap-1 px-4 py-2 bg-gray-900/80 text-xs text-gray-500 uppercase border-b border-gray-700/50">
+                  <div class="grid grid-cols-12 gap-1 px-5 py-3 bg-gray-900/80 text-sm text-gray-500 uppercase border-b border-gray-700/50">
                     <div class="col-span-5">Batsman</div>
                     <div class="col-span-4">Status</div>
                     <div class="col-span-3 text-right">R (B)</div>
@@ -1008,22 +1008,22 @@ import { HttpClient } from '@angular/common/http';
                   <div class="flex-1 overflow-y-auto">
                     <ng-container *ngFor="let batsman of getFullBattingCard(0); let i = index">
                       <div 
-                        class="grid grid-cols-12 gap-1 px-4 py-2 border-b border-gray-800/50 text-sm"
+                        class="grid grid-cols-12 gap-1 px-5 py-3 border-b border-gray-800/50 text-lg"
                         [ngClass]="{
                           'bg-yellow-900/20': isBatsmanCurrentlyBatting(batsman, 0),
                           'opacity-50': batsman.isDNB
                         }"
                       >
-                        <div class="col-span-5 flex items-center gap-2 truncate">
-                          <span class="text-gray-600 text-xs w-4">{{ i + 1 }}</span>
-                          <span class="truncate" [ngClass]="{
+                        <div class="col-span-5 flex items-center gap-3 truncate">
+                          <span class="text-gray-600 text-sm w-5">{{ i + 1 }}</span>
+                          <span class="truncate text-lg" [ngClass]="{
                             'text-yellow-300 font-semibold': isBatsmanCurrentlyBatting(batsman, 0),
                             'text-gray-400': batsman.isDNB,
                             'text-white': !batsman.isDNB && !isBatsmanCurrentlyBatting(batsman, 0)
                           }">{{ getShortPlayerName(batsman.player) }}</span>
-                          <span *ngIf="isBatsmanCurrentlyBatting(batsman, 0)" class="text-yellow-400 text-xs">*</span>
+                          <span *ngIf="isBatsmanCurrentlyBatting(batsman, 0)" class="text-yellow-400 text-sm">*</span>
                         </div>
-                        <div class="col-span-4 text-xs truncate" [ngClass]="{
+                        <div class="col-span-4 text-base truncate" [ngClass]="{
                           'text-gray-600 italic': batsman.isDNB,
                           'text-green-400': !batsman.isOut && !batsman.isDNB,
                           'text-red-400': batsman.isOut
@@ -1032,32 +1032,32 @@ import { HttpClient } from '@angular/common/http';
                         </div>
                         <div class="col-span-3 text-right">
                           <ng-container *ngIf="!batsman.isDNB">
-                            <span class="font-bold text-white">{{ batsman.runs || 0 }}</span>
-                            <span class="text-gray-500 text-xs ml-1">({{ batsman.balls || 0 }})</span>
+                            <span class="font-bold text-white text-xl">{{ batsman.runs || 0 }}</span>
+                            <span class="text-gray-500 text-base ml-1">({{ batsman.balls || 0 }})</span>
                           </ng-container>
-                          <span *ngIf="batsman.isDNB" class="text-gray-600">-</span>
+                          <span *ngIf="batsman.isDNB" class="text-gray-600 text-base">-</span>
                         </div>
                       </div>
                     </ng-container>
                     
                     <!-- Extras Row -->
-                    <div class="grid grid-cols-12 gap-1 px-4 py-2 bg-gray-800/50 border-b border-gray-700/50 text-sm">
+                    <div class="grid grid-cols-12 gap-1 px-5 py-3 bg-gray-800/50 border-b border-gray-700/50 text-lg">
                       <div class="col-span-5 text-gray-400">Extras</div>
-                      <div class="col-span-4 text-xs text-gray-500">{{ getExtrasBreakdownForInnings(0) }}</div>
-                      <div class="col-span-3 text-right font-bold text-yellow-400">{{ getSummaryExtras(0) }}</div>
+                      <div class="col-span-4 text-base text-gray-500">{{ getExtrasBreakdownForInnings(0) }}</div>
+                      <div class="col-span-3 text-right font-bold text-yellow-400 text-xl">{{ getSummaryExtras(0) }}</div>
                     </div>
                     
                     <!-- Total Row -->
-                    <div class="grid grid-cols-12 gap-1 px-4 py-3 bg-gray-900/80 text-sm font-bold">
+                    <div class="grid grid-cols-12 gap-1 px-5 py-4 bg-gray-900/80 text-lg font-bold">
                       <div class="col-span-9 text-gray-300">TOTAL ({{ match.innings[0]?.totalWickets || 0 }} wkts, {{ getInningsOvers(match.innings[0]) }} ov)</div>
-                      <div class="col-span-3 text-right text-xl text-white">{{ match.innings[0]?.totalRuns || 0 }}</div>
+                      <div class="col-span-3 text-right text-2xl text-white">{{ match.innings[0]?.totalRuns || 0 }}</div>
                     </div>
                   </div>
                   
                   <!-- Bowling Summary -->
-                  <div class="border-t border-gray-700/50 px-4 py-3 bg-gray-900/60">
-                    <div class="text-xs text-gray-500 uppercase mb-2">Bowling</div>
-                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <div class="border-t border-gray-700/50 px-5 py-4 bg-gray-900/60">
+                    <div class="text-sm text-gray-500 uppercase mb-3">Bowling</div>
+                    <div class="flex flex-wrap gap-x-5 gap-y-2 text-lg">
                       <ng-container *ngFor="let bowler of getSummaryBowlers(0, 5)">
                         <span class="text-gray-300">
                           {{ getShortPlayerName(bowler.player) }} 
@@ -1093,7 +1093,7 @@ import { HttpClient } from '@angular/common/http';
                   </div>
                   
                   <!-- Batting List Header -->
-                  <div class="grid grid-cols-12 gap-1 px-4 py-2 bg-gray-900/80 text-xs text-gray-500 uppercase border-b border-gray-700/50">
+                  <div class="grid grid-cols-12 gap-1 px-5 py-3 bg-gray-900/80 text-sm text-gray-500 uppercase border-b border-gray-700/50">
                     <div class="col-span-5">Batsman</div>
                     <div class="col-span-4">Status</div>
                     <div class="col-span-3 text-right">R (B)</div>
@@ -1104,22 +1104,22 @@ import { HttpClient } from '@angular/common/http';
                     <ng-container *ngIf="match.innings[1]">
                       <ng-container *ngFor="let batsman of getFullBattingCard(1); let i = index">
                         <div 
-                          class="grid grid-cols-12 gap-1 px-4 py-2 border-b border-gray-800/50 text-sm"
+                          class="grid grid-cols-12 gap-1 px-5 py-3 border-b border-gray-800/50 text-lg"
                           [ngClass]="{
                             'bg-cyan-900/20': isBatsmanCurrentlyBatting(batsman, 1),
                             'opacity-50': batsman.isDNB
                           }"
                         >
-                          <div class="col-span-5 flex items-center gap-2 truncate">
-                            <span class="text-gray-600 text-xs w-4">{{ i + 1 }}</span>
-                            <span class="truncate" [ngClass]="{
+                          <div class="col-span-5 flex items-center gap-3 truncate">
+                            <span class="text-gray-600 text-sm w-5">{{ i + 1 }}</span>
+                            <span class="truncate text-lg" [ngClass]="{
                               'text-cyan-300 font-semibold': isBatsmanCurrentlyBatting(batsman, 1),
                               'text-gray-400': batsman.isDNB,
                               'text-white': !batsman.isDNB && !isBatsmanCurrentlyBatting(batsman, 1)
                             }">{{ getShortPlayerName(batsman.player) }}</span>
-                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 1)" class="text-cyan-400 text-xs">*</span>
+                            <span *ngIf="isBatsmanCurrentlyBatting(batsman, 1)" class="text-cyan-400 text-sm">*</span>
                           </div>
-                          <div class="col-span-4 text-xs truncate" [ngClass]="{
+                          <div class="col-span-4 text-base truncate" [ngClass]="{
                             'text-gray-600 italic': batsman.isDNB,
                             'text-green-400': !batsman.isOut && !batsman.isDNB,
                             'text-red-400': batsman.isOut
@@ -1128,25 +1128,25 @@ import { HttpClient } from '@angular/common/http';
                           </div>
                           <div class="col-span-3 text-right">
                             <ng-container *ngIf="!batsman.isDNB">
-                              <span class="font-bold text-white">{{ batsman.runs || 0 }}</span>
-                              <span class="text-gray-500 text-xs ml-1">({{ batsman.balls || 0 }})</span>
+                              <span class="font-bold text-white text-xl">{{ batsman.runs || 0 }}</span>
+                              <span class="text-gray-500 text-base ml-1">({{ batsman.balls || 0 }})</span>
                             </ng-container>
-                            <span *ngIf="batsman.isDNB" class="text-gray-600">-</span>
+                            <span *ngIf="batsman.isDNB" class="text-gray-600 text-base">-</span>
                           </div>
                         </div>
                       </ng-container>
                       
                       <!-- Extras Row -->
-                      <div class="grid grid-cols-12 gap-1 px-4 py-2 bg-gray-800/50 border-b border-gray-700/50 text-sm">
+                      <div class="grid grid-cols-12 gap-1 px-5 py-3 bg-gray-800/50 border-b border-gray-700/50 text-lg">
                         <div class="col-span-5 text-gray-400">Extras</div>
-                        <div class="col-span-4 text-xs text-gray-500">{{ getExtrasBreakdownForInnings(1) }}</div>
-                        <div class="col-span-3 text-right font-bold text-yellow-400">{{ getSummaryExtras(1) }}</div>
+                        <div class="col-span-4 text-base text-gray-500">{{ getExtrasBreakdownForInnings(1) }}</div>
+                        <div class="col-span-3 text-right font-bold text-yellow-400 text-xl">{{ getSummaryExtras(1) }}</div>
                       </div>
                       
                       <!-- Total Row -->
-                      <div class="grid grid-cols-12 gap-1 px-4 py-3 bg-gray-900/80 text-sm font-bold">
+                      <div class="grid grid-cols-12 gap-1 px-5 py-4 bg-gray-900/80 text-lg font-bold">
                         <div class="col-span-9 text-gray-300">TOTAL ({{ match.innings[1]?.totalWickets || 0 }} wkts, {{ getInningsOvers(match.innings[1]) }} ov)</div>
-                        <div class="col-span-3 text-right text-xl text-white">{{ match.innings[1]?.totalRuns || 0 }}</div>
+                        <div class="col-span-3 text-right text-2xl text-white">{{ match.innings[1]?.totalRuns || 0 }}</div>
                       </div>
                     </ng-container>
                     
@@ -1160,9 +1160,9 @@ import { HttpClient } from '@angular/common/http';
                   </div>
                   
                   <!-- Bowling Summary (2nd Innings) -->
-                  <div *ngIf="match.innings[1]" class="border-t border-gray-700/50 px-4 py-3 bg-gray-900/60">
-                    <div class="text-xs text-gray-500 uppercase mb-2">Bowling</div>
-                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <div *ngIf="match.innings[1]" class="border-t border-gray-700/50 px-5 py-4 bg-gray-900/60">
+                    <div class="text-sm text-gray-500 uppercase mb-3">Bowling</div>
+                    <div class="flex flex-wrap gap-x-5 gap-y-2 text-lg">
                       <ng-container *ngFor="let bowler of getSummaryBowlers(1, 5)">
                         <span class="text-gray-300">
                           {{ getShortPlayerName(bowler.player) }} 
@@ -1178,10 +1178,10 @@ import { HttpClient } from '@angular/common/http';
 
             <!-- Bottom Bar: Match Status / Chase Info -->
             <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-t border-gray-700/50">
-              <div class="max-w-7xl mx-auto px-6 py-3">
+              <div class="max-w-7xl mx-auto px-8 py-5">
                 <!-- Match Completed Result -->
                 <div *ngIf="match.status === 'completed'" class="text-center">
-                  <div class="text-2xl font-bold">
+                  <div class="text-3xl font-bold">
                     <span *ngIf="match.result?.winner" class="text-white">{{ getTeamName(match.result.winner) }}</span>
                     <span *ngIf="match.result?.winner" class="text-green-400"> won by {{ match.result.winMargin }}</span>
                     <span *ngIf="!match.result?.winner" class="text-yellow-400">{{ match.result?.winMargin || 'Match Tied' }}</span>
@@ -1189,34 +1189,34 @@ import { HttpClient } from '@angular/common/http';
                 </div>
                 
                 <!-- Chase Equation (2nd innings in progress) -->
-                <div *ngIf="match.status !== 'completed' && match.currentInnings === 1" class="flex items-center justify-center gap-8">
-                  <div class="text-xl">
+                <div *ngIf="match.status !== 'completed' && match.currentInnings === 1" class="flex items-center justify-center gap-10">
+                  <div class="text-2xl">
                     <span class="text-gray-400">{{ getTeamName(match.innings[1]?.battingTeam) }} need </span>
-                    <span class="text-yellow-400 font-bold text-2xl">{{ getRunsNeeded() }}</span>
+                    <span class="text-yellow-400 font-bold text-3xl">{{ getRunsNeeded() }}</span>
                     <span class="text-gray-400"> from </span>
-                    <span class="text-yellow-400 font-bold text-2xl">{{ getBallsRemaining() }}</span>
+                    <span class="text-yellow-400 font-bold text-3xl">{{ getBallsRemaining() }}</span>
                     <span class="text-gray-400"> balls</span>
                   </div>
-                  <div class="w-px h-8 bg-gray-600"></div>
-                  <div class="text-lg">
+                  <div class="w-px h-10 bg-gray-600"></div>
+                  <div class="text-2xl">
                     <span class="text-gray-500">RRR: </span>
-                    <span class="text-orange-400 font-bold">{{ getRequiredRunRate() }}</span>
+                    <span class="text-orange-400 font-bold text-3xl">{{ getRequiredRunRate() }}</span>
                   </div>
-                  <div class="text-lg">
+                  <div class="text-2xl">
                     <span class="text-gray-500">CRR: </span>
-                    <span class="text-cyan-400 font-bold">{{ getSummaryRunRate(1) }}</span>
+                    <span class="text-cyan-400 font-bold text-3xl">{{ getSummaryRunRate(1) }}</span>
                   </div>
                 </div>
                 
                 <!-- First Innings in Progress -->
-                <div *ngIf="match.status !== 'completed' && match.currentInnings === 0" class="flex items-center justify-center gap-6">
-                  <div class="text-lg text-gray-400">
+                <div *ngIf="match.status !== 'completed' && match.currentInnings === 0" class="flex items-center justify-center gap-8">
+                  <div class="text-2xl text-gray-400">
                     {{ getTeamName(match.innings[0]?.bowlingTeam) }} to bat next
                   </div>
-                  <div class="w-px h-6 bg-gray-600"></div>
-                  <div class="text-lg">
+                  <div class="w-px h-8 bg-gray-600"></div>
+                  <div class="text-2xl">
                     <span class="text-gray-500">CRR: </span>
-                    <span class="text-cyan-400 font-bold">{{ getSummaryRunRate(0) }}</span>
+                    <span class="text-cyan-400 font-bold text-3xl">{{ getSummaryRunRate(0) }}</span>
                   </div>
                 </div>
               </div>
