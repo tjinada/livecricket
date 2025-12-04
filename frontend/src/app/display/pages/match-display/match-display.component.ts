@@ -386,24 +386,23 @@ import { HttpClient } from '@angular/common/http';
             <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
               <div class="max-w-7xl mx-auto px-10 py-6">
                 <div class="flex items-center justify-between">
-                  <!-- Match Info -->
-                  <div class="flex items-center gap-8">
-                    <!-- Live Badge -->
-                    <div class="flex items-center gap-3 bg-red-600 px-5 py-2.5 rounded-full">
-                      <span class="w-3.5 h-3.5 bg-white rounded-full animate-pulse"></span>
-                      <span class="text-base font-bold uppercase tracking-wider">Live</span>
-                    </div>
-                    <!-- Match Title -->
-                    <div>
-                      <h1 class="text-3xl font-bold tracking-wide">
-                        <span class="text-blue-400">{{ getBattingTeamName() }}</span>
-                        <span class="text-gray-500 mx-3">vs</span>
-                        <span class="text-gray-300">{{ getBowlingTeamName() }}</span>
-                      </h1>
-                      <p class="text-base text-gray-500 mt-1">{{ match.format }} Match • {{ getInningsLabel() }}</p>
-                    </div>
+                  <!-- Left: Live Badge -->
+                  <div class="flex items-center gap-3 bg-red-600 px-5 py-2.5 rounded-full">
+                    <span class="w-3.5 h-3.5 bg-white rounded-full animate-pulse"></span>
+                    <span class="text-base font-bold uppercase tracking-wider">Live</span>
                   </div>
-                  <!-- Format Badge -->
+                  
+                  <!-- Center: Match Title -->
+                  <div class="text-center">
+                    <h1 class="text-3xl font-bold tracking-wide">
+                      <span class="text-blue-400">{{ getBattingTeamName() }}</span>
+                      <span class="text-gray-500 mx-3">vs</span>
+                      <span class="text-gray-300">{{ getBowlingTeamName() }}</span>
+                    </h1>
+                    <p class="text-base text-gray-500 mt-1">{{ match.format }} Match • {{ getInningsLabel() }}</p>
+                  </div>
+                  
+                  <!-- Right: Format Badge -->
                   <div class="bg-gray-700/50 px-8 py-3 rounded-lg text-xl font-semibold">
                     {{ match.format }}
                   </div>
@@ -931,46 +930,35 @@ import { HttpClient } from '@angular/common/http';
           <!-- ==================== MATCH SUMMARY VIEW (Side-by-Side Full Scorecard) ==================== -->
           <div *ngIf="displayView === 'overall-summary'" class="h-full flex flex-col">
             
-            <!-- Top Header Bar -->
-            <div class="bg-gradient-to-r from-purple-900/95 via-purple-800/95 to-purple-900/95 backdrop-blur-sm border-b border-purple-600/40">
-              <div class="w-full px-8 py-4">
-                <div class="flex items-center justify-center gap-16">
-                  <!-- Team 1 -->
-                  <div class="flex items-center gap-4">
-                    <img 
-                      *ngIf="getTeamFlag(match.innings[0]?.battingTeam)"
-                      [src]="getTeamFlag(match.innings[0]?.battingTeam)"
-                      class="w-14 h-10 object-cover rounded shadow-lg border border-white/20"
-                    >
-                    <div *ngIf="!getTeamFlag(match.innings[0]?.battingTeam)" 
-                      class="w-14 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded flex items-center justify-center text-lg font-bold">
-                      {{ getTeamCode(match.innings[0]?.battingTeam) }}
-                    </div>
-                    <span class="text-3xl font-bold text-yellow-300">{{ getTeamName(match.innings[0]?.battingTeam) }}</span>
+            <!-- Top Header Bar (matches score-summary style) -->
+            <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
+              <div class="max-w-7xl mx-auto px-10 py-6">
+                <div class="flex items-center justify-between">
+                  <!-- Left: Live/Completed Badge -->
+                  <div *ngIf="match.status === 'live'" class="flex items-center gap-3 bg-red-600 px-5 py-2.5 rounded-full">
+                    <span class="w-3.5 h-3.5 bg-white rounded-full animate-pulse"></span>
+                    <span class="text-base font-bold uppercase tracking-wider">Live</span>
+                  </div>
+                  <div *ngIf="match.status === 'completed'" class="flex items-center gap-3 bg-green-600 px-5 py-2.5 rounded-full">
+                    <span class="text-base font-bold uppercase tracking-wider">Completed</span>
+                  </div>
+                  <div *ngIf="match.status !== 'live' && match.status !== 'completed'" class="flex items-center gap-3 bg-gray-600 px-5 py-2.5 rounded-full">
+                    <span class="text-base font-bold uppercase tracking-wider">{{ match.status }}</span>
                   </div>
                   
-                  <!-- Match Title -->
-                  <div class="text-center px-8">
-                    <h1 class="text-3xl font-black text-white tracking-wide">{{ match.format }} {{ match.matchType || 'Match' }}</h1>
-                    <div class="flex items-center justify-center gap-3 mt-1">
-                      <span *ngIf="match.status === 'live'" class="bg-red-600 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">● LIVE</span>
-                      <span *ngIf="match.status === 'completed'" class="bg-green-600 text-white text-sm font-bold px-3 py-1 rounded-full">COMPLETED</span>
-                      <span *ngIf="match.status !== 'completed' && match.status !== 'live'" class="text-purple-300 text-lg">{{ match.status === 'upcoming' ? 'Upcoming' : 'In Progress' }}</span>
-                    </div>
+                  <!-- Center: Match Title -->
+                  <div class="text-center">
+                    <h1 class="text-3xl font-bold tracking-wide">
+                      <span class="text-blue-400">{{ getTeamName(match.innings[0]?.battingTeam) }}</span>
+                      <span class="text-gray-500 mx-3">vs</span>
+                      <span class="text-gray-300">{{ getTeamName(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam) }}</span>
+                    </h1>
+                    <p class="text-base text-gray-500 mt-1">{{ match.format }} Match • {{ getInningsLabel() }}</p>
                   </div>
                   
-                  <!-- Team 2 -->
-                  <div class="flex items-center gap-4">
-                    <span class="text-3xl font-bold text-cyan-300">{{ getTeamName(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam) }}</span>
-                    <img 
-                      *ngIf="getTeamFlag(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam)"
-                      [src]="getTeamFlag(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam)"
-                      class="w-14 h-10 object-cover rounded shadow-lg border border-white/20"
-                    >
-                    <div *ngIf="!getTeamFlag(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam)" 
-                      class="w-14 h-10 bg-gradient-to-br from-cyan-600 to-cyan-800 rounded flex items-center justify-center text-lg font-bold">
-                      {{ getTeamCode(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam) }}
-                    </div>
+                  <!-- Right: Format Badge -->
+                  <div class="bg-gray-700/50 px-8 py-3 rounded-lg text-xl font-semibold">
+                    {{ match.format }}
                   </div>
                 </div>
               </div>
