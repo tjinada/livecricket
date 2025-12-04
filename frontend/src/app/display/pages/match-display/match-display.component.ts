@@ -538,31 +538,34 @@ import { HttpClient } from '@angular/common/http';
             <!-- Bottom Stats Bar -->
             <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-t border-gray-700/50">
               <div class="w-full px-6 py-4">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center">
                   
-                  <!-- Left: Previous Overs (Last 2 completed overs) -->
-                  <div class="flex items-center gap-4">
+                  <!-- Left: Previous Overs (flex-1 to balance with right) -->
+                  <div class="flex-1 flex items-center justify-end gap-4 pr-6">
                     <span class="text-sm text-gray-500 uppercase">Previous</span>
                     <ng-container *ngFor="let over of getPreviousOvers(); let i = index">
                       <div class="flex items-center gap-1">
-                        <span class="text-xs text-gray-600 mr-1">{{ over.overNumber }}</span>
+                        <span class="text-xs text-gray-500 mr-1">{{ over.overNumber }}</span>
                         <ng-container *ngFor="let ball of over.balls">
                           <div 
-                            class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                            class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
                             [ngClass]="getBallColorClass(ball)"
                           >
                             {{ ball.display === '0' ? '•' : ball.display }}
                           </div>
                         </ng-container>
-                        <span class="text-xs text-gray-500 ml-1">({{ over.runs }})</span>
+                        <span class="text-sm text-gray-500 ml-1">({{ over.runs }})</span>
                       </div>
                       <div *ngIf="i < getPreviousOvers().length - 1" class="w-px h-6 bg-gray-700"></div>
                     </ng-container>
                     <div *ngIf="getPreviousOvers().length === 0" class="text-gray-600 text-sm italic">No previous overs</div>
                   </div>
 
-                  <!-- Center: This Over -->
-                  <div class="flex items-center gap-3">
+                  <!-- Separator -->
+                  <div class="w-px h-10 bg-gray-600 mx-6"></div>
+
+                  <!-- Center: This Over (fixed width, always centered) -->
+                  <div class="flex items-center gap-3 px-4">
                     <span class="text-base text-gray-500 uppercase mr-2">This Over</span>
                     <ng-container *ngFor="let ball of getCurrentOverBalls()">
                       <div 
@@ -578,8 +581,11 @@ import { HttpClient } from '@angular/common/http';
                     </ng-container>
                   </div>
 
-                  <!-- Right Side: Last Wicket + Run Rates -->
-                  <div class="flex items-center gap-6">
+                  <!-- Separator -->
+                  <div class="w-px h-10 bg-gray-600 mx-6"></div>
+
+                  <!-- Right: Last Wicket + Run Rates (flex-1 to balance with left) -->
+                  <div class="flex-1 flex items-center justify-start gap-6 pl-6">
                     <!-- Last Wicket -->
                     <div *ngIf="getLastWicket()" class="flex items-center gap-2 bg-red-900/40 rounded-lg px-4 py-2 border border-red-600/40">
                       <span class="text-red-400 text-sm">Last Wkt:</span>
@@ -587,7 +593,7 @@ import { HttpClient } from '@angular/common/http';
                     </div>
                     
                     <!-- Run Rates -->
-                    <div class="flex items-center gap-6 text-xl pl-4 border-l border-gray-700">
+                    <div class="flex items-center gap-6 text-xl" [ngClass]="{'pl-4 border-l border-gray-700': getLastWicket()}">
                       <div>
                         <span class="text-gray-500">CRR </span>
                         <span class="text-3xl font-bold text-green-400">{{ getCurrentRunRate() }}</span>
