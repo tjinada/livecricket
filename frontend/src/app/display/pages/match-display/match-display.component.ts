@@ -416,16 +416,20 @@ import { HttpClient } from '@angular/common/http';
               
               <!-- Central Score Display -->
               <div class="flex flex-col items-center mb-8">
-                <!-- Team Badge, Flag & Name with backdrop -->
+                <!-- Team Flag & Name with backdrop -->
                 <div class="flex items-center justify-center gap-5 mb-6 bg-black/50 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/10">
-                  <div class="w-20 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-2xl font-black shadow-lg border border-blue-400/30">
+                  <!-- Team Code Badge (only if no flag) -->
+                  <div 
+                    *ngIf="!getBattingTeamFlag()"
+                    class="w-20 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-2xl font-black shadow-lg border border-blue-400/30"
+                  >
                     {{ getBattingTeamCode() }}
                   </div>
                   <!-- Team Flag -->
                   <img 
                     *ngIf="getBattingTeamFlag()"
                     [src]="getBattingTeamFlag()"
-                    class="w-14 h-10 object-cover rounded shadow-lg border border-white/20"
+                    class="w-16 h-12 object-cover rounded-lg shadow-lg border border-white/20"
                   >
                   <span class="text-5xl font-semibold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">{{ getBattingTeamName() }}</span>
                 </div>
@@ -2246,16 +2250,16 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     const battingTeam = this.currentInnings?.battingTeam;
     if (!battingTeam) return null;
     
-    // Check for flag directly on team object
-    if (battingTeam.flag) return battingTeam.flag;
+    // Check for flagUrl directly on team object
+    if (battingTeam.flagUrl) return battingTeam.flagUrl;
     
     // Try to find from match teams
     const teamId = battingTeam._id || battingTeam;
     if (this.match?.team1?._id === teamId || this.match?.team1 === teamId) {
-      return this.match.team1?.flag || null;
+      return this.match.team1?.flagUrl || null;
     }
     if (this.match?.team2?._id === teamId || this.match?.team2 === teamId) {
-      return this.match.team2?.flag || null;
+      return this.match.team2?.flagUrl || null;
     }
     return null;
   }

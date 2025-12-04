@@ -1,6 +1,7 @@
 const express = require('express');
 const { Country, Player, Match } = require('../models');
 const auth = require('../middleware/auth');
+const { getFlagUrl } = require('../utils/flagUtils');
 
 const router = express.Router();
 
@@ -11,6 +12,86 @@ router.get('/', async (req, res, next) => {
     res.json({
       success: true,
       data: countries
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/countries - Create country (protected)
+router.post('/', auth, async (req, res, next) => {
+  try {
+    const { name, code, flagUrl } = req.body;
+    
+    // Auto-populate flagUrl if not provided
+    const resolvedFlagUrl = flagUrl || getFlagUrl(code);
+    
+    const country = new Country({
+      name,
+      code,
+      flagUrl: resolvedFlagUrl
+    });
+    
+    await country.save();
+    
+    res.status(201).json({
+      success: true,
+      data: country
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/countries/auto-populate-flags - Auto-populate flag URLs for countries without flags (protected)
+router.post('/auto-populate-flags', auth, async (req, res, next) => {
+  try {
+    const countries = await Country.find();
+    let updated = 0;
+    
+    for (const country of countries) {
+      const flagUrl = getFlagUrl(country.code);
+      if (flagUrl && !country.flagUrl) {
+        country.flagUrl = flagUrl;
+        await country.save();
+        updated++;
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Auto-populated flag URLs for ${updated} countries`,
+      updated
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/countries/refresh-flags - Refresh all flag URLs (overwrites existing) (protected)
+router.post('/refresh-flags', auth, async (req, res, next) => {
+  try {
+    const countries = await Country.find();
+    let updated = 0;
+    const results = [];
+    
+    for (const country of countries) {
+      const flagUrl = getFlagUrl(country.code);
+      if (flagUrl) {
+        country.flagUrl = flagUrl;
+        await country.save();
+        updated++;
+        results.push({ code: country.code, name: country.name, flagUrl });
+      } else {
+        results.push({ code: country.code, name: country.name, flagUrl: null, error: 'No mapping found' });
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Refreshed flag URLs for ${updated} countries`,
+      updated,
+      results
     });
   } catch (error) {
     next(error);
@@ -36,34 +117,18 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-// POST /api/countries - Create country (protected)
-router.post('/', auth, async (req, res, next) => {
-  try {
-    const { name, code, flagUrl } = req.body;
-    
-    const country = new Country({
-      name,
-      code,
-      flagUrl
-    });
-    
-    await country.save();
-    
-    res.status(201).json({
-      success: true,
-      data: country
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
 // PUT /api/countries/:id - Update country (protected)
 router.put('/:id', auth, async (req, res, next) => {
   try {
     const { name, code, flagUrl, flagVideo, background } = req.body;
     
-    const updateData = { name, code, flagUrl };
+    // Auto-populate flagUrl if code is provided but flagUrl is not
+    const resolvedFlagUrl = flagUrl !== undefined ? flagUrl : (code ? getFlagUrl(code) : undefined);
+    
+    const updateData = { name, code };
+    if (resolvedFlagUrl !== undefined) {
+      updateData.flagUrl = resolvedFlagUrl;
+    }
     
     // Handle flagVideo update (animated flag for display overlay)
     if (flagVideo !== undefined) {

@@ -13,13 +13,35 @@ import { Country } from '../../../core/models';
     <div>
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-800">Countries</h2>
-        <button 
-          (click)="openModal()"
-          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-        >
-          + Add Country
-        </button>
+        <div class="flex items-center gap-3">
+          <button 
+            (click)="refreshAllFlags()"
+            [disabled]="refreshingFlags"
+            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+            title="Auto-populate flag icons from flagicons.lipis.dev"
+          >
+            @if (refreshingFlags) {
+              <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>Refreshing...</span>
+            } @else {
+              <span>🏳️</span>
+              <span>Refresh Flags</span>
+            }
+          </button>
+          <button 
+            (click)="openModal()"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            + Add Country
+          </button>
+        </div>
       </div>
+      
+      @if (flagRefreshMessage) {
+        <div class="mb-4 p-3 rounded-lg text-sm" [ngClass]="flagRefreshSuccess ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
+          {{ flagRefreshMessage }}
+        </div>
+      }
 
       <!-- Loading State -->
       @if (loading) {
@@ -387,6 +409,11 @@ export class CountriesComponent implements OnInit {
   deleteError = '';
   cascadeDelete = false;
 
+  // Flag refresh state
+  refreshingFlags = false;
+  flagRefreshMessage = '';
+  flagRefreshSuccess = false;
+
   constructor(
     private countryService: CountryService,
     private playerService: PlayerService,
@@ -632,6 +659,40 @@ export class CountriesComponent implements OnInit {
       error: (err) => {
         this.deleteError = err.error?.message || 'Failed to delete country';
         this.deleting = false;
+      }
+    });
+  }
+
+  refreshAllFlags() {
+    this.refreshingFlags = true;
+    this.flagRefreshMessage = '';
+    
+    this.http.post<{ success: boolean; message: string; updated: number; results: any[] }>(
+      '/api/countries/refresh-flags', 
+      {}
+    ).subscribe({
+      next: (response) => {
+        this.refreshingFlags = false;
+        if (response.success) {
+          this.flagRefreshSuccess = true;
+          this.flagRefreshMessage = response.message;
+          this.loadCountries(); // Reload to show updated flags
+        } else {
+          this.flagRefreshSuccess = false;
+          this.flagRefreshMessage = 'Failed to refresh flags';
+        }
+        // Clear message after 5 seconds
+        setTimeout(() => {
+          this.flagRefreshMessage = '';
+        }, 5000);
+      },
+      error: (err) => {
+        this.refreshingFlags = false;
+        this.flagRefreshSuccess = false;
+        this.flagRefreshMessage = err.error?.message || 'Failed to refresh flags';
+        setTimeout(() => {
+          this.flagRefreshMessage = '';
+        }, 5000);
       }
     });
   }
