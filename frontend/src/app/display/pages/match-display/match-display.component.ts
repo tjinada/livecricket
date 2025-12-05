@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { PlayerCacheService } from '../../services/player-cache.service';
 import { MatchCalculationsService, GraphDataPoint } from '../../services/match-calculations.service';
 import { TeamDisplayService } from '../../services/team-display.service';
+import { DismissalFormatterService } from '../../services/dismissal-formatter.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1806,7 +1807,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private playerCacheService: PlayerCacheService,
     private calcService: MatchCalculationsService,
-    private teamService: TeamDisplayService
+    private teamService: TeamDisplayService,
+    private dismissalService: DismissalFormatterService
   ) {}
 
   ngOnInit() {
@@ -2634,38 +2636,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getHowOut(batsman: any): string {
-    if (!batsman.isOut) {
-      if (batsman.isNotOut || this.isCurrentBatsman(batsman)) return 'not out';
-      return 'did not bat';
-    }
-    const d = batsman.dismissal;
-    if (!d?.type) return 'out';
-    switch (d.type) {
-      case 'bowled': return `b ${this.getPlayerName(d.bowler)}`;
-      case 'caught':
-        const fielder = this.getPlayerName(d.fielder);
-        const bowler = this.getPlayerName(d.bowler);
-        return fielder === bowler ? `c & b ${bowler}` : `c ${fielder} b ${bowler}`;
-      case 'lbw': return `lbw b ${this.getPlayerName(d.bowler)}`;
-      case 'run-out': return `run out (${this.getPlayerName(d.fielder)})`;
-      case 'stumped': return `st ${this.getPlayerName(d.fielder)} b ${this.getPlayerName(d.bowler)}`;
-      case 'hit-wicket': return `hit wicket b ${this.getPlayerName(d.bowler)}`;
-      default: return 'out';
-    }
+    return this.dismissalService.getHowOut(batsman, this.isCurrentBatsman(batsman));
   }
 
   getShortHowOut(batsman: any): string {
-    if (!batsman.isOut || !batsman.dismissal?.type) return '';
-    const d = batsman.dismissal;
-    switch (d.type) {
-      case 'bowled': return 'b';
-      case 'caught': return 'c';
-      case 'lbw': return 'lbw';
-      case 'run-out': return 'r/o';
-      case 'stumped': return 'st';
-      case 'hit-wicket': return 'hw';
-      default: return '';
-    }
+    return this.dismissalService.getShortHowOut(batsman);
   }
 
   getStrikeRate(batsman: any): string {
@@ -2827,27 +2802,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== NEW PLAYER STATS VIEW HELPERS ====================
 
   getShortDismissal(batsman: any): string {
-    // Handle DNB (Did Not Bat)
-    if (batsman.isDNB) {
-      return 'DNB';
-    }
-    
-    if (!batsman.isOut) {
-      if (batsman.isNotOut || this.isCurrentBatsman(batsman)) return 'not out';
-      return '';
-    }
-    const d = batsman.dismissal;
-    if (!d?.type) return 'out';
-    const bowlerName = this.getPlayerName(d.bowler)?.split(' ').pop() || '';
-    switch (d.type) {
-      case 'bowled': return `b ${bowlerName}`;
-      case 'caught': return `c b ${bowlerName}`;
-      case 'lbw': return `lbw ${bowlerName}`;
-      case 'run-out': return 'run out';
-      case 'stumped': return `st b ${bowlerName}`;
-      case 'hit-wicket': return 'hit wkt';
-      default: return 'out';
-    }
+    return this.dismissalService.getShortDismissal(batsman, this.isCurrentBatsman(batsman));
   }
 
   getShortPlayerName(player: any): string {
@@ -2909,32 +2864,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   // Get dismissal text for summary view
   getSummaryDismissal(batsman: any): string {
-    if (batsman.isDNB) {
-      return 'DNB';
-    }
-    
-    if (!batsman.isOut) {
-      if (batsman.isNotOut || this.isCurrentBatsman(batsman)) return 'not out';
-      return '';
-    }
-    
-    const d = batsman.dismissal;
-    if (!d?.type) return 'out';
-    
-    const bowlerName = this.getPlayerName(d.bowler)?.split(' ').pop() || '';
-    const fielderName = this.getPlayerName(d.fielder)?.split(' ').pop() || '';
-    
-    switch (d.type) {
-      case 'bowled': return `b ${bowlerName}`;
-      case 'caught': 
-        if (fielderName === bowlerName) return `c & b ${bowlerName}`;
-        return `c ${fielderName} b ${bowlerName}`;
-      case 'lbw': return `lbw ${bowlerName}`;
-      case 'run-out': return fielderName ? `run out (${fielderName})` : 'run out';
-      case 'stumped': return `st b ${bowlerName}`;
-      case 'hit-wicket': return `hit wkt b ${bowlerName}`;
-      default: return 'out';
-    }
+    return this.dismissalService.getSummaryDismissal(batsman, this.isCurrentBatsman(batsman));
   }
 
   // Get batsman image for summary view
