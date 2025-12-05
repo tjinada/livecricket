@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { PlayerCacheService } from '../../services/player-cache.service';
+import { MatchCalculationsService, GraphDataPoint } from '../../services/match-calculations.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1802,7 +1803,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
-    private playerCacheService: PlayerCacheService
+    private playerCacheService: PlayerCacheService,
+    private calcService: MatchCalculationsService
   ) {}
 
   ngOnInit() {
@@ -2546,42 +2548,36 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getOversDisplay(): string {
-    const balls = this.currentInnings?.totalBalls || 0;
-    return `${Math.floor(balls / 6)}.${balls % 6}`;
+    return this.calcService.getOversDisplay(this.currentInnings?.totalBalls || 0);
   }
 
   getCurrentRunRate(): string {
-    const balls = this.currentInnings?.totalBalls || 0;
-    const runs = this.currentInnings?.totalRuns || 0;
-    if (balls === 0) return '0.00';
-    return ((runs / balls) * 6).toFixed(2);
+    return this.calcService.getCurrentRunRate(
+      this.currentInnings?.totalRuns || 0,
+      this.currentInnings?.totalBalls || 0
+    );
   }
 
   getRequiredRunRate(): string {
     if (this.match?.currentInnings !== 1) return '-';
-    const runsNeeded = this.getRunsNeeded();
-    const ballsRemaining = this.getBallsRemaining();
-    if (ballsRemaining <= 0) return '-';
-    return ((runsNeeded / ballsRemaining) * 6).toFixed(2);
+    return this.calcService.getRequiredRunRate(this.getRunsNeeded(), this.getBallsRemaining());
   }
 
   getTarget(): number {
     if (!this.match?.innings?.[0]) return 0;
-    return (this.match.innings[0].totalRuns || 0) + 1;
+    return this.calcService.getTarget(this.match.innings[0].totalRuns || 0);
   }
 
   getRunsNeeded(): number {
-    return Math.max(0, this.getTarget() - (this.currentInnings?.totalRuns || 0));
+    return this.calcService.getRunsNeeded(this.getTarget(), this.currentInnings?.totalRuns || 0);
   }
 
   getBallsRemaining(): number {
-    const maxBalls = this.match?.format === 'T20' ? 120 : 300;
-    return Math.max(0, maxBalls - (this.currentInnings?.totalBalls || 0));
+    return this.calcService.getBallsRemaining(this.match?.format, this.currentInnings?.totalBalls || 0);
   }
 
   getOversRemaining(): string {
-    const balls = this.getBallsRemaining();
-    return `${Math.floor(balls / 6)}.${balls % 6}`;
+    return this.calcService.getOversRemaining(this.getBallsRemaining());
   }
 
   isSecondInnings(): boolean {
@@ -2719,8 +2715,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getStrikeRate(batsman: any): string {
-    if (!batsman.balls) return '0.00';
-    return ((batsman.runs / batsman.balls) * 100).toFixed(2);
+    return this.calcService.getStrikeRate(batsman.runs || 0, batsman.balls || 0);
   }
 
   getBowlerOversDisplay(bowler: any): string {
@@ -2728,26 +2723,15 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getBowlerEconomy(bowler: any): string {
-    const totalBalls = ((bowler.overs || 0) * 6) + (bowler.balls || 0);
-    if (totalBalls === 0) return '0.00';
-    return ((bowler.runs / totalBalls) * 6).toFixed(2);
+    return this.calcService.getBowlerEconomy(bowler.runs || 0, bowler.overs || 0, bowler.balls || 0);
   }
 
   getTotalExtras(): number {
-    const e = this.currentInnings?.extras;
-    if (!e) return 0;
-    return (e.wides || 0) + (e.noBalls || 0) + (e.byes || 0) + (e.legByes || 0);
+    return this.calcService.getTotalExtras(this.currentInnings?.extras);
   }
 
   getExtrasBreakdown(): string {
-    const e = this.currentInnings?.extras;
-    if (!e) return '';
-    const parts = [];
-    if (e.wides) parts.push(`W ${e.wides}`);
-    if (e.noBalls) parts.push(`NB ${e.noBalls}`);
-    if (e.byes) parts.push(`B ${e.byes}`);
-    if (e.legByes) parts.push(`LB ${e.legByes}`);
-    return parts.join(', ');
+    return this.calcService.getExtrasBreakdown(this.currentInnings?.extras);
   }
 
   getYetToBat(): string[] {
@@ -2775,8 +2759,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== MATCH SUMMARY VIEW HELPERS ====================
 
   getInningsOvers(innings: any): string {
-    const balls = innings?.totalBalls || 0;
-    return `${Math.floor(balls / 6)}.${balls % 6}`;
+    return this.calcService.getOversDisplay(innings?.totalBalls || 0);
   }
 
   getTopBatsmen(innings: any, count: number): any[] {
@@ -2825,129 +2808,23 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getOversAxisLabels(): number[] {
-    const maxOvers = this.match?.format === 'T20' ? 20 : 50;
-    const step = maxOvers === 20 ? 5 : 10;
-    const labels = [];
-    for (let i = 0; i <= maxOvers; i += step) {
-      labels.push(i);
-    }
-    return labels;
+    return this.calcService.getOversAxisLabels(this.match?.format);
   }
 
   getOversScale(): number {
-    const maxOvers = this.match?.format === 'T20' ? 20 : 50;
-    return 450 / maxOvers;
+    return this.calcService.getXScale(this.match?.format, 450);
   }
 
   getOversScaleLarge(): number {
-    const maxOvers = this.match?.format === 'T20' ? 20 : 50;
-    return 530 / maxOvers;
+    return this.calcService.getXScale(this.match?.format, 530);
   }
 
-  getFirstInningsData(): { over: number; runs: number }[] {
-    return this.getInningsGraphData(0);
+  getFirstInningsData(): GraphDataPoint[] {
+    return this.calcService.getInningsGraphData(this.match?.innings?.[0]);
   }
 
-  getSecondInningsData(): { over: number; runs: number }[] {
-    return this.getInningsGraphData(1);
-  }
-
-  getInningsGraphData(inningsIndex: number): { over: number; runs: number }[] {
-    const innings = this.match?.innings?.[inningsIndex];
-    if (!innings) return [];
-    
-    const points: { over: number; runs: number }[] = [];
-    
-    // Get the total completed overs
-    const completedOvers = Math.floor((innings.totalBalls || 0) / 6);
-    const totalRuns = innings.totalRuns || 0;
-    
-    if (completedOvers === 0) return [];
-    
-    // Try to use over-by-over data if available
-    const overs = innings.overs || [];
-    
-    if (overs.length > 0 && overs.length >= completedOvers) {
-      // We have complete over data - use it directly
-      let cumulativeRuns = 0;
-      
-      overs.forEach((over: any, idx: number) => {
-        let overRuns = 0;
-        if (typeof over.runs === 'number' && over.runs > 0) {
-          overRuns = over.runs;
-        } else if (over.balls && over.balls.length > 0) {
-          overRuns = over.balls.reduce((sum: number, ball: any) => sum + (ball.runs || 0), 0);
-        }
-        cumulativeRuns += overRuns;
-        points.push({ over: idx + 1, runs: cumulativeRuns });
-      });
-      
-      // Adjust if there's a discrepancy
-      if (points.length > 0 && totalRuns > 0) {
-        const lastPointRuns = points[points.length - 1].runs;
-        if (Math.abs(lastPointRuns - totalRuns) > 2) {
-          const scaleFactor = totalRuns / lastPointRuns;
-          points.forEach(p => {
-            p.runs = Math.round(p.runs * scaleFactor);
-          });
-          points[points.length - 1].runs = totalRuns;
-        }
-      }
-    } else if (overs.length > 0 && overs.length < completedOvers) {
-      // PARTIAL DATA: We have some overs but not all
-      // Use actual data for available overs, then interpolate the rest
-      let cumulativeRuns = 0;
-      
-      // First, add the overs we have data for
-      overs.forEach((over: any, idx: number) => {
-        let overRuns = 0;
-        if (typeof over.runs === 'number' && over.runs > 0) {
-          overRuns = over.runs;
-        } else if (over.balls && over.balls.length > 0) {
-          overRuns = over.balls.reduce((sum: number, ball: any) => sum + (ball.runs || 0), 0);
-        }
-        cumulativeRuns += overRuns;
-        points.push({ over: idx + 1, runs: cumulativeRuns });
-      });
-      
-      // Calculate remaining runs and overs
-      const remainingRuns = totalRuns - cumulativeRuns;
-      const remainingOvers = completedOvers - overs.length;
-      
-      if (remainingOvers > 0 && remainingRuns > 0) {
-        const avgRunsPerRemainingOver = remainingRuns / remainingOvers;
-        
-        // Add interpolated points for the remaining overs
-        for (let i = 1; i <= remainingOvers; i++) {
-          cumulativeRuns += avgRunsPerRemainingOver;
-          points.push({ 
-            over: overs.length + i, 
-            runs: Math.round(cumulativeRuns) 
-          });
-        }
-      }
-      
-      // Ensure last point matches exact total
-      if (points.length > 0) {
-        points[points.length - 1].runs = totalRuns;
-      }
-    } else {
-      // No over data - use pure linear interpolation
-      const runsPerOver = totalRuns / completedOvers;
-      
-      for (let i = 1; i <= completedOvers; i++) {
-        points.push({ 
-          over: i, 
-          runs: Math.round(runsPerOver * i) 
-        });
-      }
-      
-      if (points.length > 0) {
-        points[points.length - 1].runs = totalRuns;
-      }
-    }
-    
-    return points;
+  getSecondInningsData(): GraphDataPoint[] {
+    return this.calcService.getInningsGraphData(this.match?.innings?.[1]);
   }
 
   getFirstInningsLinePoints(): string {
@@ -2975,33 +2852,25 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getProjectedScore(): number {
-    const balls = this.currentInnings?.totalBalls || 0;
-    const runs = this.currentInnings?.totalRuns || 0;
-    if (balls === 0) return 0;
-    const maxBalls = this.match?.format === 'T20' ? 120 : 300;
-    const runRate = runs / balls;
-    return Math.round(runRate * maxBalls);
+    return this.calcService.getProjectedScore(
+      this.currentInnings?.totalRuns || 0,
+      this.currentInnings?.totalBalls || 0,
+      this.match?.format
+    );
   }
 
   getWinProbability(): number {
     if (this.match?.currentInnings !== 1) return 50;
-    const runsNeeded = this.getRunsNeeded();
-    const ballsRemaining = this.getBallsRemaining();
-    const wicketsInHand = 10 - (this.currentInnings?.totalWickets || 0);
-    if (runsNeeded <= 0) return 100;
-    if (wicketsInHand === 0 || ballsRemaining === 0) return 0;
-    const requiredRunRate = (runsNeeded / ballsRemaining) * 6;
-    const currentRunRate = this.currentInnings?.totalBalls > 0 
-      ? (this.currentInnings.totalRuns / this.currentInnings.totalBalls) * 6 
+    const currentRunRate = this.currentInnings?.totalBalls > 0
+      ? (this.currentInnings.totalRuns / this.currentInnings.totalBalls) * 6
       : 0;
-    let probability = 50;
-    const runRateDiff = currentRunRate - requiredRunRate;
-    probability += runRateDiff * 8;
-    probability += (wicketsInHand - 5) * 4;
-    const maxBalls = this.match?.format === 'T20' ? 120 : 300;
-    const ballsFactor = ballsRemaining / maxBalls;
-    probability = probability * (0.6 + ballsFactor * 0.4);
-    return Math.max(5, Math.min(95, Math.round(probability)));
+    return this.calcService.getWinProbability(
+      this.getRunsNeeded(),
+      this.getBallsRemaining(),
+      10 - (this.currentInnings?.totalWickets || 0),
+      currentRunRate,
+      this.match?.format
+    );
   }
 
   // ==================== NEW PLAYER STATS VIEW HELPERS ====================
@@ -3134,14 +3003,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // Get extras breakdown for a specific innings
   getExtrasBreakdownForInnings(inningsIndex: number): string {
     const innings = this.match?.innings?.[inningsIndex];
-    if (!innings?.extras) return '';
-    const e = innings.extras;
-    const parts = [];
-    if (e.wides) parts.push(`W ${e.wides}`);
-    if (e.noBalls) parts.push(`NB ${e.noBalls}`);
-    if (e.byes) parts.push(`B ${e.byes}`);
-    if (e.legByes) parts.push(`LB ${e.legByes}`);
-    return parts.join(', ');
+    return this.calcService.getExtrasBreakdown(innings?.extras);
   }
 
   getYetToBatCount(): number {
@@ -3172,21 +3034,18 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getTotalFours(): number {
-    const battingStats = this.currentInnings?.battingStats || [];
-    return battingStats.reduce((sum: number, b: any) => sum + (b.fours || 0), 0);
+    return this.calcService.getTotalFours(this.currentInnings?.battingStats);
   }
 
   getTotalSixes(): number {
-    const battingStats = this.currentInnings?.battingStats || [];
-    return battingStats.reduce((sum: number, b: any) => sum + (b.sixes || 0), 0);
+    return this.calcService.getTotalSixes(this.currentInnings?.battingStats);
   }
 
   getDotBallsPercentage(): number {
-    const bowlingStats = this.currentInnings?.bowlingStats || [];
-    const totalDots = bowlingStats.reduce((sum: number, b: any) => sum + (b.dotBalls || 0), 0);
-    const totalBalls = this.currentInnings?.totalBalls || 0;
-    if (totalBalls === 0) return 0;
-    return Math.round((totalDots / totalBalls) * 100);
+    return this.calcService.getDotBallsPercentage(
+      this.currentInnings?.bowlingStats,
+      this.currentInnings?.totalBalls || 0
+    );
   }
 
   // ==================== SUMMARY VIEW HELPERS ====================
@@ -3194,10 +3053,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   getSummaryRunRate(inningsIndex: number): string {
     const innings = this.match?.innings?.[inningsIndex];
     if (!innings) return '0.00';
-    const balls = innings.totalBalls || 0;
-    const runs = innings.totalRuns || 0;
-    if (balls === 0) return '0.00';
-    return ((runs / balls) * 6).toFixed(2);
+    return this.calcService.getCurrentRunRate(innings.totalRuns || 0, innings.totalBalls || 0);
   }
 
   isBatsmanCurrentlyBatting(batsman: any, inningsIndex: number): boolean {
@@ -3220,91 +3076,77 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   getSummaryFours(inningsIndex: number): number {
     const innings = this.match?.innings?.[inningsIndex];
-    if (!innings?.battingStats) return 0;
-    return innings.battingStats.reduce((sum: number, b: any) => sum + (b.fours || 0), 0);
+    return this.calcService.getTotalFours(innings?.battingStats);
   }
 
   getSummarySixes(inningsIndex: number): number {
     const innings = this.match?.innings?.[inningsIndex];
-    if (!innings?.battingStats) return 0;
-    return innings.battingStats.reduce((sum: number, b: any) => sum + (b.sixes || 0), 0);
+    return this.calcService.getTotalSixes(innings?.battingStats);
   }
 
   getSummaryExtras(inningsIndex: number): number {
     const innings = this.match?.innings?.[inningsIndex];
-    if (!innings?.extras) return 0;
-    const e = innings.extras;
-    return (e.wides || 0) + (e.noBalls || 0) + (e.byes || 0) + (e.legByes || 0);
+    return this.calcService.getTotalExtras(innings?.extras);
   }
 
   getSummaryBallsRemaining(inningsIndex: number): number {
     const innings = this.match?.innings?.[inningsIndex];
     if (!innings) return 0;
-    const maxBalls = this.match?.format === 'T20' ? 120 : 300;
-    return Math.max(0, maxBalls - (innings.totalBalls || 0));
+    return this.calcService.getBallsRemaining(this.match?.format, innings.totalBalls || 0);
   }
 
   // ==================== PROJECTIONS VIEW HELPERS (NEW LAYOUT) ====================
 
   getYAxisLabels(): number[] {
-    const maxRuns = this.getMaxRunsForGraph();
-    const step = maxRuns <= 150 ? 25 : maxRuns <= 250 ? 50 : 100;
-    const labels = [];
-    for (let i = 0; i <= maxRuns; i += step) {
-      labels.push(i);
-    }
-    return labels;
+    return this.calcService.getYAxisLabels(this.getMaxRunsForGraph());
   }
 
   getMaxRunsForGraph(): number {
-    const firstMax = this.match?.innings?.[0]?.totalRuns || 0;
-    const secondMax = this.match?.innings?.[1]?.totalRuns || 0;
-    const target = this.getTarget();
-    const maxRuns = Math.max(firstMax, secondMax, target, 100);
-    // Round up to nearest 50 for clean axis
-    return Math.ceil(maxRuns / 50) * 50;
+    return this.calcService.getMaxRunsForGraph(this.match?.innings, this.getTarget());
   }
 
   getXScale(): number {
-    const maxOvers = this.match?.format === 'T20' ? 20 : 50;
-    return 620 / maxOvers;  // Graph width is 620
+    return this.calcService.getXScale(this.match?.format, 620);
   }
 
   getYScale(): number {
-    const maxRuns = this.getMaxRunsForGraph();
-    return 320 / maxRuns;  // Graph height is 320
+    return this.calcService.getYScale(this.getMaxRunsForGraph(), 320);
   }
 
   getFirstInningsLinePointsXL(): string {
-    return this.getFirstInningsData()
-      .map(p => `${60 + (p.over * this.getXScale())},${350 - (p.runs * this.getYScale())}`)
-      .join(' ');
+    return this.calcService.getLinePoints(
+      this.getFirstInningsData(),
+      60, 350,
+      this.getXScale(),
+      this.getYScale()
+    );
   }
 
   getSecondInningsLinePointsXL(): string {
-    return this.getSecondInningsData()
-      .map(p => `${60 + (p.over * this.getXScale())},${350 - (p.runs * this.getYScale())}`)
-      .join(' ');
+    return this.calcService.getLinePoints(
+      this.getSecondInningsData(),
+      60, 350,
+      this.getXScale(),
+      this.getYScale()
+    );
   }
 
   getFirstInningsAreaPoints(): string {
-    const data = this.getFirstInningsData();
-    if (data.length === 0) return '';
-    const baseY = 350;
-    const startX = 60 + (data[0].over * this.getXScale());
-    const endX = 60 + (data[data.length - 1].over * this.getXScale());
-    const linePoints = data.map(p => `${60 + (p.over * this.getXScale())},${350 - (p.runs * this.getYScale())}`).join(' ');
-    return `${startX},${baseY} ${linePoints} ${endX},${baseY}`;
+    return this.calcService.getAreaPoints(
+      this.getFirstInningsData(),
+      60, 350,
+      this.getXScale(),
+      this.getYScale()
+    );
   }
 
   getSecondInningsAreaPoints(): string {
-    const data = this.getSecondInningsData();
-    if (data.length === 0) return '';
-    const baseY = 350;
-    const startX = 60 + (data[0].over * this.getXScale());
-    const endX = 60 + (data[data.length - 1].over * this.getXScale());
-    const linePoints = data.map(p => `${60 + (p.over * this.getXScale())},${350 - (p.runs * this.getYScale())}`).join(' ');
-    return `${startX},${baseY} ${linePoints} ${endX},${baseY}`;
+    return this.calcService.getAreaPoints(
+      this.getSecondInningsData(),
+      60, 350,
+      this.getXScale(),
+      this.getYScale()
+    );
   }
 
   // ==================== PARTNERSHIP VIEW HELPERS ====================
@@ -3312,41 +3154,25 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   getStrikerDots(): number {
     const stats = this.getStrikerStats();
     if (!stats) return 0;
-    // If dotBalls is tracked
     if (stats.dotBalls !== undefined) return stats.dotBalls;
-    // Otherwise calculate: balls - (runs scored on balls) roughly
-    // Simplified: balls - (fours*1 + sixes*1 + other scoring shots)
-    // For simplicity, just count non-boundary non-zero balls
-    const balls = stats.balls || 0;
-    const fours = stats.fours || 0;
-    const sixes = stats.sixes || 0;
-    const runs = stats.runs || 0;
-    // Rough estimate: dots = balls - boundary balls - singles/doubles/triples balls
-    // More accurate: dots = balls where 0 runs scored
-    // Without ball-by-ball data, estimate based on runs
-    const boundaryBalls = fours + sixes;
-    const nonBoundaryRuns = runs - (fours * 4) - (sixes * 6);
-    const nonBoundaryBalls = balls - boundaryBalls;
-    // Assume non-boundary runs came from non-boundary balls (1-3 runs each)
-    const scoringNonBoundaryBalls = nonBoundaryRuns > 0 ? Math.min(nonBoundaryRuns, nonBoundaryBalls) : 0;
-    const dotBalls = Math.max(0, nonBoundaryBalls - scoringNonBoundaryBalls);
-    return dotBalls;
+    return this.calcService.estimateDotBalls(
+      stats.runs || 0,
+      stats.balls || 0,
+      stats.fours || 0,
+      stats.sixes || 0
+    );
   }
 
   getNonStrikerDots(): number {
     const stats = this.getNonStrikerStats();
     if (!stats) return 0;
     if (stats.dotBalls !== undefined) return stats.dotBalls;
-    const balls = stats.balls || 0;
-    const fours = stats.fours || 0;
-    const sixes = stats.sixes || 0;
-    const runs = stats.runs || 0;
-    const boundaryBalls = fours + sixes;
-    const nonBoundaryRuns = runs - (fours * 4) - (sixes * 6);
-    const nonBoundaryBalls = balls - boundaryBalls;
-    const scoringNonBoundaryBalls = nonBoundaryRuns > 0 ? Math.min(nonBoundaryRuns, nonBoundaryBalls) : 0;
-    const dotBalls = Math.max(0, nonBoundaryBalls - scoringNonBoundaryBalls);
-    return dotBalls;
+    return this.calcService.estimateDotBalls(
+      stats.runs || 0,
+      stats.balls || 0,
+      stats.fours || 0,
+      stats.sixes || 0
+    );
   }
 
   getStrikerBattingStyle(): string {
