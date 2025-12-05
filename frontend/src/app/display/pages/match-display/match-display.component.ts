@@ -6,6 +6,7 @@ import { PlayerCacheService } from '../../services/player-cache.service';
 import { MatchCalculationsService, GraphDataPoint } from '../../services/match-calculations.service';
 import { TeamDisplayService } from '../../services/team-display.service';
 import { DismissalFormatterService } from '../../services/dismissal-formatter.service';
+import { BattingCardService } from '../../services/batting-card.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1808,7 +1809,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     private playerCacheService: PlayerCacheService,
     private calcService: MatchCalculationsService,
     private teamService: TeamDisplayService,
-    private dismissalService: DismissalFormatterService
+    private dismissalService: DismissalFormatterService,
+    private battingCardService: BattingCardService
   ) {}
 
   ngOnInit() {
@@ -2548,48 +2550,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getBattingStats(): any[] {
-    // Display batsmen in the ORDER THEY ACTUALLY BATTED
-    // Players who have batted appear first (sorted by position), then DNB players
-    const battingTeamId = this.currentInnings?.battingTeam?._id || this.currentInnings?.battingTeam;
-    const team1Id = this.match?.team1?._id || this.match?.team1;
-    const isTeam1 = battingTeamId === team1Id || battingTeamId?.toString() === team1Id?.toString();
-    const squad = isTeam1 ? this.match?.squads?.team1 : this.match?.squads?.team2;
-    
-    if (!squad) return this.currentInnings?.battingStats || [];
-    
-    // Get Playing XI
-    const playingXI = squad.filter((p: any) => p.isPlayingXI);
-    
-    if (playingXI.length === 0) return this.currentInnings?.battingStats || [];
-    
-    // Get actual batting stats sorted by position (order they came to bat)
-    const battingStats = [...(this.currentInnings?.battingStats || [])]
-      .sort((a: any, b: any) => (a.position || 99) - (b.position || 99));
-    
-    // Create a set of player IDs who have already batted
-    const battedPlayerIds = new Set(
-      battingStats.map((stat: any) => (stat.player?._id || stat.player)?.toString())
-    );
-    
-    // Get DNB players (from Playing XI who haven't batted yet)
-    // Sort them by scheduled batting order
-    const dnbPlayers = playingXI
-      .filter((p: any) => !battedPlayerIds.has((p.player?._id || p.player)?.toString()))
-      .sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99))
-      .map((squadPlayer: any) => ({
-        player: squadPlayer.player,
-        runs: null,
-        balls: null,
-        fours: 0,
-        sixes: 0,
-        isOut: false,
-        isNotOut: false,
-        isDNB: true,
-        battingOrder: squadPlayer.battingOrder
-      }));
-    
-    // Return batted players first (in order they batted), then DNB players
-    return [...battingStats, ...dnbPlayers];
+    return this.battingCardService.getBattingStatsWithDNB(this.currentInnings, this.match);
   }
 
   getBowlingStats(): any[] {
@@ -2613,20 +2574,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   isCurrentBatsman(batsman: any): boolean {
-    const playerId = batsman.player?._id || batsman.player;
-    const strikerId = this.currentInnings?.currentBatsmen?.striker?._id || 
-                      this.currentInnings?.currentBatsmen?.striker;
-    const nonStrikerId = this.currentInnings?.currentBatsmen?.nonStriker?._id || 
-                         this.currentInnings?.currentBatsmen?.nonStriker;
-    return playerId === strikerId || playerId?.toString() === strikerId?.toString() ||
-           playerId === nonStrikerId || playerId?.toString() === nonStrikerId?.toString();
+    return this.battingCardService.isCurrentBatsman(batsman, this.currentInnings);
   }
 
   isStriker(batsman: any): boolean {
-    const playerId = batsman.player?._id || batsman.player;
-    const strikerId = this.currentInnings?.currentBatsmen?.striker?._id || 
-                      this.currentInnings?.currentBatsmen?.striker;
-    return playerId === strikerId || playerId?.toString() === strikerId?.toString();
+    return this.battingCardService.isStriker(batsman, this.currentInnings);
   }
 
   isCurrentBowler(bowler: any): boolean {
@@ -2664,21 +2616,15 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getYetToBat(): string[] {
-    const battingTeamId = this.currentInnings?.battingTeam?._id || this.currentInnings?.battingTeam;
-    const team1Id = this.match.team1?._id || this.match.team1;
-    const isTeam1 = battingTeamId === team1Id || battingTeamId?.toString() === team1Id?.toString();
-    const squad = isTeam1 ? this.match.squads?.team1 : this.match.squads?.team2;
-    if (!squad) return [];
-    const battedIds = new Set(
-      this.currentInnings?.battingStats?.map((b: any) => (b.player?._id || b.player)?.toString())
+    return this.battingCardService.getYetToBatNames(
+      this.currentInnings, 
+      this.match, 
+      (player) => this.getPlayerName(player)
     );
-    return squad
-      .filter((p: any) => p.isPlayingXI && !battedIds.has((p.player?._id || p.player)?.toString()))
-      .map((p: any) => this.getPlayerName(p.player));
   }
 
   getFallOfWickets(): any[] {
-    return this.currentInnings?.fallOfWickets || [];
+    return this.battingCardService.getFallOfWickets(this.currentInnings);
   }
 
   getFOWPlayerName(fow: any): string {
@@ -2692,10 +2638,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getTopBatsmen(innings: any, count: number): any[] {
-    if (!innings?.battingStats) return [];
-    return [...innings.battingStats]
-      .sort((a: any, b: any) => (b.runs || 0) - (a.runs || 0))
-      .slice(0, count);
+    return this.battingCardService.getTopBatsmen(innings, count);
   }
 
   getTopBatsmanImage(batsman: any): string | null {
@@ -2817,49 +2760,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // Get full batting card for an innings (all 11 players with DNB status)
   // Display batsmen in the ORDER THEY ACTUALLY BATTED
   getFullBattingCard(inningsIndex: number): any[] {
-    const innings = this.match?.innings?.[inningsIndex];
-    if (!innings) return [];
-    
-    const battingTeamId = innings.battingTeam?._id || innings.battingTeam;
-    const team1Id = this.match?.team1?._id || this.match?.team1;
-    const isTeam1 = battingTeamId === team1Id || battingTeamId?.toString() === team1Id?.toString();
-    const squad = isTeam1 ? this.match?.squads?.team1 : this.match?.squads?.team2;
-    
-    if (!squad) return innings.battingStats || [];
-    
-    // Get Playing XI
-    const playingXI = squad.filter((p: any) => p.isPlayingXI);
-    
-    if (playingXI.length === 0) return innings.battingStats || [];
-    
-    // Get actual batting stats sorted by position (order they came to bat)
-    const battingStats = [...(innings.battingStats || [])]
-      .sort((a: any, b: any) => (a.position || 99) - (b.position || 99));
-    
-    // Create a set of player IDs who have already batted
-    const battedPlayerIds = new Set(
-      battingStats.map((stat: any) => (stat.player?._id || stat.player)?.toString())
-    );
-    
-    // Get DNB players (from Playing XI who haven't batted yet)
-    // Sort them by scheduled batting order
-    const dnbPlayers = playingXI
-      .filter((p: any) => !battedPlayerIds.has((p.player?._id || p.player)?.toString()))
-      .sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99))
-      .map((squadPlayer: any) => ({
-        player: squadPlayer.player,
-        runs: null,
-        balls: null,
-        fours: 0,
-        sixes: 0,
-        isOut: false,
-        isNotOut: false,
-        isDNB: true,
-        battingOrder: squadPlayer.battingOrder
-      }));
-    
-    // Return batted players first (in order they batted), then DNB players
-    return [...battingStats, ...dnbPlayers];
+    return this.battingCardService.getFullBattingCard(inningsIndex, this.match);
   }
 
   // Get dismissal text for summary view
@@ -2879,9 +2780,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getYetToBatCount(): number {
-    // Count DNB players from the batting stats
-    const battingStats = this.getBattingStats();
-    return battingStats.filter((b: any) => b.isDNB).length;
+    return this.battingCardService.getYetToBatCount(this.getBattingStats());
   }
 
   getCurrentBowlerOvers(): string {
@@ -2929,13 +2828,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   isBatsmanCurrentlyBatting(batsman: any, inningsIndex: number): boolean {
-    const innings = this.match?.innings?.[inningsIndex];
-    if (!innings) return false;
-    const playerId = batsman.player?._id || batsman.player;
-    const strikerId = innings.currentBatsmen?.striker?._id || innings.currentBatsmen?.striker;
-    const nonStrikerId = innings.currentBatsmen?.nonStriker?._id || innings.currentBatsmen?.nonStriker;
-    return playerId === strikerId || playerId?.toString() === strikerId?.toString() ||
-           playerId === nonStrikerId || playerId?.toString() === nonStrikerId?.toString();
+    return this.battingCardService.isBatsmanCurrentlyBattingInInnings(batsman, inningsIndex, this.match);
   }
 
   getSummaryBowlers(inningsIndex: number, count: number): any[] {
