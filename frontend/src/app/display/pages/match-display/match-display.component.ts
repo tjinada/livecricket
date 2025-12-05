@@ -9,6 +9,7 @@ import { DismissalFormatterService } from '../../services/dismissal-formatter.se
 import { BattingCardService } from '../../services/batting-card.service';
 import { BowlerCardService } from '../../services/bowler-card.service';
 import { OverDisplayService } from '../../services/over-display.service';
+import { CurrentBatsmenService } from '../../services/current-batsmen.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1814,7 +1815,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     private dismissalService: DismissalFormatterService,
     private battingCardService: BattingCardService,
     private bowlerCardService: BowlerCardService,
-    private overDisplayService: OverDisplayService
+    private overDisplayService: OverDisplayService,
+    private currentBatsmenService: CurrentBatsmenService
   ) {}
 
   ngOnInit() {
@@ -2332,79 +2334,59 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getStrikerName(): string {
-    const striker = this.currentInnings?.currentBatsmen?.striker;
-    const name = this.getPlayerName(striker);
-    return name?.split(' ').pop() || 'Unknown';
+    return this.currentBatsmenService.getStrikerName(this.currentInnings);
   }
 
   getStrikerImage(): string | null {
-    const striker = this.currentInnings?.currentBatsmen?.striker;
-    return this.getPlayerImage(striker);
+    return this.currentBatsmenService.getStrikerImage(this.currentInnings);
   }
 
   getStrikerRuns(): number {
-    return this.getStrikerStats()?.runs || 0;
+    return this.currentBatsmenService.getStrikerRuns(this.currentInnings);
   }
 
   getStrikerBalls(): number {
-    return this.getStrikerStats()?.balls || 0;
+    return this.currentBatsmenService.getStrikerBalls(this.currentInnings);
   }
 
   getStrikerSR(): string {
-    const stats = this.getStrikerStats();
-    if (!stats?.balls) return '0.00';
-    return ((stats.runs / stats.balls) * 100).toFixed(1);
+    return this.currentBatsmenService.getStrikerSR(this.currentInnings);
   }
 
   getNonStrikerName(): string {
-    const nonStriker = this.currentInnings?.currentBatsmen?.nonStriker;
-    const name = this.getPlayerName(nonStriker);
-    return name?.split(' ').pop() || 'Unknown';
+    return this.currentBatsmenService.getNonStrikerName(this.currentInnings);
   }
 
   getNonStrikerImage(): string | null {
-    const nonStriker = this.currentInnings?.currentBatsmen?.nonStriker;
-    return this.getPlayerImage(nonStriker);
+    return this.currentBatsmenService.getNonStrikerImage(this.currentInnings);
   }
 
   getNonStrikerRuns(): number {
-    return this.getNonStrikerStats()?.runs || 0;
+    return this.currentBatsmenService.getNonStrikerRuns(this.currentInnings);
   }
 
   getNonStrikerBalls(): number {
-    return this.getNonStrikerStats()?.balls || 0;
+    return this.currentBatsmenService.getNonStrikerBalls(this.currentInnings);
   }
 
   getNonStrikerSR(): string {
-    const stats = this.getNonStrikerStats();
-    if (!stats?.balls) return '0.00';
-    return ((stats.runs / stats.balls) * 100).toFixed(1);
+    return this.currentBatsmenService.getNonStrikerSR(this.currentInnings);
   }
 
   getStrikerStats(): any {
-    const strikerId = this.currentInnings?.currentBatsmen?.striker?._id || 
-                      this.currentInnings?.currentBatsmen?.striker;
-    return this.currentInnings?.battingStats?.find((b: any) => {
-      const id = b.player?._id || b.player;
-      return id === strikerId || id?.toString() === strikerId?.toString();
-    });
+    return this.currentBatsmenService.getStrikerStats(this.currentInnings);
   }
 
   getNonStrikerStats(): any {
-    const nonStrikerId = this.currentInnings?.currentBatsmen?.nonStriker?._id || 
-                         this.currentInnings?.currentBatsmen?.nonStriker;
-    return this.currentInnings?.battingStats?.find((b: any) => {
-      const id = b.player?._id || b.player;
-      return id === nonStrikerId || id?.toString() === nonStrikerId?.toString();
-    });
+    return this.currentBatsmenService.getNonStrikerStats(this.currentInnings);
   }
 
   getPartnershipRuns(): number {
-    return this.currentInnings?.partnership?.runs || 0;
+    return this.currentBatsmenService.getPartnershipRuns(this.currentInnings);
   }
 
   getPartnershipBalls(): number {
-    return this.currentInnings?.partnership?.balls || 0;
+    return this.currentBatsmenService.getPartnershipBalls(this.currentInnings);
   }
 
   getLastWicket(): string | null {
@@ -2855,54 +2837,18 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== PARTNERSHIP VIEW HELPERS ====================
 
   getStrikerDots(): number {
-    const stats = this.getStrikerStats();
-    if (!stats) return 0;
-    if (stats.dotBalls !== undefined) return stats.dotBalls;
-    return this.calcService.estimateDotBalls(
-      stats.runs || 0,
-      stats.balls || 0,
-      stats.fours || 0,
-      stats.sixes || 0
-    );
+    return this.currentBatsmenService.getStrikerDots(this.currentInnings);
   }
 
   getNonStrikerDots(): number {
-    const stats = this.getNonStrikerStats();
-    if (!stats) return 0;
-    if (stats.dotBalls !== undefined) return stats.dotBalls;
-    return this.calcService.estimateDotBalls(
-      stats.runs || 0,
-      stats.balls || 0,
-      stats.fours || 0,
-      stats.sixes || 0
-    );
+    return this.currentBatsmenService.getNonStrikerDots(this.currentInnings);
   }
 
   getStrikerBattingStyle(): string {
-    const striker = this.currentInnings?.currentBatsmen?.striker;
-    if (!striker) return '';
-    // Try to get batting style from player object
-    if (striker.battingStyle) return striker.battingStyle;
-    // Try to find in squad
-    const playerId = striker._id || striker;
-    const squad = this.match?.squads?.team1?.concat(this.match?.squads?.team2 || []) || [];
-    const squadPlayer = squad.find((p: any) => {
-      const id = p.player?._id || p.player;
-      return id === playerId || id?.toString() === playerId?.toString();
-    });
-    return squadPlayer?.player?.battingStyle || '';
+    return this.currentBatsmenService.getStrikerBattingStyle(this.currentInnings, this.match);
   }
 
   getNonStrikerBattingStyle(): string {
-    const nonStriker = this.currentInnings?.currentBatsmen?.nonStriker;
-    if (!nonStriker) return '';
-    if (nonStriker.battingStyle) return nonStriker.battingStyle;
-    const playerId = nonStriker._id || nonStriker;
-    const squad = this.match?.squads?.team1?.concat(this.match?.squads?.team2 || []) || [];
-    const squadPlayer = squad.find((p: any) => {
-      const id = p.player?._id || p.player;
-      return id === playerId || id?.toString() === playerId?.toString();
-    });
-    return squadPlayer?.player?.battingStyle || '';
+    return this.currentBatsmenService.getNonStrikerBattingStyle(this.currentInnings, this.match);
   }
 }
