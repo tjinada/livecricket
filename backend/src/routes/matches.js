@@ -103,7 +103,8 @@ router.get('/:id', async (req, res, next) => {
       .populate('innings.battingStats.dismissal.bowler', 'name headshotPath')
       .populate('innings.battingStats.dismissal.fielder', 'name headshotPath')
       .populate('innings.bowlingStats.player', 'name headshotPath')
-      .populate('innings.fallOfWickets.player', 'name headshotPath');
+      .populate('innings.fallOfWickets.player', 'name headshotPath')
+      .populate('selectedPlayerForStats', 'name role battingStyle bowlingStyle headshotPath');
     
     if (!match) {
       return res.status(404).json({
@@ -414,9 +415,9 @@ router.post('/:id/start', auth, async (req, res, next) => {
 // PUT /api/matches/:id/display-view - Change display view (protected)
 router.put('/:id/display-view', auth, async (req, res, next) => {
   try {
-    const { view } = req.body;
+    const { view, selectedPlayer } = req.body;
     
-    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary'];
+    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats'];
     if (!validViews.includes(view)) {
       return res.status(400).json({
         success: false,
@@ -424,11 +425,19 @@ router.put('/:id/display-view', auth, async (req, res, next) => {
       });
     }
     
+    // Build update object
+    const updateData = { displayView: view };
+    
+    // If switching to player-stats view and a player is provided, set it
+    if (view === 'player-stats' && selectedPlayer) {
+      updateData.selectedPlayerForStats = selectedPlayer;
+    }
+    
     const match = await Match.findByIdAndUpdate(
       req.params.id,
-      { displayView: view },
+      updateData,
       { new: true }
-    );
+    ).populate('selectedPlayerForStats', 'name role battingStyle bowlingStyle headshotPath');
     
     if (!match) {
       return res.status(404).json({
@@ -437,12 +446,58 @@ router.put('/:id/display-view', auth, async (req, res, next) => {
       });
     }
     
-    // Broadcast view change to SSE clients
-    broadcastToMatch(req.params.id, 'view-change', { view });
+    // Broadcast view change to SSE clients (include selected player for player-stats view)
+    const broadcastData = { view };
+    if (view === 'player-stats' && match.selectedPlayerForStats) {
+      broadcastData.selectedPlayer = match.selectedPlayerForStats;
+    }
+    broadcastToMatch(req.params.id, 'view-change', broadcastData);
     
     res.json({
       success: true,
-      data: { displayView: match.displayView }
+      data: { 
+        displayView: match.displayView,
+        selectedPlayerForStats: match.selectedPlayerForStats
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/matches/:id/selected-player - Set selected player for player-stats view (protected)
+router.put('/:id/selected-player', auth, async (req, res, next) => {
+  try {
+    const { playerId } = req.body;
+    
+    if (!playerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Player ID is required'
+      });
+    }
+    
+    const match = await Match.findByIdAndUpdate(
+      req.params.id,
+      { selectedPlayerForStats: playerId },
+      { new: true }
+    ).populate('selectedPlayerForStats', 'name role battingStyle bowlingStyle headshotPath');
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+    
+    // Broadcast selected player change to SSE clients
+    broadcastToMatch(req.params.id, 'player-stats-change', { 
+      selectedPlayer: match.selectedPlayerForStats 
+    });
+    
+    res.json({
+      success: true,
+      data: { selectedPlayerForStats: match.selectedPlayerForStats }
     });
   } catch (error) {
     next(error);

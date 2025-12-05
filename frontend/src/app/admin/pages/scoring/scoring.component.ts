@@ -8,7 +8,7 @@ import { PlayerService } from '../../../core/services/player.service';
 import { Player } from '../../../core/models';
 import { BackgroundSettingsComponent, BackgroundSettings } from '../../components/background-settings/background-settings.component';
 
-type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute';
+type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats';
 
 @Component({
   selector: 'app-scoring',
@@ -126,7 +126,9 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <option value="run-rate-graph">Run Rate Graph</option>
               <option value="current-partnership">Current Partnership</option>
               <option value="final-match-summary">Final Match Summary</option>
+              <option value="player-stats">Player Stats</option>
             </select>
+
           </div>
 
           <!-- Display Overlays for Completed Match -->
@@ -701,6 +703,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   <option value="run-rate-graph">Run Rate Graph</option>
                   <option value="current-partnership">Current Partnership</option>
                   <option value="final-match-summary">Final Match Summary</option>
+                  <option value="player-stats">Player Stats</option>
                 </select>
               </div>
 
@@ -1242,6 +1245,71 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
           (close)="showBackgroundSettings = false"
           (saved)="saveBackgroundSettings($event)"
         ></app-background-settings>
+      }
+
+      <!-- Player Stats Selection Modal -->
+      @if (activeModal === 'playerStats') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">Select Player for Stats Display</h3>
+            </div>
+            <div class="p-4">
+              <p class="text-sm text-gray-500 mb-4">Choose a player to display their stats on the display screen</p>
+              
+              <!-- Team 1 Players -->
+              <div class="mb-4">
+                <h4 class="font-medium text-gray-700 mb-2">{{ match?.team1?.name }}</h4>
+                <div class="grid grid-cols-2 gap-2">
+                  @for (player of getAllTeam1Players(); track getPlayerId(player)) {
+                    <button 
+                      (click)="selectPlayerForStats(getPlayerId(player))"
+                      class="p-2 rounded-lg border text-left text-sm hover:bg-gray-50"
+                      [class.border-blue-500]="selectedPlayerForStats === getPlayerId(player)"
+                      [class.bg-blue-50]="selectedPlayerForStats === getPlayerId(player)"
+                    >
+                      <span class="font-medium">{{ getSquadPlayerName(player) }}</span>
+                      <span class="text-xs text-gray-500 block">{{ getPlayerRole(player) }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+              
+              <!-- Team 2 Players -->
+              <div>
+                <h4 class="font-medium text-gray-700 mb-2">{{ match?.team2?.name }}</h4>
+                <div class="grid grid-cols-2 gap-2">
+                  @for (player of getAllTeam2Players(); track getPlayerId(player)) {
+                    <button 
+                      (click)="selectPlayerForStats(getPlayerId(player))"
+                      class="p-2 rounded-lg border text-left text-sm hover:bg-gray-50"
+                      [class.border-blue-500]="selectedPlayerForStats === getPlayerId(player)"
+                      [class.bg-blue-50]="selectedPlayerForStats === getPlayerId(player)"
+                    >
+                      <span class="font-medium">{{ getSquadPlayerName(player) }}</span>
+                      <span class="text-xs text-gray-500 block">{{ getPlayerRole(player) }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="p-4 border-t flex justify-end gap-3">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button 
+                (click)="confirmPlayerStatsSelection()"
+                [disabled]="processing || !selectedPlayerForStats"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {{ processing ? 'Saving...' : 'Show Player Stats' }}
+              </button>
+            </div>
+          </div>
+        </div>
       }
     </div>
   `
@@ -2291,6 +2359,12 @@ export class ScoringComponent implements OnInit, OnDestroy {
   }
 
   changeDisplayView() {
+    // If player-stats is selected, open the player selection modal instead of changing view directly
+    if (this.displayView === 'player-stats') {
+      this.openPlayerStatsModal();
+      return;
+    }
+    
     this.matchService.setDisplayView(this.matchId, this.displayView).subscribe({
       error: (err) => {
         this.error = err.error?.message || 'Failed to change display view';
@@ -2389,5 +2463,63 @@ export class ScoringComponent implements OnInit, OnDestroy {
   buildPlayerImageUrl(headshotPath: string | undefined): string | null {
     if (!headshotPath) return null;
     return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${headshotPath}`;
+  }
+
+  // Player Stats View Selection
+  selectedPlayerForStats: string = '';
+
+  openPlayerStatsModal(): void {
+    // Pre-select the current player if already set
+    this.selectedPlayerForStats = this.match?.selectedPlayerForStats?._id || 
+                                   this.match?.selectedPlayerForStats || '';
+    this.activeModal = 'playerStats';
+  }
+
+  selectPlayerForStats(playerId: string): void {
+    this.selectedPlayerForStats = playerId;
+  }
+
+  confirmPlayerStatsSelection(): void {
+    if (!this.selectedPlayerForStats) return;
+
+    this.processing = true;
+    this.error = '';
+
+    // Set display view to player-stats and set the selected player
+    this.matchService.setDisplayView(this.matchId, 'player-stats', this.selectedPlayerForStats).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.displayView = 'player-stats';
+          this.closeModal();
+        } else {
+          this.error = response.message || 'Failed to set player stats view';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to set player stats view';
+        this.processing = false;
+      }
+    });
+  }
+
+  getAllTeam1Players(): any[] {
+    return this.match?.squads?.team1?.filter((p: any) => p.isPlayingXI) || [];
+  }
+
+  getAllTeam2Players(): any[] {
+    return this.match?.squads?.team2?.filter((p: any) => p.isPlayingXI) || [];
+  }
+
+  getPlayerRole(squadPlayer: any): string {
+    const role = squadPlayer?.player?.role;
+    if (!role) return '';
+    const roleMap: Record<string, string> = {
+      'batsman': 'Batsman',
+      'bowler': 'Bowler',
+      'all-rounder': 'All-Rounder',
+      'wicket-keeper': 'WK'
+    };
+    return roleMap[role] || role;
   }
 }

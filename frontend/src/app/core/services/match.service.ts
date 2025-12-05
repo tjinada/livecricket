@@ -27,6 +27,7 @@ export interface Match {
     winType: 'runs' | 'wickets';
   };
   displayView: string;
+  selectedPlayerForStats?: any;
   backgrounds?: {
     useTeamBackground: boolean;
     views?: {
@@ -110,8 +111,16 @@ export class MatchService {
     return this.http.post<ApiResponse<Match>>(`${this.apiUrl}/${id}/start`, data);
   }
 
-  setDisplayView(id: string, view: string): Observable<ApiResponse<any>> {
-    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/display-view`, { view });
+  setDisplayView(id: string, view: string, selectedPlayer?: string): Observable<ApiResponse<any>> {
+    const body: { view: string; selectedPlayer?: string } = { view };
+    if (selectedPlayer) {
+      body.selectedPlayer = selectedPlayer;
+    }
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/display-view`, body);
+  }
+
+  setSelectedPlayerForStats(id: string, playerId: string): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/selected-player`, { playerId });
   }
 
   updateBackgrounds(id: string, backgrounds: {

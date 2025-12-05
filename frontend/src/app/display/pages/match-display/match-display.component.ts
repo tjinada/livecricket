@@ -22,7 +22,8 @@ import {
   LiveMatchSummaryViewComponent,
   FinalMatchSummaryViewComponent,
   RunRateGraphViewComponent,
-  CurrentPartnershipViewComponent
+  CurrentPartnershipViewComponent,
+  PlayerStatsViewComponent
 } from './components';
 
 @Component({
@@ -36,7 +37,8 @@ import {
     LiveMatchSummaryViewComponent,
     FinalMatchSummaryViewComponent,
     RunRateGraphViewComponent,
-    CurrentPartnershipViewComponent
+    CurrentPartnershipViewComponent,
+    PlayerStatsViewComponent
   ],
   templateUrl: './match-display.component.html'
 })
@@ -248,6 +250,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       case 'background-change':
       case 'squad-change':
       case 'zoom-change':
+      case 'player-stats-change':
         this.reloadMatch();
         break;
       case 'heartbeat':
@@ -322,7 +325,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       'live-match-summary': 'Live Match Summary',
       'run-rate-graph': 'Run Rate Graph',
       'current-partnership': 'Current Partnership',
-      'final-match-summary': 'Final Match Summary'
+      'final-match-summary': 'Final Match Summary',
+      'player-stats': 'Player Stats'
     };
     return names[this.displayView] || 'Live Score';
   }
@@ -880,5 +884,54 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       runs: bowler.runs || 0,
       oversDisplay: this.getBowlerOversDisplay(bowler)
     }));
+  }
+
+  // ==================== PLAYER STATS VIEW HELPERS ====================
+
+  /**
+   * Get the selected player for player-stats view
+   */
+  getSelectedPlayer(): any {
+    return this.match?.selectedPlayerForStats || null;
+  }
+
+  /**
+   * Get batting stats for the selected player from all innings
+   */
+  getSelectedPlayerBattingStats(): any {
+    const selectedPlayer = this.getSelectedPlayer();
+    if (!selectedPlayer || !this.match?.innings) return null;
+
+    const playerId = selectedPlayer._id || selectedPlayer;
+
+    // Search through all innings for batting stats
+    for (const innings of this.match.innings) {
+      const stats = innings.battingStats?.find((bs: any) => {
+        const bsPlayerId = bs.player?._id || bs.player;
+        return bsPlayerId === playerId || bsPlayerId?.toString() === playerId?.toString();
+      });
+      if (stats) return stats;
+    }
+    return null;
+  }
+
+  /**
+   * Get bowling stats for the selected player from all innings
+   */
+  getSelectedPlayerBowlingStats(): any {
+    const selectedPlayer = this.getSelectedPlayer();
+    if (!selectedPlayer || !this.match?.innings) return null;
+
+    const playerId = selectedPlayer._id || selectedPlayer;
+
+    // Search through all innings for bowling stats
+    for (const innings of this.match.innings) {
+      const stats = innings.bowlingStats?.find((bs: any) => {
+        const bsPlayerId = bs.player?._id || bs.player;
+        return bsPlayerId === playerId || bsPlayerId?.toString() === playerId?.toString();
+      });
+      if (stats) return stats;
+    }
+    return null;
   }
 }

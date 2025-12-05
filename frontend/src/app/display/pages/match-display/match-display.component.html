@@ -285,6 +285,25 @@
         [runsNeeded]="getRunsNeeded()"
         [ballsRemaining]="getBallsRemaining()"
       ></app-current-partnership-view>
+
+      <!-- ==================== PLAYER STATS VIEW (Sub-Component) ==================== -->
+      <app-player-stats-view
+        *ngIf="displayView === 'player-stats'"
+        class="flex-1 flex flex-col min-h-0"
+        [format]="match.format"
+        [inningsLabel]="getInningsLabel()"
+        [battingTeamName]="getBattingTeamName()"
+        [bowlingTeamName]="getBowlingTeamName()"
+        [totalRuns]="currentInnings?.totalRuns || 0"
+        [totalWickets]="currentInnings?.totalWickets || 0"
+        [oversDisplay]="getOversDisplay()"
+        [selectedPlayer]="getSelectedPlayer()"
+        [playerBattingStats]="getSelectedPlayerBattingStats()"
+        [playerBowlingStats]="getSelectedPlayerBowlingStats()"
+        [matchStatus]="match.status"
+        [team1Name]="match.team1?.name"
+        [team2Name]="match.team2?.name"
+      ></app-player-stats-view>
       
       <!-- View Indicator -->
       <div class="fixed bottom-4 right-4 bg-black/50 px-3 py-1 rounded text-xs text-gray-400 backdrop-blur-sm">

@@ -21,6 +21,7 @@ export type SSEEventType =
   | 'background-change'
   | 'squad-change'
   | 'zoom-change'
+  | 'player-stats-change'
   | 'six'
   | 'four'
   | 'wicket'
@@ -146,7 +147,8 @@ export class MatchDisplaySSEService implements OnDestroy {
     const standardEvents: SSEEventType[] = [
       'score-update', 'over-complete', 'innings-complete',
       'innings-start', 'match-complete', 'batsmen-change', 
-      'bowler-change', 'background-change', 'squad-change', 'zoom-change'
+      'bowler-change', 'background-change', 'squad-change', 'zoom-change',
+      'player-stats-change'
     ];
     
     standardEvents.forEach(eventName => {

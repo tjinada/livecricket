@@ -16,10 +16,11 @@ export interface BackgroundSettings {
     'run-rate-graph'?: ViewBackground;
     'current-partnership'?: ViewBackground;
     'final-match-summary'?: ViewBackground;
+    'player-stats'?: ViewBackground;
   };
 }
 
-type ViewKey = 'live-score' | 'live-match-summary' | 'run-rate-graph' | 'current-partnership' | 'final-match-summary';
+type ViewKey = 'live-score' | 'live-match-summary' | 'run-rate-graph' | 'current-partnership' | 'final-match-summary' | 'player-stats';
 
 @Component({
   selector: 'app-background-settings',
@@ -265,14 +266,15 @@ export class BackgroundSettingsComponent implements OnInit {
     views: {}
   };
 
-  viewKeys: ViewKey[] = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary'];
+  viewKeys: ViewKey[] = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats'];
 
   viewSettings: Record<ViewKey, ViewBackground> = {
     'live-score': { type: 'none', url: null },
     'live-match-summary': { type: 'none', url: null },
     'run-rate-graph': { type: 'none', url: null },
     'current-partnership': { type: 'none', url: null },
-    'final-match-summary': { type: 'none', url: null }
+    'final-match-summary': { type: 'none', url: null },
+    'player-stats': { type: 'none', url: null }
   };
 
   uploadProgress: Record<ViewKey, UploadProgress | null> = {
@@ -280,7 +282,8 @@ export class BackgroundSettingsComponent implements OnInit {
     'live-match-summary': null,
     'run-rate-graph': null,
     'current-partnership': null,
-    'final-match-summary': null
+    'final-match-summary': null,
+    'player-stats': null
   };
 
   constructor(private uploadService: UploadService) {}
@@ -305,7 +308,8 @@ export class BackgroundSettingsComponent implements OnInit {
       'live-match-summary': 'Live Match Summary',
       'run-rate-graph': 'Run Rate Graph',
       'current-partnership': 'Current Partnership',
-      'final-match-summary': 'Final Match Summary'
+      'final-match-summary': 'Final Match Summary',
+      'player-stats': 'Player Stats'
     };
     return labels[view];
   }
@@ -316,7 +320,8 @@ export class BackgroundSettingsComponent implements OnInit {
       'live-match-summary': 'Full batting and bowling scorecard',
       'run-rate-graph': 'Run rate chart and projections',
       'current-partnership': 'Current batsmen partnership details',
-      'final-match-summary': 'Both innings summary side by side'
+      'final-match-summary': 'Both innings summary side by side',
+      'player-stats': 'Individual player statistics display'
     };
     return descriptions[view];
   }

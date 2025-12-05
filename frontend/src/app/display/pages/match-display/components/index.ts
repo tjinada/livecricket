@@ -6,3 +6,4 @@ export * from './live-match-summary-view.component';
 export * from './final-match-summary-view.component';
 export * from './run-rate-graph-view.component';
 export * from './current-partnership-view.component';
+export * from './player-stats-view.component';
