@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Router } from '@angular/router';
 import { MatchService, Match } from '../../../core/services/match.service';
 import { CountryService, PlayerService } from '../../../core/services';
@@ -8,10 +9,37 @@ import { Country, Player } from '../../../core/models';
 
 type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
 
+interface SquadPlayer {
+  player: string;
+  playerData?: Player;
+  isPlayingXI: boolean;
+  battingOrder: number;
+}
+
 @Component({
   selector: 'app-matches',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DragDropModule],
+  styles: [`
+    .cdk-drag-preview {
+      box-sizing: border-box;
+      border-radius: 4px;
+      box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2),
+                  0 8px 10px 1px rgba(0, 0, 0, 0.14),
+                  0 3px 14px 2px rgba(0, 0, 0, 0.12);
+      background: white;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .cdk-drag-animating {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    }
+    .cdk-drop-list-dragging .cdk-drag {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    }
+  `],
   template: `
     <div>
       <!-- Match List View -->
@@ -116,7 +144,7 @@ type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
                       </span>
                     </div>
                     <p class="text-gray-500 text-sm">
-                      {{ match.format }} • {{ match.venue }} • {{ match.date | date:'medium' }}
+                      {{ match.format }} • {{ match.venue }} • {{ match.date | date:'mediumDate' }}
                     </p>
                     @if (match.toss && match.toss.winner) {
                       <p class="text-gray-500 text-sm mt-1">
@@ -158,6 +186,13 @@ type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
                           Start Match
                         </button>
                       }
+                      <button 
+                        (click)="setupSquad(match)"
+                        class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                        [class.hidden]="!hasSquad(match)"
+                      >
+                        Edit Squad
+                      </button>
                       <button 
                         (click)="confirmDelete(match)"
                         class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
@@ -269,9 +304,9 @@ type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
               </div>
 
               <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
                 <input 
-                  type="datetime-local"
+                  type="date"
                   [(ngModel)]="matchForm.date"
                   name="date"
                   required
@@ -306,7 +341,7 @@ type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
         </div>
       }
 
-      <!-- Squad Selection -->
+      <!-- Squad Selection - Two Panel Layout -->
       @if (currentStep === 'squad' && selectedMatch) {
         <div>
           <div class="flex items-center gap-4 mb-6">
@@ -318,121 +353,237 @@ type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
             </h2>
           </div>
 
-          <div class="bg-white rounded-lg shadow p-4 mb-4">
-            <p class="text-sm text-gray-600">
-              💡 <strong>Tip:</strong> Enter batting order (1-11) for each player. Leave empty for players not in Playing XI.
-            </p>
-          </div>
-
           <div class="grid grid-cols-2 gap-6">
-            <!-- Team 1 Squad -->
+            <!-- Team 1 -->
             <div class="bg-white rounded-lg shadow">
               <div class="px-4 py-3 border-b bg-gray-50 rounded-t-lg">
-                <h3 class="text-lg font-semibold text-gray-800 flex items-center justify-between">
-                  <span>{{ selectedMatch.team1?.name }}</span>
-                  <span class="text-sm font-medium px-2 py-1 rounded"
-                    [class.bg-green-100]="getPlayingXICount('team1') === 11"
-                    [class.text-green-700]="getPlayingXICount('team1') === 11"
-                    [class.bg-yellow-100]="getPlayingXICount('team1') !== 11"
-                    [class.text-yellow-700]="getPlayingXICount('team1') !== 11">
-                    {{ getPlayingXICount('team1') }}/11
-                  </span>
-                </h3>
+                <h3 class="text-lg font-semibold text-gray-800">{{ selectedMatch.team1?.name }}</h3>
               </div>
               
-              @if (team1Players.length === 0) {
-                <div class="p-4">
-                  <p class="text-gray-500 text-sm">No players found for this country</p>
-                </div>
-              } @else {
-                <div class="divide-y max-h-[calc(100vh-320px)] overflow-y-auto">
-                  @for (player of team1Players; track player._id) {
-                    <div class="flex items-center gap-3 px-4 py-2 hover:bg-gray-50"
-                      [class.bg-green-50]="isInSquad('team1', player._id)">
-                      <input 
-                        type="number"
-                        [value]="getBattingOrder('team1', player._id) || null"
-                        (input)="onBattingOrderChange('team1', player._id, $event)"
-                        min="1"
-                        max="11"
-                        class="w-14 px-2 py-1 text-center border rounded text-sm font-medium"
-                        [class.border-green-500]="isInSquad('team1', player._id)"
-                        [class.bg-green-100]="isInSquad('team1', player._id)"
-                        placeholder="-"
+              <div class="grid grid-cols-2 divide-x" style="height: calc(100vh - 280px);">
+                <!-- Available Players -->
+                <div class="flex flex-col">
+                  <div class="px-3 py-2 border-b bg-gray-50">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-sm font-medium text-gray-600">Available</span>
+                      <select 
+                        [(ngModel)]="team1RoleFilter"
+                        class="text-xs px-2 py-1 border rounded bg-white"
                       >
-                      <div class="flex-1 min-w-0">
-                        <span class="font-medium text-gray-900">{{ player.name }}</span>
+                        <option value="">All Roles</option>
+                        <option value="batsman">Batsman</option>
+                        <option value="bowler">Bowler</option>
+                        <option value="all-rounder">All Rounder</option>
+                        <option value="wicket-keeper">Wicket Keeper</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="flex-1 overflow-y-auto">
+                    @for (player of getAvailablePlayers('team1'); track player._id) {
+                      <div 
+                        class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                        (click)="addToSquad('team1', player)"
+                      >
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-gray-900 truncate">{{ player.name }}</div>
+                          <div class="text-xs text-gray-500">{{ formatRole(player.role) }}</div>
+                        </div>
+                        <button 
+                          class="w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-600 hover:bg-green-200 flex-shrink-0"
+                          [disabled]="getPlayingXICount('team1') >= 11"
+                        >
+                          +
+                        </button>
                       </div>
-                      <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">
-                        {{ formatRole(player.role) }}
+                    }
+                    @if (getAvailablePlayers('team1').length === 0) {
+                      <div class="p-4 text-center text-gray-400 text-sm">
+                        @if (team1Players.length === 0) {
+                          No players found
+                        } @else {
+                          All players selected
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Playing XI -->
+                <div class="flex flex-col">
+                  <div class="px-3 py-2 border-b bg-green-50">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium text-green-700">Playing XI</span>
+                      <span 
+                        class="text-xs font-bold px-2 py-0.5 rounded-full"
+                        [class.bg-green-200]="getPlayingXICount('team1') === 11"
+                        [class.text-green-800]="getPlayingXICount('team1') === 11"
+                        [class.bg-yellow-200]="getPlayingXICount('team1') !== 11"
+                        [class.text-yellow-800]="getPlayingXICount('team1') !== 11"
+                      >
+                        {{ getPlayingXICount('team1') }}/11
                       </span>
                     </div>
-                  }
+                  </div>
+                  <div 
+                    class="flex-1 overflow-y-auto"
+                    cdkDropList
+                    [cdkDropListData]="squadForm.team1"
+                    (cdkDropListDropped)="dropPlayer('team1', $event)"
+                  >
+                    @for (squadPlayer of getPlayingXI('team1'); track squadPlayer.player; let i = $index) {
+                      <div 
+                        class="flex items-center gap-1 px-2 py-1.5 border-b border-gray-100 bg-green-50/50 cursor-grab active:cursor-grabbing"
+                        cdkDrag
+                        [cdkDragData]="squadPlayer"
+                      >
+                        <div class="cdk-drag-placeholder" *cdkDragPlaceholder>
+                          <div class="h-10 bg-green-200 border-2 border-dashed border-green-400 rounded"></div>
+                        </div>
+                        <span class="w-5 h-5 flex items-center justify-center text-xs font-bold text-green-700 bg-green-200 rounded">
+                          {{ squadPlayer.battingOrder }}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-gray-900 truncate">{{ squadPlayer.playerData?.name }}</div>
+                          <div class="text-xs text-gray-500">{{ formatRole(squadPlayer.playerData?.role || '') }}</div>
+                        </div>
+                        <div class="flex items-center gap-0.5">
+                          <span class="text-gray-300 mr-1">⋮⋮</span>
+                          <button 
+                            class="w-5 h-5 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-100 rounded"
+                            (click)="removeFromSquad('team1', squadPlayer.player)"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    }
+                    @if (getPlayingXICount('team1') === 0) {
+                      <div class="p-4 text-center text-gray-400 text-sm">
+                        Click + to add players
+                      </div>
+                    }
+                  </div>
                 </div>
-              }
+              </div>
             </div>
 
-            <!-- Team 2 Squad -->
+            <!-- Team 2 -->
             <div class="bg-white rounded-lg shadow">
               <div class="px-4 py-3 border-b bg-gray-50 rounded-t-lg">
-                <h3 class="text-lg font-semibold text-gray-800 flex items-center justify-between">
-                  <span>{{ selectedMatch.team2?.name }}</span>
-                  <span class="text-sm font-medium px-2 py-1 rounded"
-                    [class.bg-green-100]="getPlayingXICount('team2') === 11"
-                    [class.text-green-700]="getPlayingXICount('team2') === 11"
-                    [class.bg-yellow-100]="getPlayingXICount('team2') !== 11"
-                    [class.text-yellow-700]="getPlayingXICount('team2') !== 11">
-                    {{ getPlayingXICount('team2') }}/11
-                  </span>
-                </h3>
+                <h3 class="text-lg font-semibold text-gray-800">{{ selectedMatch.team2?.name }}</h3>
               </div>
               
-              @if (team2Players.length === 0) {
-                <div class="p-4">
-                  <p class="text-gray-500 text-sm">No players found for this country</p>
-                </div>
-              } @else {
-                <div class="divide-y max-h-[calc(100vh-320px)] overflow-y-auto">
-                  @for (player of team2Players; track player._id) {
-                    <div class="flex items-center gap-3 px-4 py-2 hover:bg-gray-50"
-                      [class.bg-green-50]="isInSquad('team2', player._id)">
-                      <input 
-                        type="number"
-                        [value]="getBattingOrder('team2', player._id) || null"
-                        (input)="onBattingOrderChange('team2', player._id, $event)"
-                        min="1"
-                        max="11"
-                        class="w-14 px-2 py-1 text-center border rounded text-sm font-medium"
-                        [class.border-green-500]="isInSquad('team2', player._id)"
-                        [class.bg-green-100]="isInSquad('team2', player._id)"
-                        placeholder="-"
+              <div class="grid grid-cols-2 divide-x" style="height: calc(100vh - 280px);">
+                <!-- Available Players -->
+                <div class="flex flex-col">
+                  <div class="px-3 py-2 border-b bg-gray-50">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-sm font-medium text-gray-600">Available</span>
+                      <select 
+                        [(ngModel)]="team2RoleFilter"
+                        class="text-xs px-2 py-1 border rounded bg-white"
                       >
-                      <div class="flex-1 min-w-0">
-                        <span class="font-medium text-gray-900">{{ player.name }}</span>
+                        <option value="">All Roles</option>
+                        <option value="batsman">Batsman</option>
+                        <option value="bowler">Bowler</option>
+                        <option value="all-rounder">All Rounder</option>
+                        <option value="wicket-keeper">Wicket Keeper</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="flex-1 overflow-y-auto">
+                    @for (player of getAvailablePlayers('team2'); track player._id) {
+                      <div 
+                        class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                        (click)="addToSquad('team2', player)"
+                      >
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-gray-900 truncate">{{ player.name }}</div>
+                          <div class="text-xs text-gray-500">{{ formatRole(player.role) }}</div>
+                        </div>
+                        <button 
+                          class="w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-600 hover:bg-green-200 flex-shrink-0"
+                          [disabled]="getPlayingXICount('team2') >= 11"
+                        >
+                          +
+                        </button>
                       </div>
-                      <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">
-                        {{ formatRole(player.role) }}
+                    }
+                    @if (getAvailablePlayers('team2').length === 0) {
+                      <div class="p-4 text-center text-gray-400 text-sm">
+                        @if (team2Players.length === 0) {
+                          No players found
+                        } @else {
+                          All players selected
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Playing XI -->
+                <div class="flex flex-col">
+                  <div class="px-3 py-2 border-b bg-green-50">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium text-green-700">Playing XI</span>
+                      <span 
+                        class="text-xs font-bold px-2 py-0.5 rounded-full"
+                        [class.bg-green-200]="getPlayingXICount('team2') === 11"
+                        [class.text-green-800]="getPlayingXICount('team2') === 11"
+                        [class.bg-yellow-200]="getPlayingXICount('team2') !== 11"
+                        [class.text-yellow-800]="getPlayingXICount('team2') !== 11"
+                      >
+                        {{ getPlayingXICount('team2') }}/11
                       </span>
                     </div>
-                  }
+                  </div>
+                  <div 
+                    class="flex-1 overflow-y-auto"
+                    cdkDropList
+                    [cdkDropListData]="squadForm.team2"
+                    (cdkDropListDropped)="dropPlayer('team2', $event)"
+                  >
+                    @for (squadPlayer of getPlayingXI('team2'); track squadPlayer.player; let i = $index) {
+                      <div 
+                        class="flex items-center gap-1 px-2 py-1.5 border-b border-gray-100 bg-green-50/50 cursor-grab active:cursor-grabbing"
+                        cdkDrag
+                        [cdkDragData]="squadPlayer"
+                      >
+                        <div class="cdk-drag-placeholder" *cdkDragPlaceholder>
+                          <div class="h-10 bg-green-200 border-2 border-dashed border-green-400 rounded"></div>
+                        </div>
+                        <span class="w-5 h-5 flex items-center justify-center text-xs font-bold text-green-700 bg-green-200 rounded">
+                          {{ squadPlayer.battingOrder }}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-sm font-medium text-gray-900 truncate">{{ squadPlayer.playerData?.name }}</div>
+                          <div class="text-xs text-gray-500">{{ formatRole(squadPlayer.playerData?.role || '') }}</div>
+                        </div>
+                        <div class="flex items-center gap-0.5">
+                          <span class="text-gray-300 mr-1">⋮⋮</span>
+                          <button 
+                            class="w-5 h-5 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-100 rounded"
+                            (click)="removeFromSquad('team2', squadPlayer.player)"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    }
+                    @if (getPlayingXICount('team2') === 0) {
+                      <div class="p-4 text-center text-gray-400 text-sm">
+                        Click + to add players
+                      </div>
+                    }
+                  </div>
                 </div>
-              }
+              </div>
             </div>
           </div>
 
           @if (error) {
             <div class="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
               {{ error }}
-            </div>
-          }
-
-          @if (squadValidationErrors.length > 0) {
-            <div class="mt-4 p-3 bg-yellow-50 text-yellow-700 rounded-lg text-sm">
-              <ul class="list-disc list-inside">
-                @for (err of squadValidationErrors; track err) {
-                  <li>{{ err }}</li>
-                }
-              </ul>
             </div>
           }
 
@@ -445,7 +596,7 @@ type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
             </button>
             <button 
               (click)="saveSquad()"
-              [disabled]="saving || getPlayingXICount('team1') !== 11 || getPlayingXICount('team2') !== 11 || squadValidationErrors.length > 0"
+              [disabled]="saving || getPlayingXICount('team1') !== 11 || getPlayingXICount('team2') !== 11"
               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
             >
               {{ saving ? 'Saving...' : 'Save Squads' }}
@@ -707,11 +858,12 @@ export class MatchesComponent implements OnInit {
   selectedMatch: Match | null = null;
   team1Players: Player[] = [];
   team2Players: Player[] = [];
+  team1RoleFilter = '';
+  team2RoleFilter = '';
   squadForm: {
-    team1: { player: string; isPlayingXI: boolean; battingOrder: number }[];
-    team2: { player: string; isPlayingXI: boolean; battingOrder: number }[];
+    team1: SquadPlayer[];
+    team2: SquadPlayer[];
   } = { team1: [], team2: [] };
-  squadValidationErrors: string[] = [];
 
   // Toss Form
   tossForm = {
@@ -822,24 +974,15 @@ export class MatchesComponent implements OnInit {
     });
   }
 
-  // Squad Management
+  // Squad Management - Two Panel
   setupSquad(match: Match) {
     this.selectedMatch = match;
     this.error = '';
+    this.team1RoleFilter = '';
+    this.team2RoleFilter = '';
     
     // Initialize squad form with existing squad or empty
-    this.squadForm = {
-      team1: match.squads?.team1?.map(p => ({
-        player: p.player._id || p.player,
-        isPlayingXI: p.isPlayingXI,
-        battingOrder: p.battingOrder || 0
-      })) || [],
-      team2: match.squads?.team2?.map(p => ({
-        player: p.player._id || p.player,
-        isPlayingXI: p.isPlayingXI,
-        battingOrder: p.battingOrder || 0
-      })) || []
-    };
+    this.squadForm = { team1: [], team2: [] };
 
     // Load players for both teams
     const team1Id = match.team1._id || match.team1;
@@ -849,6 +992,24 @@ export class MatchesComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.team1Players = response.data;
+          // Populate existing squad with player data
+          if (match.squads?.team1) {
+            this.squadForm.team1 = match.squads.team1
+              .filter(p => p.isPlayingXI)
+              .map(p => {
+                const playerId = p.player._id || p.player;
+                const playerData = this.team1Players.find(pl => pl._id === playerId);
+                return {
+                  player: playerId,
+                  playerData: playerData || p.player,
+                  isPlayingXI: true,
+                  battingOrder: p.battingOrder || 0
+                };
+              })
+              .sort((a, b) => a.battingOrder - b.battingOrder);
+            // Reassign batting orders to be sequential
+            this.squadForm.team1.forEach((p, i) => p.battingOrder = i + 1);
+          }
         }
       }
     });
@@ -857,6 +1018,24 @@ export class MatchesComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.team2Players = response.data;
+          // Populate existing squad with player data
+          if (match.squads?.team2) {
+            this.squadForm.team2 = match.squads.team2
+              .filter(p => p.isPlayingXI)
+              .map(p => {
+                const playerId = p.player._id || p.player;
+                const playerData = this.team2Players.find(pl => pl._id === playerId);
+                return {
+                  player: playerId,
+                  playerData: playerData || p.player,
+                  isPlayingXI: true,
+                  battingOrder: p.battingOrder || 0
+                };
+              })
+              .sort((a, b) => a.battingOrder - b.battingOrder);
+            // Reassign batting orders to be sequential
+            this.squadForm.team2.forEach((p, i) => p.battingOrder = i + 1);
+          }
         }
       }
     });
@@ -864,85 +1043,67 @@ export class MatchesComponent implements OnInit {
     this.currentStep = 'squad';
   }
 
-  isInSquad(team: 'team1' | 'team2', playerId: string): boolean {
-    return this.squadForm[team].some(p => p.player === playerId && p.isPlayingXI);
+  getAvailablePlayers(team: 'team1' | 'team2'): Player[] {
+    const players = team === 'team1' ? this.team1Players : this.team2Players;
+    const roleFilter = team === 'team1' ? this.team1RoleFilter : this.team2RoleFilter;
+    const selectedIds = this.squadForm[team].map(p => p.player);
+    
+    return players.filter(p => {
+      const notSelected = !selectedIds.includes(p._id);
+      const matchesRole = !roleFilter || p.role === roleFilter;
+      return notSelected && matchesRole;
+    });
+  }
+
+  getPlayingXI(team: 'team1' | 'team2'): SquadPlayer[] {
+    return this.squadForm[team].filter(p => p.isPlayingXI).sort((a, b) => a.battingOrder - b.battingOrder);
   }
 
   getPlayingXICount(team: 'team1' | 'team2'): number {
     return this.squadForm[team].filter(p => p.isPlayingXI).length;
   }
 
-  togglePlayer(team: 'team1' | 'team2', player: Player) {
-    const index = this.squadForm[team].findIndex(p => p.player === player._id);
+  addToSquad(team: 'team1' | 'team2', player: Player) {
+    if (this.getPlayingXICount(team) >= 11) return;
     
+    const nextOrder = this.getPlayingXICount(team) + 1;
+    this.squadForm[team].push({
+      player: player._id,
+      playerData: player,
+      isPlayingXI: true,
+      battingOrder: nextOrder
+    });
+  }
+
+  removeFromSquad(team: 'team1' | 'team2', playerId: string) {
+    const index = this.squadForm[team].findIndex(p => p.player === playerId);
     if (index >= 0) {
-      // Remove from squad
       this.squadForm[team].splice(index, 1);
-    } else {
-      // Add to squad
-      const order = this.getPlayingXICount(team) + 1;
-      this.squadForm[team].push({
-        player: player._id,
-        isPlayingXI: true,
-        battingOrder: order
-      });
+      // Reorder remaining players
+      this.squadForm[team]
+        .filter(p => p.isPlayingXI)
+        .sort((a, b) => a.battingOrder - b.battingOrder)
+        .forEach((p, i) => p.battingOrder = i + 1);
     }
   }
 
-  getBattingOrder(team: 'team1' | 'team2', playerId: string): number {
-    const player = this.squadForm[team].find(p => p.player === playerId);
-    return player?.battingOrder || 0;
-  }
-
-  onBattingOrderChange(team: 'team1' | 'team2', playerId: string, event: Event) {
-    const value = parseInt((event.target as HTMLInputElement).value) || 0;
-    const existingIndex = this.squadForm[team].findIndex(p => p.player === playerId);
+  dropPlayer(team: 'team1' | 'team2', event: CdkDragDrop<SquadPlayer[]>) {
+    if (event.previousIndex === event.currentIndex) return;
     
-    if (value >= 1 && value <= 11) {
-      // Add or update player in squad
-      if (existingIndex >= 0) {
-        this.squadForm[team][existingIndex].battingOrder = value;
-        this.squadForm[team][existingIndex].isPlayingXI = true;
-      } else {
-        this.squadForm[team].push({
-          player: playerId,
-          isPlayingXI: true,
-          battingOrder: value
-        });
-      }
-    } else {
-      // Remove player from squad if value is cleared or invalid
-      if (existingIndex >= 0) {
-        this.squadForm[team].splice(existingIndex, 1);
-      }
-    }
+    // Get the playing XI sorted by batting order
+    const playingXI = this.getPlayingXI(team);
     
-    this.validateSquad();
-  }
-
-  validateSquad() {
-    this.squadValidationErrors = [];
+    // Move the item in the array
+    moveItemInArray(playingXI, event.previousIndex, event.currentIndex);
     
-    // Check for duplicate batting orders in team1
-    const team1Orders = this.squadForm.team1
-      .filter(p => p.isPlayingXI && p.battingOrder > 0)
-      .map(p => p.battingOrder);
-    const team1Duplicates = team1Orders.filter((item, index) => team1Orders.indexOf(item) !== index);
-    if (team1Duplicates.length > 0) {
-      this.squadValidationErrors.push(`${this.selectedMatch?.team1?.name}: Duplicate batting order(s): ${[...new Set(team1Duplicates)].join(', ')}`);
-    }
-    
-    // Check for duplicate batting orders in team2
-    const team2Orders = this.squadForm.team2
-      .filter(p => p.isPlayingXI && p.battingOrder > 0)
-      .map(p => p.battingOrder);
-    const team2Duplicates = team2Orders.filter((item, index) => team2Orders.indexOf(item) !== index);
-    if (team2Duplicates.length > 0) {
-      this.squadValidationErrors.push(`${this.selectedMatch?.team2?.name}: Duplicate batting order(s): ${[...new Set(team2Duplicates)].join(', ')}`);
-    }
+    // Reassign batting orders based on new positions
+    playingXI.forEach((player, index) => {
+      player.battingOrder = index + 1;
+    });
   }
 
   formatRole(role: string): string {
+    if (!role) return '';
     return role.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
 
@@ -955,9 +1116,22 @@ export class MatchesComponent implements OnInit {
     this.saving = true;
     this.error = '';
 
+    // Convert to backend format
+    const team1Data = this.squadForm.team1.map(p => ({
+      player: p.player,
+      isPlayingXI: p.isPlayingXI,
+      battingOrder: p.battingOrder
+    }));
+
+    const team2Data = this.squadForm.team2.map(p => ({
+      player: p.player,
+      isPlayingXI: p.isPlayingXI,
+      battingOrder: p.battingOrder
+    }));
+
     this.matchService.setSquad(this.selectedMatch!._id, {
-      team1: this.squadForm.team1,
-      team2: this.squadForm.team2
+      team1: team1Data,
+      team2: team2Data
     }).subscribe({
       next: (response) => {
         if (response.success) {
