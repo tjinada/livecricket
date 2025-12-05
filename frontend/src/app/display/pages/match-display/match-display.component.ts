@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { PlayerCacheService } from '../../services/player-cache.service';
 import { MatchCalculationsService, GraphDataPoint } from '../../services/match-calculations.service';
+import { TeamDisplayService } from '../../services/team-display.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1804,7 +1805,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private http: HttpClient,
     private playerCacheService: PlayerCacheService,
-    private calcService: MatchCalculationsService
+    private calcService: MatchCalculationsService,
+    private teamService: TeamDisplayService
   ) {}
 
   ngOnInit() {
@@ -1948,20 +1950,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getTeamFlagVideo(team: any): string | null {
-    if (!team) return null;
-    
-    // If team has flagVideo directly
-    if (team.flagVideo) return team.flagVideo;
-    
-    // Try to find from match teams
-    const teamId = team._id || team;
-    if (this.match?.team1?._id === teamId || this.match?.team1 === teamId) {
-      return this.match.team1?.flagVideo || null;
-    }
-    if (this.match?.team2?._id === teamId || this.match?.team2 === teamId) {
-      return this.match.team2?.flagVideo || null;
-    }
-    return null;
+    return this.teamService.getTeamFlagVideo(team, this.match);
   }
 
   buildPlayerNameCache() {
@@ -2307,65 +2296,31 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== LIVE SCORE VIEW HELPERS ====================
 
   getBattingTeamCode(): string {
-    if (!this.currentInnings?.battingTeam) return '???';
-    return this.currentInnings.battingTeam.code || this.getTeamCode(this.currentInnings.battingTeam);
+    return this.teamService.getBattingTeamCode(this.currentInnings, this.match);
   }
 
   getBattingTeamFlag(): string | null {
-    const battingTeam = this.currentInnings?.battingTeam;
-    if (!battingTeam) return null;
-    
-    // Check for flagUrl directly on team object
-    if (battingTeam.flagUrl) return battingTeam.flagUrl;
-    
-    // Try to find from match teams
-    const teamId = battingTeam._id || battingTeam;
-    if (this.match?.team1?._id === teamId || this.match?.team1 === teamId) {
-      return this.match.team1?.flagUrl || null;
-    }
-    if (this.match?.team2?._id === teamId || this.match?.team2 === teamId) {
-      return this.match.team2?.flagUrl || null;
-    }
-    return null;
+    return this.teamService.getBattingTeamFlag(this.currentInnings, this.match);
   }
 
   getBowlingTeamCode(): string {
-    if (!this.currentInnings?.bowlingTeam) return '???';
-    return this.currentInnings.bowlingTeam.code || this.getTeamCode(this.currentInnings.bowlingTeam);
+    return this.teamService.getBowlingTeamCode(this.currentInnings, this.match);
   }
 
   getTeamCode(team: any): string {
-    if (!team) return '???';
-    if (team.code) return team.code;
-    const teamId = team._id || team;
-    if (this.match.team1?._id === teamId || this.match.team1 === teamId) {
-      return this.match.team1?.code || 'T1';
-    }
-    if (this.match.team2?._id === teamId || this.match.team2 === teamId) {
-      return this.match.team2?.code || 'T2';
-    }
-    return '???';
+    return this.teamService.getTeamCode(team, this.match);
   }
 
   getTeamName(team: any): string {
-    if (!team) return 'Unknown';
-    if (team.name) return team.name;
-    const teamId = team._id || team;
-    if (this.match.team1?._id === teamId || this.match.team1 === teamId) {
-      return this.match.team1?.name || 'Team 1';
-    }
-    if (this.match.team2?._id === teamId || this.match.team2 === teamId) {
-      return this.match.team2?.name || 'Team 2';
-    }
-    return 'Unknown';
+    return this.teamService.getTeamName(team, this.match);
   }
 
   getBattingTeamName(): string {
-    return this.getTeamName(this.currentInnings?.battingTeam);
+    return this.teamService.getBattingTeamName(this.currentInnings, this.match);
   }
 
   getBowlingTeamName(): string {
-    return this.getTeamName(this.currentInnings?.bowlingTeam);
+    return this.teamService.getBowlingTeamName(this.currentInnings, this.match);
   }
 
   getStrikerName(): string {
@@ -2587,8 +2542,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== PLAYER STATS VIEW HELPERS ====================
 
   getInningsLabel(): string {
-    const idx = this.match?.currentInnings || 0;
-    return idx === 0 ? '1st Innings' : '2nd Innings';
+    return this.teamService.getInningsLabel(this.match?.currentInnings || 0);
   }
 
   getBattingStats(): any[] {
@@ -2787,24 +2741,21 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getSecondBattingTeamName(): string {
-    if (!this.match?.innings?.[1]) {
-      return this.getTeamName(this.match?.innings?.[0]?.bowlingTeam);
-    }
-    return this.getTeamName(this.match.innings[1].battingTeam);
+    return this.teamService.getSecondBattingTeamName(this.match);
   }
 
   getFirstBattingTeamName(): string {
-    return this.getTeamName(this.match?.innings?.[0]?.battingTeam);
+    return this.teamService.getFirstBattingTeamName(this.match);
   }
 
   // ==================== PROJECTIONS VIEW HELPERS ====================
 
   getFirstInningsTeamName(): string {
-    return this.getTeamName(this.match?.innings?.[0]?.battingTeam);
+    return this.teamService.getFirstInningsTeamName(this.match);
   }
 
   getSecondInningsTeamName(): string {
-    return this.getTeamName(this.match?.innings?.[1]?.battingTeam);
+    return this.teamService.getSecondInningsTeamName(this.match);
   }
 
   getOversAxisLabels(): number[] {
@@ -2905,16 +2856,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   // Get team flag for display
   getTeamFlag(team: any): string | null {
-    if (!team) return null;
-    if (team.flagUrl) return team.flagUrl;
-    const teamId = team._id || team;
-    if (this.match?.team1?._id === teamId || this.match?.team1 === teamId) {
-      return this.match.team1?.flagUrl || null;
-    }
-    if (this.match?.team2?._id === teamId || this.match?.team2 === teamId) {
-      return this.match.team2?.flagUrl || null;
-    }
-    return null;
+    return this.teamService.getTeamFlag(team, this.match);
   }
 
   // Get full batting card for an innings (all 11 players with DNB status)
