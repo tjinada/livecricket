@@ -2561,7 +2561,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getBattingStats(): any[] {
-    // Get all 11 batsmen in batting order with DNB for those who haven't batted
+    // Display batsmen in the ORDER THEY ACTUALLY BATTED
+    // Players who have batted appear first (sorted by position), then DNB players
     const battingTeamId = this.currentInnings?.battingTeam?._id || this.currentInnings?.battingTeam;
     const team1Id = this.match?.team1?._id || this.match?.team1;
     const isTeam1 = battingTeamId === team1Id || battingTeamId?.toString() === team1Id?.toString();
@@ -2569,33 +2570,26 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     
     if (!squad) return this.currentInnings?.battingStats || [];
     
-    // Get Playing XI sorted by batting order
-    const playingXI = squad
-      .filter((p: any) => p.isPlayingXI)
-      .sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+    // Get Playing XI
+    const playingXI = squad.filter((p: any) => p.isPlayingXI);
     
     if (playingXI.length === 0) return this.currentInnings?.battingStats || [];
     
-    // Create a map of actual batting stats by player ID
-    const battingStatsMap = new Map<string, any>();
-    (this.currentInnings?.battingStats || []).forEach((stat: any) => {
-      const playerId = (stat.player?._id || stat.player)?.toString();
-      if (playerId) {
-        battingStatsMap.set(playerId, stat);
-      }
-    });
+    // Get actual batting stats sorted by position (order they came to bat)
+    const battingStats = [...(this.currentInnings?.battingStats || [])]
+      .sort((a: any, b: any) => (a.position || 99) - (b.position || 99));
     
-    // Build combined list: actual stats for those who batted, DNB placeholder for others
-    return playingXI.map((squadPlayer: any) => {
-      const playerId = (squadPlayer.player?._id || squadPlayer.player)?.toString();
-      const existingStats = battingStatsMap.get(playerId);
-      
-      if (existingStats) {
-        return existingStats;
-      }
-      
-      // DNB placeholder
-      return {
+    // Create a set of player IDs who have already batted
+    const battedPlayerIds = new Set(
+      battingStats.map((stat: any) => (stat.player?._id || stat.player)?.toString())
+    );
+    
+    // Get DNB players (from Playing XI who haven't batted yet)
+    // Sort them by scheduled batting order
+    const dnbPlayers = playingXI
+      .filter((p: any) => !battedPlayerIds.has((p.player?._id || p.player)?.toString()))
+      .sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99))
+      .map((squadPlayer: any) => ({
         player: squadPlayer.player,
         runs: null,
         balls: null,
@@ -2603,10 +2597,12 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
         sixes: 0,
         isOut: false,
         isNotOut: false,
-        isDNB: true, // Flag for "Did Not Bat"
+        isDNB: true,
         battingOrder: squadPlayer.battingOrder
-      };
-    });
+      }));
+    
+    // Return batted players first (in order they batted), then DNB players
+    return [...battingStats, ...dnbPlayers];
   }
 
   getBowlingStats(): any[] {
@@ -3019,6 +3015,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   // Get full batting card for an innings (all 11 players with DNB status)
+  // Display batsmen in the ORDER THEY ACTUALLY BATTED
   getFullBattingCard(inningsIndex: number): any[] {
     const innings = this.match?.innings?.[inningsIndex];
     if (!innings) return [];
@@ -3030,33 +3027,26 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     
     if (!squad) return innings.battingStats || [];
     
-    // Get Playing XI sorted by batting order
-    const playingXI = squad
-      .filter((p: any) => p.isPlayingXI)
-      .sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+    // Get Playing XI
+    const playingXI = squad.filter((p: any) => p.isPlayingXI);
     
     if (playingXI.length === 0) return innings.battingStats || [];
     
-    // Create a map of actual batting stats by player ID
-    const battingStatsMap = new Map<string, any>();
-    (innings.battingStats || []).forEach((stat: any) => {
-      const playerId = (stat.player?._id || stat.player)?.toString();
-      if (playerId) {
-        battingStatsMap.set(playerId, stat);
-      }
-    });
+    // Get actual batting stats sorted by position (order they came to bat)
+    const battingStats = [...(innings.battingStats || [])]
+      .sort((a: any, b: any) => (a.position || 99) - (b.position || 99));
     
-    // Build combined list
-    return playingXI.map((squadPlayer: any) => {
-      const playerId = (squadPlayer.player?._id || squadPlayer.player)?.toString();
-      const existingStats = battingStatsMap.get(playerId);
-      
-      if (existingStats) {
-        return existingStats;
-      }
-      
-      // DNB placeholder
-      return {
+    // Create a set of player IDs who have already batted
+    const battedPlayerIds = new Set(
+      battingStats.map((stat: any) => (stat.player?._id || stat.player)?.toString())
+    );
+    
+    // Get DNB players (from Playing XI who haven't batted yet)
+    // Sort them by scheduled batting order
+    const dnbPlayers = playingXI
+      .filter((p: any) => !battedPlayerIds.has((p.player?._id || p.player)?.toString()))
+      .sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99))
+      .map((squadPlayer: any) => ({
         player: squadPlayer.player,
         runs: null,
         balls: null,
@@ -3066,8 +3056,10 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
         isNotOut: false,
         isDNB: true,
         battingOrder: squadPlayer.battingOrder
-      };
-    });
+      }));
+    
+    // Return batted players first (in order they batted), then DNB players
+    return [...battingStats, ...dnbPlayers];
   }
 
   // Get dismissal text for summary view

@@ -234,6 +234,10 @@
 - [x] Fixed strike rotation for wides/no-balls (penalty doesn't count)
 - [x] Fixed end-of-over rotation (don't double-rotate)
 - [x] Added player name caching for display
+- [x] Fixed batting order display to show batsmen in actual batting order (not scheduled order)
+  - Players who have batted appear first (sorted by position)
+  - DNB players appear after, sorted by scheduled batting order
+  - Applies to both live-match-summary and final-match-summary views
 
 ---
 
