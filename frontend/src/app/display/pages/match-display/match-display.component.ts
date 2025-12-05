@@ -8,6 +8,7 @@ import { TeamDisplayService } from '../../services/team-display.service';
 import { DismissalFormatterService } from '../../services/dismissal-formatter.service';
 import { BattingCardService } from '../../services/batting-card.service';
 import { BowlerCardService } from '../../services/bowler-card.service';
+import { OverDisplayService } from '../../services/over-display.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1812,7 +1813,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     private teamService: TeamDisplayService,
     private dismissalService: DismissalFormatterService,
     private battingCardService: BattingCardService,
-    private bowlerCardService: BowlerCardService
+    private bowlerCardService: BowlerCardService,
+    private overDisplayService: OverDisplayService
   ) {}
 
   ngOnInit() {
@@ -2415,46 +2417,12 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getRecentOvers(): { overNumber: number; balls: any[]; runs: number }[] {
-    const overs = this.currentInnings?.overs || [];
-    // Get last 3 completed overs
-    const recentCompleted = overs.slice(-3).map((over: any, idx: number) => {
-      const overNumber = overs.length - (3 - idx - 1);
-      const runs = over.balls?.reduce((sum: number, b: any) => sum + (b.runs || 0) + (b.extras || 0), 0) || 0;
-      return {
-        overNumber,
-        balls: over.balls || [],
-        runs
-      };
-    });
-    return recentCompleted.filter((o: any) => o.balls.length > 0);
+    return this.overDisplayService.getRecentOvers(this.currentInnings, 3);
   }
 
   // Get last 2 completed overs (not including current over)
   getPreviousOvers(): { overNumber: number; balls: any[]; runs: number }[] {
-    const overs = this.currentInnings?.overs || [];
-    const totalBalls = this.currentInnings?.totalBalls || 0;
-    const currentOverBallCount = totalBalls % 6;
-    
-    // If we're mid-over, the last item in overs array is the current over
-    // Get the 2 overs before that
-    let completedOvers = overs;
-    if (currentOverBallCount > 0 && overs.length > 0) {
-      // Current over is in progress, exclude it
-      completedOvers = overs.slice(0, -1);
-    }
-    
-    // Get last 2 completed overs
-    const lastTwo = completedOvers.slice(-2);
-    
-    return lastTwo.map((over: any, idx: number) => {
-      const overNumber = completedOvers.length - lastTwo.length + idx + 1;
-      const runs = over.balls?.reduce((sum: number, b: any) => sum + (b.runs || 0) + (b.extras || 0), 0) || 0;
-      return {
-        overNumber,
-        balls: over.balls || [],
-        runs
-      };
-    }).filter((o: any) => o.balls.length > 0);
+    return this.overDisplayService.getPreviousOvers(this.currentInnings, 2);
   }
 
   getCurrentBowlerName(): string {
@@ -2489,23 +2457,15 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getCurrentOverBalls(): any[] {
-    return this.currentInnings?.currentOver || [];
+    return this.overDisplayService.getCurrentOverBalls(this.currentInnings);
   }
 
   getRemainingBallsInOver(): number[] {
-    const bowled = this.getCurrentOverBalls().filter(b => b.ballNumber !== null).length;
-    return Array(Math.max(0, 6 - bowled)).fill(0);
+    return this.overDisplayService.getRemainingBallsInOver(this.currentInnings);
   }
 
   getBallColorClass(ball: any): { [key: string]: boolean } {
-    return {
-      'bg-red-500 text-white': ball.isWicket,
-      'bg-green-500 text-white': !ball.isWicket && ball.display === '4',
-      'bg-purple-500 text-white': !ball.isWicket && ball.display === '6',
-      'bg-yellow-500 text-black': !ball.isWicket && ball.isExtra,
-      'bg-gray-600 text-gray-300': !ball.isWicket && !ball.isExtra && (ball.display === '•' || ball.display === '0' || ball.runs === 0),
-      'bg-blue-500 text-white': !ball.isWicket && !ball.isExtra && ball.display !== '4' && ball.display !== '6' && ball.display !== '•' && ball.display !== '0' && ball.runs !== 0
-    };
+    return this.overDisplayService.getBallColorClass(ball);
   }
 
   getOversDisplay(): string {
