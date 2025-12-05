@@ -7,15 +7,35 @@ const router = express.Router();
 // Store SSE clients for live updates
 const sseClients = new Map();
 
-// Heartbeat interval (30 seconds) - keeps connections alive
-const HEARTBEAT_INTERVAL = 30000;
+// Store update version per match (increments on each broadcast)
+// This allows clients to detect missed updates
+const matchVersions = new Map();
+
+// Heartbeat interval (15 seconds) - more frequent for better detection
+const HEARTBEAT_INTERVAL = 15000;
+
+// Get current version for a match
+function getMatchVersion(matchId) {
+  if (!matchVersions.has(matchId)) {
+    matchVersions.set(matchId, 0);
+  }
+  return matchVersions.get(matchId);
+}
+
+// Increment and return new version for a match
+function incrementMatchVersion(matchId) {
+  const newVersion = getMatchVersion(matchId) + 1;
+  matchVersions.set(matchId, newVersion);
+  return newVersion;
+}
 
 // Send heartbeat to all connected clients
 setInterval(() => {
   sseClients.forEach((clients, matchId) => {
+    const version = getMatchVersion(matchId);
     clients.forEach((client, clientId) => {
       try {
-        client.write(`event: heartbeat\ndata: ${JSON.stringify({ timestamp: Date.now() })}\n\n`);
+        client.write(`event: heartbeat\ndata: ${JSON.stringify({ timestamp: Date.now(), version })}\n\n`);
       } catch (error) {
         // Client disconnected, remove from list
         clients.delete(clientId);
@@ -554,11 +574,18 @@ router.get('/:id/live', async (req, res, next) => {
     }
     sseClients.get(req.params.id).set(clientId, res);
     
-    // Send initial connection event
-    res.write(`event: connected\ndata: ${JSON.stringify({ clientId })}\n\n`);
+    // Get current version for this match
+    const version = getMatchVersion(req.params.id);
     
-    // Send current match state
-    res.write(`event: match-state\ndata: ${JSON.stringify({ displayView: match.displayView })}\n\n`);
+    // Send initial connection event with version
+    res.write(`event: connected\ndata: ${JSON.stringify({ clientId, version })}\n\n`);
+    
+    // Send current match state with version
+    res.write(`event: match-state\ndata: ${JSON.stringify({ 
+      displayView: match.displayView,
+      _version: version,
+      _timestamp: Date.now()
+    })}\n\n`);
     
     // Handle client disconnect
     req.on('close', () => {
@@ -578,16 +605,30 @@ router.get('/:id/live', async (req, res, next) => {
 // Helper function to broadcast to all SSE clients for a match
 function broadcastToMatch(matchId, event, data) {
   const matchClients = sseClients.get(matchId);
-  if (matchClients) {
-    const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-    matchClients.forEach((client) => {
-      client.write(message);
+  if (matchClients && matchClients.size > 0) {
+    // Increment version on each broadcast
+    const version = incrementMatchVersion(matchId);
+    const enrichedData = { ...data, _version: version, _timestamp: Date.now() };
+    const message = `event: ${event}\ndata: ${JSON.stringify(enrichedData)}\n\n`;
+    
+    matchClients.forEach((client, clientId) => {
+      try {
+        client.write(message);
+      } catch (error) {
+        // Client disconnected during write, remove it
+        console.log(`SSE: Removing disconnected client ${clientId}`);
+        matchClients.delete(clientId);
+        if (matchClients.size === 0) {
+          sseClients.delete(matchId);
+        }
+      }
     });
   }
 }
 
-// Export broadcast function for use in scoring routes
+// Export broadcast function and version getter for use in scoring routes
 router.broadcastToMatch = broadcastToMatch;
+router.getMatchVersion = getMatchVersion;
 
 // PUT /api/matches/:id/substitute - Substitute a player in the squad (protected)
 router.put('/:id/substitute', auth, async (req, res, next) => {
@@ -763,6 +804,37 @@ router.post('/:id/notification', async (req, res, next) => {
     res.json({
       success: true,
       message: 'Notification sent'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/matches/:id/sync-check - Lightweight sync check endpoint
+// Returns current version and last update timestamp for fast sync verification
+router.get('/:id/sync-check', async (req, res, next) => {
+  try {
+    const match = await Match.findById(req.params.id)
+      .select('updatedAt status displayView');
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+    
+    const version = getMatchVersion(req.params.id);
+    
+    res.json({
+      success: true,
+      data: {
+        version,
+        updatedAt: match.updatedAt,
+        status: match.status,
+        displayView: match.displayView,
+        serverTime: Date.now()
+      }
     });
   } catch (error) {
     next(error);

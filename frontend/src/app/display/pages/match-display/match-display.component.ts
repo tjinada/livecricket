@@ -1793,6 +1793,13 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   private lastHeartbeat = Date.now();
   private heartbeatCheckInterval: any = null;
   
+  // Version tracking for sync verification
+  private serverVersion = 0;
+  private lastKnownVersion = 0;
+  private syncCheckInterval: any = null;
+  private readonly SYNC_CHECK_INTERVAL = 30000; // Check sync every 30 seconds
+  private readonly HEARTBEAT_TIMEOUT = 25000; // Expect heartbeat within 25s (server sends every 15s)
+  
   // ESPN CDN base URL for player images
   private readonly ESPN_CDN_BASE = 'https://img1.hscicdn.com/image/upload';
 
@@ -1823,6 +1830,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     }
     if (this.heartbeatCheckInterval) {
       clearInterval(this.heartbeatCheckInterval);
+    }
+    if (this.syncCheckInterval) {
+      clearInterval(this.syncCheckInterval);
     }
   }
 
@@ -2000,21 +2010,52 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       this.isConnected = true;
       this.reconnectAttempts = 0;
       this.lastHeartbeat = Date.now();
+      
+      // Extract version from connected event if available
+      try {
+        const data = JSON.parse(event.data);
+        if (data.version !== undefined) {
+          this.serverVersion = data.version;
+          this.lastKnownVersion = data.version;
+        }
+      } catch (e) { /* ignore parse errors */ }
+      
       this.startHeartbeatCheck();
+      this.startSyncCheck(); // Start periodic sync verification
     });
     
-    // Handle heartbeat to track connection health
+    // Handle heartbeat to track connection health and version
     this.eventSource.addEventListener('heartbeat', (event: any) => {
       this.lastHeartbeat = Date.now();
       this.isConnected = true;
+      
+      // Extract version from heartbeat if available
+      try {
+        const data = JSON.parse(event.data);
+        if (data.version !== undefined) {
+          this.serverVersion = data.version;
+        }
+      } catch (e) { /* ignore parse errors */ }
     });
+    
+    // Helper to extract version from event data
+    // Backend sends _version (with underscore) in enriched data
+    const extractVersion = (event: any) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data._version !== undefined) {
+          this.serverVersion = data._version;
+        }
+      } catch (e) { /* ignore */ }
+    };
     
     const events = ['score-update', 'over-complete', 'innings-complete', 
                     'innings-start', 'match-complete', 'batsmen-change', 'bowler-change', 
                     'background-change', 'squad-change', 'zoom-change'];
-    events.forEach(event => {
-      this.eventSource!.addEventListener(event, () => {
+    events.forEach(eventName => {
+      this.eventSource!.addEventListener(eventName, (event: any) => {
         this.lastHeartbeat = Date.now();
+        extractVersion(event);
         this.reloadMatch();
       });
     });
@@ -2023,6 +2064,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     this.eventSource.addEventListener('six', (event: any) => {
       this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
+      if (data._version !== undefined) this.serverVersion = data._version;
       this.showBigNotification('six', data);
       this.reloadMatch();
     });
@@ -2030,6 +2072,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     this.eventSource.addEventListener('four', (event: any) => {
       this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
+      if (data._version !== undefined) this.serverVersion = data._version;
       this.showBigNotification('four', data);
       this.reloadMatch();
     });
@@ -2037,6 +2080,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     this.eventSource.addEventListener('wicket', (event: any) => {
       this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
+      if (data._version !== undefined) this.serverVersion = data._version;
       this.showBigNotification('wicket', data);
       this.reloadMatch();
     });
@@ -2044,12 +2088,14 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     // Third Umpire events
     this.eventSource.addEventListener('third-umpire-start', (event: any) => {
       this.lastHeartbeat = Date.now();
+      extractVersion(event);
       this.showThirdUmpireOverlay();
     });
     
     this.eventSource.addEventListener('third-umpire-decision', (event: any) => {
       this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
+      if (data._version !== undefined) this.serverVersion = data._version;
       this.showThirdUmpireDecision(data.decision);
     });
     
@@ -2057,17 +2103,20 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     this.eventSource.addEventListener('custom-message', (event: any) => {
       this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
+      if (data._version !== undefined) this.serverVersion = data._version;
       this.showCustomMessage(data.message);
     });
     
-    this.eventSource.addEventListener('custom-message-dismiss', () => {
+    this.eventSource.addEventListener('custom-message-dismiss', (event: any) => {
       this.lastHeartbeat = Date.now();
+      extractVersion(event);
       this.dismissNotification();
     });
     
     this.eventSource.addEventListener('view-change', (event: any) => {
       this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
+      if (data._version !== undefined) this.serverVersion = data._version;
       if (data.view) {
         this.displayView = data.view;
         this.updateBackground();
@@ -2078,6 +2127,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     this.eventSource.addEventListener('match-state', (event: any) => {
       this.lastHeartbeat = Date.now();
       const data = JSON.parse(event.data);
+      if (data._version !== undefined) this.serverVersion = data._version;
       if (data.displayView) {
         this.displayView = data.displayView;
         this.updateBackground();
@@ -2092,6 +2142,50 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       this.disconnectSSE();
       this.scheduleReconnect();
     };
+  }
+  
+  private startSyncCheck() {
+    // Clear any existing sync check interval
+    if (this.syncCheckInterval) {
+      clearInterval(this.syncCheckInterval);
+    }
+    
+    // Periodic sync verification to catch missed updates
+    this.syncCheckInterval = setInterval(() => {
+      this.checkSync();
+    }, this.SYNC_CHECK_INTERVAL);
+  }
+  
+  private checkSync() {
+    this.http.get<{ success: boolean; data: any }>(`/api/matches/${this.matchId}/sync-check`).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          const serverVersion = response.data.version;
+          
+          // If server version is higher than our last known version, we missed updates
+          if (serverVersion > this.lastKnownVersion) {
+            console.log(`Sync: Version mismatch detected (server: ${serverVersion}, local: ${this.lastKnownVersion}). Reloading...`);
+            this.reloadMatch();
+          }
+          
+          // Update our tracking
+          this.lastKnownVersion = serverVersion;
+          this.serverVersion = serverVersion;
+          
+          // Also check if displayView changed
+          if (response.data.displayView && response.data.displayView !== this.displayView) {
+            console.log(`Sync: Display view changed (server: ${response.data.displayView}, local: ${this.displayView}). Updating...`);
+            this.displayView = response.data.displayView;
+            this.updateBackground();
+          }
+        }
+      },
+      error: (err) => {
+        console.warn('Sync check failed:', err.message);
+        // On sync check failure, do a full reload to be safe
+        this.reloadMatch();
+      }
+    });
   }
   
   private startHeartbeatCheck() {
