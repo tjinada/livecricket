@@ -77,8 +77,9 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
         
         const currentInnings = match?.innings?.[match.currentInnings];
         
-        // Find dismissed batsman
-        const dismissedId = result.ball.wicket?.dismissedPlayer?.toString();
+        // Find dismissed batsman - use dismissedPlayer from ball, or fallback to the batsman who faced the ball
+        // (result.ball.batsman is the striker who faced the delivery)
+        const dismissedId = result.ball.wicket?.dismissedPlayer?.toString() || result.ball.batsman?.toString();
         const dismissedStats = currentInnings?.battingStats?.find(
           s => s.player?._id?.toString() === dismissedId
         );
@@ -87,6 +88,32 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
         const bowlerStats = currentInnings?.bowlingStats?.find(
           s => s.player?._id?.toString() === result.ball.bowler?.toString()
         );
+        
+        // Find fielder name from bowling team (they're in bowlingStats for this innings)
+        // or from the squads if not found in bowlingStats
+        let fielderName = null;
+        if (result.ball.wicket?.fielder) {
+          const fielderId = result.ball.wicket.fielder.toString();
+          // First try to find in bowling stats
+          const fielderInBowlingStats = currentInnings?.bowlingStats?.find(
+            s => s.player?._id?.toString() === fielderId
+          );
+          if (fielderInBowlingStats?.player?.name) {
+            fielderName = fielderInBowlingStats.player.name;
+          } else {
+            // Try to find in squads
+            const bowlingTeamId = currentInnings?.bowlingTeam?._id || currentInnings?.bowlingTeam;
+            const squad = match.team1?.toString() === bowlingTeamId?.toString() 
+              ? match.squads?.team1 
+              : match.squads?.team2;
+            if (squad) {
+              const fielderInSquad = squad.find(
+                p => (p.player?._id || p.player)?.toString() === fielderId
+              );
+              fielderName = fielderInSquad?.player?.name || null;
+            }
+          }
+        }
         
         broadcastToMatch(matchId, 'wicket', {
           dismissedName: dismissedStats?.player?.name || 'Batsman',
@@ -97,8 +124,7 @@ router.post('/:matchId/ball', auth, async (req, res, next) => {
           bowlerName: bowlerStats?.player?.name || 'Bowler',
           bowlerImage: buildImageUrl(bowlerStats?.player?.headshotPath) || null,
           bowlerWickets: bowlerStats?.wickets || 0,
-          fielderName: result.ball.wicket?.fielder ? 
-            (currentInnings?.bowlingStats?.find(s => s.player?._id?.toString() === result.ball.wicket?.fielder?.toString())?.player?.name) : null,
+          fielderName: fielderName,
           totalScore: result.innings.totalRuns,
           totalWickets: result.innings.totalWickets
         });
