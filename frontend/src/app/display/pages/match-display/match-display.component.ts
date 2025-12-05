@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { PlayerCacheService } from '../../services/player-cache.service';
 import { MatchCalculationsService, GraphDataPoint } from '../../services/match-calculations.service';
 import { TeamDisplayService } from '../../services/team-display.service';
@@ -10,6 +11,7 @@ import { BattingCardService } from '../../services/batting-card.service';
 import { BowlerCardService } from '../../services/bowler-card.service';
 import { OverDisplayService } from '../../services/over-display.service';
 import { CurrentBatsmenService } from '../../services/current-batsmen.service';
+import { MatchDisplaySSEService, SSEEvent } from '../../services/match-display-sse.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1789,22 +1791,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // Custom Message properties
   customMessage: string = '';
   
-  private eventSource: EventSource | null = null;
-  
-  // SSE connection state
+  // SSE subscription
+  private sseSubscription: Subscription | null = null;
   isConnected = true;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
-  private reconnectTimeout: any = null;
-  private lastHeartbeat = Date.now();
-  private heartbeatCheckInterval: any = null;
-  
-  // Version tracking for sync verification
-  private serverVersion = 0;
-  private lastKnownVersion = 0;
-  private syncCheckInterval: any = null;
-  private readonly SYNC_CHECK_INTERVAL = 30000; // Check sync every 30 seconds
-  private readonly HEARTBEAT_TIMEOUT = 25000; // Expect heartbeat within 25s (server sends every 15s)
 
   constructor(
     private route: ActivatedRoute,
@@ -1816,7 +1805,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     private battingCardService: BattingCardService,
     private bowlerCardService: BowlerCardService,
     private overDisplayService: OverDisplayService,
-    private currentBatsmenService: CurrentBatsmenService
+    private currentBatsmenService: CurrentBatsmenService,
+    private sseService: MatchDisplaySSEService
   ) {}
 
   ngOnInit() {
@@ -1824,7 +1814,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     if (this.matchId) {
       this.loadDefaultBackgrounds();
       this.loadMatch();
-      this.connectSSE();
+      this.setupSSE();
     } else {
       this.error = 'Invalid match ID';
       this.loading = false;
@@ -1832,18 +1822,12 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.disconnectSSE();
+    if (this.sseSubscription) {
+      this.sseSubscription.unsubscribe();
+    }
+    this.sseService.disconnect();
     if (this.notificationTimeout) {
       clearTimeout(this.notificationTimeout);
-    }
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-    }
-    if (this.heartbeatCheckInterval) {
-      clearInterval(this.heartbeatCheckInterval);
-    }
-    if (this.syncCheckInterval) {
-      clearInterval(this.syncCheckInterval);
     }
   }
 
@@ -1968,238 +1952,110 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     this.playerCacheService.buildCacheFromMatch(this.match);
   }
 
-  connectSSE() {
-    // Clean up any existing connection
-    this.disconnectSSE();
+  /**
+   * Setup SSE connection using the SSE service
+   */
+  private setupSSE(): void {
+    // Connect to SSE
+    this.sseService.connect(this.matchId);
     
-    console.log('SSE: Connecting to live updates...');
-    this.eventSource = new EventSource(`/api/matches/${this.matchId}/live`);
-    
-    // Connection opened successfully
-    this.eventSource.addEventListener('connected', (event: any) => {
-      console.log('SSE: Connected successfully');
-      this.isConnected = true;
-      this.reconnectAttempts = 0;
-      this.lastHeartbeat = Date.now();
-      
-      // Extract version from connected event if available
-      try {
-        const data = JSON.parse(event.data);
-        if (data.version !== undefined) {
-          this.serverVersion = data.version;
-          this.lastKnownVersion = data.version;
-        }
-      } catch (e) { /* ignore parse errors */ }
-      
-      this.startHeartbeatCheck();
-      this.startSyncCheck(); // Start periodic sync verification
-    });
-    
-    // Handle heartbeat to track connection health and version
-    this.eventSource.addEventListener('heartbeat', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      this.isConnected = true;
-      
-      // Extract version from heartbeat if available
-      try {
-        const data = JSON.parse(event.data);
-        if (data.version !== undefined) {
-          this.serverVersion = data.version;
-        }
-      } catch (e) { /* ignore parse errors */ }
-    });
-    
-    // Helper to extract version from event data
-    // Backend sends _version (with underscore) in enriched data
-    const extractVersion = (event: any) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data._version !== undefined) {
-          this.serverVersion = data._version;
-        }
-      } catch (e) { /* ignore */ }
-    };
-    
-    const events = ['score-update', 'over-complete', 'innings-complete', 
-                    'innings-start', 'match-complete', 'batsmen-change', 'bowler-change', 
-                    'background-change', 'squad-change', 'zoom-change'];
-    events.forEach(eventName => {
-      this.eventSource!.addEventListener(eventName, (event: any) => {
-        this.lastHeartbeat = Date.now();
-        extractVersion(event);
-        this.reloadMatch();
-      });
-    });
-    
-    // Special notification events
-    this.eventSource.addEventListener('six', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      const data = JSON.parse(event.data);
-      if (data._version !== undefined) this.serverVersion = data._version;
-      this.showBigNotification('six', data);
-      this.reloadMatch();
-    });
-    
-    this.eventSource.addEventListener('four', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      const data = JSON.parse(event.data);
-      if (data._version !== undefined) this.serverVersion = data._version;
-      this.showBigNotification('four', data);
-      this.reloadMatch();
-    });
-    
-    this.eventSource.addEventListener('wicket', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      const data = JSON.parse(event.data);
-      if (data._version !== undefined) this.serverVersion = data._version;
-      this.showBigNotification('wicket', data);
-      this.reloadMatch();
-    });
-    
-    // Third Umpire events
-    this.eventSource.addEventListener('third-umpire-start', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      extractVersion(event);
-      this.showThirdUmpireOverlay();
-    });
-    
-    this.eventSource.addEventListener('third-umpire-decision', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      const data = JSON.parse(event.data);
-      if (data._version !== undefined) this.serverVersion = data._version;
-      this.showThirdUmpireDecision(data.decision);
-    });
-    
-    // Custom message events
-    this.eventSource.addEventListener('custom-message', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      const data = JSON.parse(event.data);
-      if (data._version !== undefined) this.serverVersion = data._version;
-      this.showCustomMessage(data.message);
-    });
-    
-    this.eventSource.addEventListener('custom-message-dismiss', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      extractVersion(event);
-      this.dismissNotification();
-    });
-    
-    this.eventSource.addEventListener('view-change', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      const data = JSON.parse(event.data);
-      if (data._version !== undefined) this.serverVersion = data._version;
-      if (data.view) {
-        this.displayView = data.view;
-        this.updateBackground();
-      }
-      this.reloadMatch();
-    });
-    
-    this.eventSource.addEventListener('match-state', (event: any) => {
-      this.lastHeartbeat = Date.now();
-      const data = JSON.parse(event.data);
-      if (data._version !== undefined) this.serverVersion = data._version;
-      if (data.displayView) {
-        this.displayView = data.displayView;
-        this.updateBackground();
-      }
-      this.reloadMatch();
-    });
-    
-    // Handle connection errors with exponential backoff
-    this.eventSource.onerror = (error) => {
-      console.error('SSE: Connection error', error);
-      this.isConnected = false;
-      this.disconnectSSE();
-      this.scheduleReconnect();
-    };
-  }
-  
-  private startSyncCheck() {
-    // Clear any existing sync check interval
-    if (this.syncCheckInterval) {
-      clearInterval(this.syncCheckInterval);
-    }
-    
-    // Periodic sync verification to catch missed updates
-    this.syncCheckInterval = setInterval(() => {
-      this.checkSync();
-    }, this.SYNC_CHECK_INTERVAL);
-  }
-  
-  private checkSync() {
-    this.http.get<{ success: boolean; data: any }>(`/api/matches/${this.matchId}/sync-check`).subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          const serverVersion = response.data.version;
-          
-          // If server version is higher than our last known version, we missed updates
-          if (serverVersion > this.lastKnownVersion) {
-            console.log(`Sync: Version mismatch detected (server: ${serverVersion}, local: ${this.lastKnownVersion}). Reloading...`);
-            this.reloadMatch();
-          }
-          
-          // Update our tracking
-          this.lastKnownVersion = serverVersion;
-          this.serverVersion = serverVersion;
-          
-          // Also check if displayView changed
-          if (response.data.displayView && response.data.displayView !== this.displayView) {
-            console.log(`Sync: Display view changed (server: ${response.data.displayView}, local: ${this.displayView}). Updating...`);
-            this.displayView = response.data.displayView;
-            this.updateBackground();
-          }
-        }
-      },
-      error: (err) => {
-        console.warn('Sync check failed:', err.message);
-        // On sync check failure, do a full reload to be safe
-        this.reloadMatch();
-      }
+    // Subscribe to SSE events
+    this.sseSubscription = this.sseService.events$.subscribe((event) => {
+      this.handleSSEEvent(event);
     });
   }
   
-  private startHeartbeatCheck() {
-    // Clear any existing interval
-    if (this.heartbeatCheckInterval) {
-      clearInterval(this.heartbeatCheckInterval);
-    }
-    
-    // Check every 45 seconds if we've received a heartbeat (server sends every 30s)
-    this.heartbeatCheckInterval = setInterval(() => {
-      const timeSinceLastHeartbeat = Date.now() - this.lastHeartbeat;
-      
-      // If no heartbeat for 60 seconds, connection is likely dead
-      if (timeSinceLastHeartbeat > 60000) {
-        console.warn('SSE: No heartbeat received, reconnecting...');
+  /**
+   * Handle incoming SSE events
+   */
+  private handleSSEEvent(event: SSEEvent): void {
+    switch (event.type) {
+      case 'connected':
+        this.isConnected = true;
+        break;
+        
+      case 'connection-lost':
         this.isConnected = false;
-        this.disconnectSSE();
-        this.scheduleReconnect();
-      }
-    }, 45000);
-  }
-  
-  private scheduleReconnect() {
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
+        break;
+        
+      case 'reconnecting':
+        this.isConnected = false;
+        break;
+        
+      case 'sync-required':
+        this.reloadMatch();
+        if (event.data?.displayView && event.data.displayView !== this.displayView) {
+          this.displayView = event.data.displayView;
+          this.updateBackground();
+        }
+        break;
+        
+      case 'six':
+        this.showBigNotification('six', event.data);
+        this.reloadMatch();
+        break;
+        
+      case 'four':
+        this.showBigNotification('four', event.data);
+        this.reloadMatch();
+        break;
+        
+      case 'wicket':
+        this.showBigNotification('wicket', event.data);
+        this.reloadMatch();
+        break;
+        
+      case 'third-umpire-start':
+        this.showThirdUmpireOverlay();
+        break;
+        
+      case 'third-umpire-decision':
+        this.showThirdUmpireDecision(event.data?.decision);
+        break;
+        
+      case 'custom-message':
+        this.showCustomMessage(event.data?.message);
+        break;
+        
+      case 'custom-message-dismiss':
+        this.dismissNotification();
+        break;
+        
+      case 'view-change':
+        if (event.data?.view) {
+          this.displayView = event.data.view;
+          this.updateBackground();
+        }
+        this.reloadMatch();
+        break;
+        
+      case 'match-state':
+        if (event.data?.displayView) {
+          this.displayView = event.data.displayView;
+          this.updateBackground();
+        }
+        this.reloadMatch();
+        break;
+        
+      // Standard events that just require a reload
+      case 'score-update':
+      case 'over-complete':
+      case 'innings-complete':
+      case 'innings-start':
+      case 'match-complete':
+      case 'batsmen-change':
+      case 'bowler-change':
+      case 'background-change':
+      case 'squad-change':
+      case 'zoom-change':
+        this.reloadMatch();
+        break;
+        
+      case 'heartbeat':
+        // Just keep connection state updated
+        this.isConnected = true;
+        break;
     }
-    
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('SSE: Max reconnect attempts reached');
-      return;
-    }
-    
-    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-    this.reconnectAttempts++;
-    
-    console.log(`SSE: Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-    
-    this.reconnectTimeout = setTimeout(() => {
-      // Reload match data first to catch up on any missed updates
-      this.reloadMatch();
-      this.connectSSE();
-    }, delay);
   }
   
   showBigNotification(type: 'six' | 'four' | 'wicket', data: any) {
@@ -2263,16 +2119,6 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     // Custom messages don't auto-dismiss - admin controls when to dismiss
   }
 
-  disconnectSSE() {
-    if (this.heartbeatCheckInterval) {
-      clearInterval(this.heartbeatCheckInterval);
-      this.heartbeatCheckInterval = null;
-    }
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
-  }
 
   // ==================== GETTERS ====================
 
