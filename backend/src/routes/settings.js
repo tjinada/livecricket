@@ -11,7 +11,8 @@ router.get('/backgrounds', async (req, res) => {
       'live-match-summary': { type: 'none', url: null },
       'run-rate-graph': { type: 'none', url: null },
       'current-partnership': { type: 'none', url: null },
-      'final-match-summary': { type: 'none', url: null }
+      'final-match-summary': { type: 'none', url: null },
+      'player-stats': { type: 'none', url: null }
     });
 
     res.json({
@@ -41,7 +42,7 @@ router.put('/backgrounds', async (req, res) => {
     }
 
     // Validate structure
-    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary'];
+    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats'];
     const validTypes = ['image', 'video', 'none'];
 
     for (const view of validViews) {
@@ -86,7 +87,7 @@ router.put('/backgrounds/:view', async (req, res) => {
     const { view } = req.params;
     const { type, url } = req.body;
 
-    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary'];
+    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats'];
     if (!validViews.includes(view)) {
       return res.status(400).json({
         success: false,
@@ -131,7 +132,7 @@ router.delete('/backgrounds/:view', async (req, res) => {
   try {
     const { view } = req.params;
 
-    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary'];
+    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats'];
     if (!validViews.includes(view)) {
       return res.status(400).json({
         success: false,

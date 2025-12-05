@@ -14,6 +14,7 @@ interface DefaultBackgrounds {
   'run-rate-graph': ViewBackground;
   'current-partnership': ViewBackground;
   'final-match-summary': ViewBackground;
+  'player-stats': ViewBackground;
 }
 
 @Component({
@@ -186,7 +187,8 @@ export class SettingsComponent implements OnInit {
     { key: 'live-match-summary', label: 'Live Match Summary' },
     { key: 'run-rate-graph', label: 'Run Rate Graph' },
     { key: 'current-partnership', label: 'Current Partnership' },
-    { key: 'final-match-summary', label: 'Final Match Summary' }
+    { key: 'final-match-summary', label: 'Final Match Summary' },
+    { key: 'player-stats', label: 'Player Stats' }
   ];
 
   backgrounds: DefaultBackgrounds = {
@@ -194,7 +196,8 @@ export class SettingsComponent implements OnInit {
     'live-match-summary': { type: 'none', url: null },
     'run-rate-graph': { type: 'none', url: null },
     'current-partnership': { type: 'none', url: null },
-    'final-match-summary': { type: 'none', url: null }
+    'final-match-summary': { type: 'none', url: null },
+    'player-stats': { type: 'none', url: null }
   };
 
   loading = true;
@@ -222,7 +225,8 @@ export class SettingsComponent implements OnInit {
             'live-match-summary': response.data['live-match-summary'] || { type: 'none', url: null },
             'run-rate-graph': response.data['run-rate-graph'] || { type: 'none', url: null },
             'current-partnership': response.data['current-partnership'] || { type: 'none', url: null },
-            'final-match-summary': response.data['final-match-summary'] || { type: 'none', url: null }
+            'final-match-summary': response.data['final-match-summary'] || { type: 'none', url: null },
+            'player-stats': response.data['player-stats'] || { type: 'none', url: null }
           };
         }
         this.loading = false;
