@@ -1,0 +1,261 @@
+<div class="h-full flex flex-col">
+  
+  <!-- Top Header Bar -->
+  <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-b border-gray-700/50">
+    <div class="max-w-7xl mx-auto px-10 py-6">
+      <div class="flex items-center justify-between">
+        <!-- Left: Status Badge -->
+        <div *ngIf="matchStatus === 'live'" class="flex items-center gap-3 bg-red-600 px-5 py-2.5 rounded-full">
+          <span class="w-3.5 h-3.5 bg-white rounded-full animate-pulse"></span>
+          <span class="text-base font-bold uppercase tracking-wider">Live</span>
+        </div>
+        <div *ngIf="matchStatus === 'completed'" class="flex items-center gap-3 bg-green-600 px-5 py-2.5 rounded-full">
+          <span class="text-base font-bold uppercase tracking-wider">Completed</span>
+        </div>
+        <div *ngIf="matchStatus !== 'live' && matchStatus !== 'completed'" class="flex items-center gap-3 bg-gray-600 px-5 py-2.5 rounded-full">
+          <span class="text-base font-bold uppercase tracking-wider">{{ matchStatus }}</span>
+        </div>
+        
+        <!-- Center: Match Title -->
+        <div class="text-center">
+          <h1 class="text-3xl font-bold tracking-wide">
+            <span class="text-blue-400">{{ firstInningsTeam }}</span>
+            <span class="text-gray-500 mx-3">vs</span>
+            <span class="text-gray-300">{{ secondInningsTeam }}</span>
+          </h1>
+          <p class="text-base text-gray-500 mt-1">{{ format }} Match • {{ inningsLabel }}</p>
+        </div>
+        
+        <!-- Right: Format Badge -->
+        <div class="bg-gray-700/50 px-8 py-3 rounded-lg text-xl font-semibold">
+          {{ format }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content - Two Teams Side by Side -->
+  <div class="flex-1 flex overflow-hidden p-3">
+    <div class="flex-1 grid grid-cols-2 gap-4 w-full">
+      
+      <!-- ===== LEFT COLUMN: First Innings ===== -->
+      <div class="flex flex-col bg-gradient-to-b from-gray-800/90 to-gray-900/90 rounded-xl backdrop-blur-sm border border-gray-700/50 overflow-hidden">
+        
+        <!-- Team Header with Score -->
+        <div class="bg-gradient-to-r from-yellow-600/30 to-yellow-700/20 px-6 py-3 border-b border-yellow-500/30">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <img *ngIf="firstInningsFlag" [src]="firstInningsFlag"
+                class="w-14 h-10 object-cover rounded shadow border border-white/20">
+              <span class="text-3xl font-bold text-yellow-300">{{ firstInningsTeam }}</span>
+            </div>
+            <div class="text-right">
+              <div class="text-6xl font-black text-white">{{ firstInningsRuns }}<span class="text-gray-400 text-4xl">/</span><span class="text-4xl">{{ firstInningsWickets }}</span></div>
+              <div class="text-gray-400 text-lg">({{ firstInningsOvers }} ov)</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Batting List Header -->
+        <div class="grid grid-cols-12 gap-2 px-5 py-1.5 bg-gray-900/80 text-sm text-gray-500 uppercase border-b border-gray-700/50">
+          <div class="col-span-5">Batsman</div>
+          <div class="col-span-4">Status</div>
+          <div class="col-span-3 text-right">R (B)</div>
+        </div>
+        
+        <!-- All Batsmen List -->
+        <div class="flex-1">
+          <ng-container *ngFor="let batsman of firstInningsBatsmen; let i = index">
+            <div class="grid grid-cols-12 gap-2 px-5 py-2 border-b border-gray-800/50"
+              [ngClass]="{'bg-yellow-900/20': batsman.isCurrentlyBatting, 'opacity-50': batsman.isDNB}">
+              <div class="col-span-5 flex items-center gap-3 min-w-0">
+                <span class="text-gray-600 text-base w-6 flex-shrink-0">{{ i + 1 }}</span>
+                <img *ngIf="batsman.image" [src]="batsman.image"
+                  class="w-11 h-11 rounded-full object-cover flex-shrink-0"
+                  [ngClass]="{'border-2 border-yellow-400': batsman.isCurrentlyBatting, 'border border-gray-600': !batsman.isCurrentlyBatting}">
+                <div *ngIf="!batsman.image" 
+                  class="w-11 h-11 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
+                  [ngClass]="{'border-2 border-yellow-400': batsman.isCurrentlyBatting, 'border border-gray-600': !batsman.isCurrentlyBatting}">
+                  <span class="text-lg">🏏</span>
+                </div>
+                <span class="truncate text-2xl font-medium" [ngClass]="{
+                  'text-yellow-300 font-semibold': batsman.isCurrentlyBatting,
+                  'text-gray-400': batsman.isDNB,
+                  'text-white': !batsman.isDNB && !batsman.isCurrentlyBatting
+                }">{{ batsman.shortName }}</span>
+                <span *ngIf="batsman.isCurrentlyBatting" class="text-yellow-400 text-base flex-shrink-0">*</span>
+              </div>
+              <div class="col-span-4 text-lg truncate flex items-center" [ngClass]="{
+                'text-gray-600 italic': batsman.isDNB,
+                'text-green-400': !batsman.isOut && !batsman.isDNB,
+                'text-red-400': batsman.isOut
+              }">
+                {{ batsman.dismissalText }}
+              </div>
+              <div class="col-span-3 text-right flex items-center justify-end">
+                <ng-container *ngIf="!batsman.isDNB">
+                  <span class="font-bold text-white text-3xl">{{ batsman.runs }}</span>
+                  <span class="text-gray-500 text-base ml-1">({{ batsman.balls }})</span>
+                </ng-container>
+                <span *ngIf="batsman.isDNB" class="text-gray-600 text-lg">-</span>
+              </div>
+            </div>
+          </ng-container>
+          
+          <!-- Extras Row -->
+          <div class="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-800/50">
+            <div class="col-span-5 text-gray-400 text-xl">Extras</div>
+            <div class="col-span-4 text-lg text-gray-500">{{ firstInningsExtrasBreakdown }}</div>
+            <div class="col-span-3 text-right font-bold text-yellow-400 text-3xl">{{ firstInningsExtras }}</div>
+          </div>
+        </div>
+        
+        <!-- Bowling Summary -->
+        <div class="border-t border-gray-700/50 px-5 py-3 bg-gray-900/60">
+          <div class="text-sm text-gray-500 uppercase mb-2">Bowling</div>
+          <div class="flex flex-wrap gap-x-5 gap-y-1 text-lg">
+            <ng-container *ngFor="let bowler of firstInningsBowlers">
+              <span class="text-gray-300">
+                {{ bowler.shortName }} 
+                <span class="text-cyan-400 font-semibold">{{ bowler.wickets }}-{{ bowler.runs }}</span>
+                <span class="text-gray-500">({{ bowler.oversDisplay }})</span>
+              </span>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== RIGHT COLUMN: Second Innings ===== -->
+      <div class="flex flex-col bg-gradient-to-b from-gray-800/90 to-gray-900/90 rounded-xl backdrop-blur-sm border border-gray-700/50 overflow-hidden"
+           [ngClass]="{'opacity-40': !hasSecondInnings}">
+        
+        <!-- Team Header with Score -->
+        <div class="bg-gradient-to-r from-cyan-600/30 to-cyan-700/20 px-6 py-3 border-b border-cyan-500/30">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <img *ngIf="secondInningsFlag" [src]="secondInningsFlag"
+                class="w-14 h-10 object-cover rounded shadow border border-white/20">
+              <span class="text-3xl font-bold text-cyan-300">{{ secondInningsTeam }}</span>
+            </div>
+            <div class="text-right">
+              <div *ngIf="hasSecondInnings" class="text-6xl font-black text-white">{{ secondInningsRuns }}<span class="text-gray-400 text-4xl">/</span><span class="text-4xl">{{ secondInningsWickets }}</span></div>
+              <div *ngIf="hasSecondInnings" class="text-gray-400 text-lg">({{ secondInningsOvers }} ov)</div>
+              <div *ngIf="!hasSecondInnings" class="text-gray-500 text-2xl">Yet to bat</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Batting List Header -->
+        <div class="grid grid-cols-12 gap-2 px-5 py-1.5 bg-gray-900/80 text-sm text-gray-500 uppercase border-b border-gray-700/50">
+          <div class="col-span-5">Batsman</div>
+          <div class="col-span-4">Status</div>
+          <div class="col-span-3 text-right">R (B)</div>
+        </div>
+        
+        <!-- All Batsmen List (2nd Innings) -->
+        <div class="flex-1">
+          <ng-container *ngIf="hasSecondInnings">
+            <ng-container *ngFor="let batsman of secondInningsBatsmen; let i = index">
+              <div class="grid grid-cols-12 gap-2 px-5 py-2 border-b border-gray-800/50"
+                [ngClass]="{'bg-cyan-900/20': batsman.isCurrentlyBatting, 'opacity-50': batsman.isDNB}">
+                <div class="col-span-5 flex items-center gap-3 min-w-0">
+                  <span class="text-gray-600 text-base w-6 flex-shrink-0">{{ i + 1 }}</span>
+                  <img *ngIf="batsman.image" [src]="batsman.image"
+                    class="w-11 h-11 rounded-full object-cover flex-shrink-0"
+                    [ngClass]="{'border-2 border-cyan-400': batsman.isCurrentlyBatting, 'border border-gray-600': !batsman.isCurrentlyBatting}">
+                  <div *ngIf="!batsman.image" 
+                    class="w-11 h-11 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0"
+                    [ngClass]="{'border-2 border-cyan-400': batsman.isCurrentlyBatting, 'border border-gray-600': !batsman.isCurrentlyBatting}">
+                    <span class="text-lg">🏏</span>
+                  </div>
+                  <span class="truncate text-2xl font-medium" [ngClass]="{
+                    'text-cyan-300 font-semibold': batsman.isCurrentlyBatting,
+                    'text-gray-400': batsman.isDNB,
+                    'text-white': !batsman.isDNB && !batsman.isCurrentlyBatting
+                  }">{{ batsman.shortName }}</span>
+                  <span *ngIf="batsman.isCurrentlyBatting" class="text-cyan-400 text-base flex-shrink-0">*</span>
+                </div>
+                <div class="col-span-4 text-lg truncate flex items-center" [ngClass]="{
+                  'text-gray-600 italic': batsman.isDNB,
+                  'text-green-400': !batsman.isOut && !batsman.isDNB,
+                  'text-red-400': batsman.isOut
+                }">
+                  {{ batsman.dismissalText }}
+                </div>
+                <div class="col-span-3 text-right flex items-center justify-end">
+                  <ng-container *ngIf="!batsman.isDNB">
+                    <span class="font-bold text-white text-3xl">{{ batsman.runs }}</span>
+                    <span class="text-gray-500 text-base ml-1">({{ batsman.balls }})</span>
+                  </ng-container>
+                  <span *ngIf="batsman.isDNB" class="text-gray-600 text-lg">-</span>
+                </div>
+              </div>
+            </ng-container>
+            
+            <!-- Extras Row -->
+            <div class="grid grid-cols-12 gap-2 px-5 py-2 bg-gray-800/50">
+              <div class="col-span-5 text-gray-400 text-xl">Extras</div>
+              <div class="col-span-4 text-lg text-gray-500">{{ secondInningsExtrasBreakdown }}</div>
+              <div class="col-span-3 text-right font-bold text-yellow-400 text-3xl">{{ secondInningsExtras }}</div>
+            </div>
+          </ng-container>
+          
+          <!-- Placeholder when 2nd innings hasn't started -->
+          <div *ngIf="!hasSecondInnings" class="flex-1 flex items-center justify-center py-8">
+            <div class="text-center text-gray-500">
+              <div class="text-5xl mb-3">🏏</div>
+              <div class="text-xl">Innings not started</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Bowling Summary (2nd Innings) -->
+        <div *ngIf="hasSecondInnings" class="border-t border-gray-700/50 px-5 py-3 bg-gray-900/60">
+          <div class="text-sm text-gray-500 uppercase mb-2">Bowling</div>
+          <div class="flex flex-wrap gap-x-5 gap-y-1 text-lg">
+            <ng-container *ngFor="let bowler of secondInningsBowlers">
+              <span class="text-gray-300">
+                {{ bowler.shortName }} 
+                <span class="text-cyan-400 font-semibold">{{ bowler.wickets }}-{{ bowler.runs }}</span>
+                <span class="text-gray-500">({{ bowler.oversDisplay }})</span>
+              </span>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Bar: Match Status / Chase Info -->
+  <div class="bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 backdrop-blur-sm border-t border-gray-700/50">
+    <div class="w-full px-10 py-5">
+      <!-- Match Completed Result -->
+      <div *ngIf="matchStatus === 'completed'" class="text-center">
+        <div class="text-5xl font-bold">
+          <span *ngIf="winnerTeam" class="text-white">{{ winnerTeam }}</span>
+          <span *ngIf="winnerTeam" class="text-green-400"> won by {{ winMargin }}</span>
+          <span *ngIf="!winnerTeam" class="text-yellow-400">{{ winMargin || 'Match Tied' }}</span>
+        </div>
+      </div>
+      
+      <!-- Chase Equation (2nd innings in progress) -->
+      <div *ngIf="matchStatus !== 'completed' && isSecondInnings" class="flex items-center justify-center">
+        <div class="text-3xl">
+          <span class="text-gray-400">{{ secondInningsTeam }} need </span>
+          <span class="text-yellow-400 font-black text-6xl">{{ runsNeeded }}</span>
+          <span class="text-gray-400"> from </span>
+          <span class="text-yellow-400 font-black text-6xl">{{ ballsRemaining }}</span>
+          <span class="text-gray-400"> balls</span>
+        </div>
+      </div>
+      
+      <!-- First Innings in Progress -->
+      <div *ngIf="matchStatus !== 'completed' && !isSecondInnings" class="flex items-center justify-center">
+        <div class="text-3xl text-gray-400">
+          {{ secondInningsTeam }} to bat next
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
