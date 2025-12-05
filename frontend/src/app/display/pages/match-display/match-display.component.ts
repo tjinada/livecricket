@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { PlayerCacheService } from '../../services/player-cache.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1782,8 +1783,6 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   customMessage: string = '';
   
   private eventSource: EventSource | null = null;
-  private playerNameCache: Map<string, string> = new Map();
-  private playerImageCache: Map<string, string> = new Map();
   
   // SSE connection state
   isConnected = true;
@@ -1799,13 +1798,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   private syncCheckInterval: any = null;
   private readonly SYNC_CHECK_INTERVAL = 30000; // Check sync every 30 seconds
   private readonly HEARTBEAT_TIMEOUT = 25000; // Expect heartbeat within 25s (server sends every 15s)
-  
-  // ESPN CDN base URL for player images
-  private readonly ESPN_CDN_BASE = 'https://img1.hscicdn.com/image/upload';
 
   constructor(
     private route: ActivatedRoute,
-    private http: HttpClient
+    private http: HttpClient,
+    private playerCacheService: PlayerCacheService
   ) {}
 
   ngOnInit() {
@@ -1966,35 +1963,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   buildPlayerNameCache() {
-    if (!this.match) return;
-    const cachePlayer = (player: any) => {
-      if (!player) return;
-      const playerId = player._id || player;
-      if (playerId && player.name) {
-        this.playerNameCache.set(playerId.toString(), player.name);
-      }
-      if (playerId && player.headshotPath) {
-        // Store the full URL in cache
-        const fullUrl = this.buildImageUrl(player.headshotPath);
-        if (fullUrl) {
-          this.playerImageCache.set(playerId.toString(), fullUrl);
-        }
-      }
-    };
-    const cacheFromSquad = (squad: any[]) => {
-      if (!squad) return;
-      squad.forEach(p => cachePlayer(p.player));
-    };
-    cacheFromSquad(this.match.squads?.team1);
-    cacheFromSquad(this.match.squads?.team2);
-    this.match.innings?.forEach((inn: any) => {
-      cachePlayer(inn.currentBatsmen?.striker);
-      cachePlayer(inn.currentBatsmen?.nonStriker);
-      cachePlayer(inn.currentBowler);
-      inn.battingStats?.forEach((bs: any) => cachePlayer(bs.player));
-      inn.bowlingStats?.forEach((bs: any) => cachePlayer(bs.player));
-      inn.fallOfWickets?.forEach((fow: any) => cachePlayer(fow.player));
-    });
+    // Delegate to PlayerCacheService
+    this.playerCacheService.buildCacheFromMatch(this.match);
   }
 
   connectSSE() {
@@ -2324,42 +2294,13 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getPlayerName(player: any): string {
-    if (!player) return 'Unknown';
-    if (player.name) return player.name;
-    const playerId = player._id || player;
-    return this.playerNameCache.get(playerId?.toString()) || 'Unknown';
+    return this.playerCacheService.getPlayerName(player);
   }
 
   getPlayerImage(player: any): string | null {
-    if (!player) return null;
-    
-    // Check for headshotPath and build full URL
-    if (player.headshotPath) {
-      return this.buildImageUrl(player.headshotPath);
-    }
-    
-    // Check for already-built imageUrl
-    if (player.imageUrl) {
-      return player.imageUrl;
-    }
-    
-    // Try to find in cache if player is just an ID
-    const playerId = player._id || player;
-    return this.playerImageCache.get(playerId?.toString()) || null;
+    return this.playerCacheService.getPlayerImage(player);
   }
 
-  // Build full ESPN CDN URL from relative path
-  private buildImageUrl(headshotPath: string): string | null {
-    if (!headshotPath) return null;
-    
-    // If it's already a full URL, return as-is
-    if (headshotPath.startsWith('http')) {
-      return headshotPath;
-    }
-    
-    // Build full URL from relative path
-    return `${this.ESPN_CDN_BASE}${headshotPath}`;
-  }
 
   // ==================== LIVE SCORE VIEW HELPERS ====================
 
@@ -3090,8 +3031,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getShortPlayerName(player: any): string {
-    const name = this.getPlayerName(player);
-    return name?.split(' ').pop() || 'Unknown';
+    return this.playerCacheService.getShortPlayerName(player);
   }
 
   // Get team flag for display
