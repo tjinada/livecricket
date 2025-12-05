@@ -12,6 +12,8 @@ import { BowlerCardService } from '../../services/bowler-card.service';
 import { OverDisplayService } from '../../services/over-display.service';
 import { CurrentBatsmenService } from '../../services/current-batsmen.service';
 import { MatchDisplaySSEService, SSEEvent } from '../../services/match-display-sse.service';
+import { BackgroundService, BackgroundState } from '../../services/background.service';
+import { NotificationService, NotificationState, NotificationType, ThirdUmpireDecision, NotificationData } from '../../services/notification.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1774,7 +1776,6 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   
   // Flag overlay properties
   showFlagOverlays = false;  // True when using default background (not match-specific)
-  defaultBackgrounds: any = {};  // Default backgrounds from settings
   battingTeamFlagVideo: string | null = null;
   bowlingTeamFlagVideo: string | null = null;
   
@@ -1806,7 +1807,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     private bowlerCardService: BowlerCardService,
     private overDisplayService: OverDisplayService,
     private currentBatsmenService: CurrentBatsmenService,
-    private sseService: MatchDisplaySSEService
+    private sseService: MatchDisplaySSEService,
+    private backgroundService: BackgroundService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit() {
@@ -1853,16 +1856,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   loadDefaultBackgrounds() {
-    this.http.get<{ success: boolean; data: any }>('/api/settings/backgrounds').subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.defaultBackgrounds = response.data;
-          this.updateBackground();
-        }
-      },
-      error: (err) => {
-        console.error('Error loading default backgrounds:', err);
-      }
+    this.backgroundService.loadDefaultBackgrounds().subscribe(() => {
+      this.updateBackground();
     });
   }
 
@@ -1880,71 +1875,17 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   updateBackground() {
-    const viewKey = this.displayView;
-    const matchViews = this.match?.backgrounds?.views;
-    const matchBackground = matchViews ? matchViews[viewKey] : null;
+    const state = this.backgroundService.updateBackground(
+      this.displayView,
+      this.match,
+      this.currentInnings
+    );
     
-    // Priority 1: Match-specific background (no flag overlay)
-    if (matchBackground?.type !== 'none' && matchBackground?.url) {
-      this.currentBackground = matchBackground;
-      this.showFlagOverlays = false;
-      this.battingTeamFlagVideo = null;
-      this.bowlingTeamFlagVideo = null;
-      return;
-    }
-    
-    // Priority 2: Team background (no flag overlay)
-    if (this.match?.backgrounds?.useTeamBackground !== false) {
-      const battingTeam = this.currentInnings?.battingTeam;
-      if (battingTeam?.background?.type !== 'none' && battingTeam?.background?.url) {
-        this.currentBackground = battingTeam.background;
-        this.showFlagOverlays = false;
-        this.battingTeamFlagVideo = null;
-        this.bowlingTeamFlagVideo = null;
-        return;
-      }
-    }
-    
-    // Priority 3: Default background with flag overlays
-    const defaultBg = this.defaultBackgrounds?.[viewKey];
-    if (defaultBg?.type !== 'none' && defaultBg?.url) {
-      this.currentBackground = defaultBg;
-      this.showFlagOverlays = true;
-      this.updateFlagOverlays();
-      return;
-    }
-    
-    // Fallback: No background, but still show flag overlays if available
-    this.currentBackground = { type: 'none', url: null };
-    this.showFlagOverlays = true;
-    this.updateFlagOverlays();
-  }
-
-  updateFlagOverlays() {
-    // For overall-summary view, use static team positions (Team1 left, Team2 right)
-    // to match the two-column layout
-    if (this.displayView === 'overall-summary') {
-      // Left side: First innings batting team
-      const leftTeam = this.match?.innings?.[0]?.battingTeam;
-      // Right side: Second innings batting team OR first innings bowling team
-      const rightTeam = this.match?.innings?.[1]?.battingTeam || this.match?.innings?.[0]?.bowlingTeam;
-      
-      this.battingTeamFlagVideo = leftTeam?.flagVideo || this.getTeamFlagVideo(leftTeam);
-      this.bowlingTeamFlagVideo = rightTeam?.flagVideo || this.getTeamFlagVideo(rightTeam);
-      return;
-    }
-    
-    // For all other views, use current innings batting/bowling teams
-    const battingTeam = this.currentInnings?.battingTeam;
-    const bowlingTeam = this.currentInnings?.bowlingTeam;
-    
-    // For batting team flag video, check if team object has flagVideo
-    this.battingTeamFlagVideo = battingTeam?.flagVideo || this.getTeamFlagVideo(battingTeam);
-    this.bowlingTeamFlagVideo = bowlingTeam?.flagVideo || this.getTeamFlagVideo(bowlingTeam);
-  }
-
-  getTeamFlagVideo(team: any): string | null {
-    return this.teamService.getTeamFlagVideo(team, this.match);
+    // Update component properties from service state
+    this.currentBackground = state.currentBackground;
+    this.showFlagOverlays = state.showFlagOverlays;
+    this.battingTeamFlagVideo = state.battingTeamFlagVideo;
+    this.bowlingTeamFlagVideo = state.bowlingTeamFlagVideo;
   }
 
   buildPlayerNameCache() {
