@@ -1260,16 +1260,33 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <!-- Team 1 Players -->
               <div class="mb-4">
                 <h4 class="font-medium text-gray-700 mb-2">{{ match?.team1?.name }}</h4>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="space-y-1">
                   @for (player of getAllTeam1Players(); track getPlayerId(player)) {
                     <button 
                       (click)="selectPlayerForStats(getPlayerId(player))"
-                      class="p-2 rounded-lg border text-left text-sm hover:bg-gray-50"
+                      class="w-full p-2 rounded-lg border text-left text-sm hover:bg-gray-50 flex items-center justify-between"
                       [class.border-blue-500]="selectedPlayerForStats === getPlayerId(player)"
                       [class.bg-blue-50]="selectedPlayerForStats === getPlayerId(player)"
                     >
-                      <span class="font-medium">{{ getSquadPlayerName(player) }}</span>
-                      <span class="text-xs text-gray-500 block">{{ getPlayerRole(player) }}</span>
+                      <div>
+                        <span class="font-medium">{{ getSquadPlayerName(player) }}</span>
+                        <span class="text-xs text-gray-500 ml-2">{{ getPlayerRole(player) }}</span>
+                      </div>
+                      <div class="flex gap-2 text-xs">
+                        @if (getPlayerBattingStatsDisplay(getPlayerId(player))) {
+                          <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                            🏏 {{ getPlayerBattingStatsDisplay(getPlayerId(player)) }}
+                          </span>
+                        }
+                        @if (getPlayerBowlingStatsDisplay(getPlayerId(player))) {
+                          <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                            ⚾ {{ getPlayerBowlingStatsDisplay(getPlayerId(player)) }}
+                          </span>
+                        }
+                        @if (!getPlayerBattingStatsDisplay(getPlayerId(player)) && !getPlayerBowlingStatsDisplay(getPlayerId(player))) {
+                          <span class="text-gray-400">No stats yet</span>
+                        }
+                      </div>
                     </button>
                   }
                 </div>
@@ -1278,16 +1295,33 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <!-- Team 2 Players -->
               <div>
                 <h4 class="font-medium text-gray-700 mb-2">{{ match?.team2?.name }}</h4>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="space-y-1">
                   @for (player of getAllTeam2Players(); track getPlayerId(player)) {
                     <button 
                       (click)="selectPlayerForStats(getPlayerId(player))"
-                      class="p-2 rounded-lg border text-left text-sm hover:bg-gray-50"
+                      class="w-full p-2 rounded-lg border text-left text-sm hover:bg-gray-50 flex items-center justify-between"
                       [class.border-blue-500]="selectedPlayerForStats === getPlayerId(player)"
                       [class.bg-blue-50]="selectedPlayerForStats === getPlayerId(player)"
                     >
-                      <span class="font-medium">{{ getSquadPlayerName(player) }}</span>
-                      <span class="text-xs text-gray-500 block">{{ getPlayerRole(player) }}</span>
+                      <div>
+                        <span class="font-medium">{{ getSquadPlayerName(player) }}</span>
+                        <span class="text-xs text-gray-500 ml-2">{{ getPlayerRole(player) }}</span>
+                      </div>
+                      <div class="flex gap-2 text-xs">
+                        @if (getPlayerBattingStatsDisplay(getPlayerId(player))) {
+                          <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                            🏏 {{ getPlayerBattingStatsDisplay(getPlayerId(player)) }}
+                          </span>
+                        }
+                        @if (getPlayerBowlingStatsDisplay(getPlayerId(player))) {
+                          <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                            ⚾ {{ getPlayerBowlingStatsDisplay(getPlayerId(player)) }}
+                          </span>
+                        }
+                        @if (!getPlayerBattingStatsDisplay(getPlayerId(player)) && !getPlayerBowlingStatsDisplay(getPlayerId(player))) {
+                          <span class="text-gray-400">No stats yet</span>
+                        }
+                      </div>
                     </button>
                   }
                 </div>
@@ -2521,5 +2555,41 @@ export class ScoringComponent implements OnInit, OnDestroy {
       'wicket-keeper': 'WK'
     };
     return roleMap[role] || role;
+  }
+
+  // Get batting stats display for a player (searches both innings)
+  getPlayerBattingStatsDisplay(playerId: string): string {
+    if (!this.match?.innings) return '';
+    
+    for (const innings of this.match.innings) {
+      const battingStat = innings.battingStats?.find((bs: any) => {
+        const bsPlayerId = bs.player?._id || bs.player;
+        return bsPlayerId === playerId || bsPlayerId?.toString() === playerId;
+      });
+      
+      if (battingStat && (battingStat.runs > 0 || battingStat.balls > 0)) {
+        const isOut = battingStat.isOut || battingStat.dismissal?.type;
+        return `${battingStat.runs}(${battingStat.balls})${isOut ? '' : '*'}`;
+      }
+    }
+    return '';
+  }
+
+  // Get bowling stats display for a player (searches both innings)
+  getPlayerBowlingStatsDisplay(playerId: string): string {
+    if (!this.match?.innings) return '';
+    
+    for (const innings of this.match.innings) {
+      const bowlingStat = innings.bowlingStats?.find((bs: any) => {
+        const bsPlayerId = bs.player?._id || bs.player;
+        return bsPlayerId === playerId || bsPlayerId?.toString() === playerId;
+      });
+      
+      if (bowlingStat && ((bowlingStat.overs || 0) > 0 || (bowlingStat.balls || 0) > 0)) {
+        const overs = `${bowlingStat.overs || 0}.${bowlingStat.balls || 0}`;
+        return `${bowlingStat.wickets || 0}/${bowlingStat.runs || 0} (${overs})`;
+      }
+    }
+    return '';
   }
 }
