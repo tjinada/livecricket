@@ -7,6 +7,7 @@ import { MatchCalculationsService, GraphDataPoint } from '../../services/match-c
 import { TeamDisplayService } from '../../services/team-display.service';
 import { DismissalFormatterService } from '../../services/dismissal-formatter.service';
 import { BattingCardService } from '../../services/batting-card.service';
+import { BowlerCardService } from '../../services/bowler-card.service';
 
 @Component({
   selector: 'app-match-display',
@@ -1810,7 +1811,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     private calcService: MatchCalculationsService,
     private teamService: TeamDisplayService,
     private dismissalService: DismissalFormatterService,
-    private battingCardService: BattingCardService
+    private battingCardService: BattingCardService,
+    private bowlerCardService: BowlerCardService
   ) {}
 
   ngOnInit() {
@@ -2554,7 +2556,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getBowlingStats(): any[] {
-    return this.currentInnings?.bowlingStats || [];
+    return this.bowlerCardService.getBowlingStats(this.currentInnings);
   }
 
   getBatsmanName(batsman: any): string {
@@ -2582,9 +2584,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   isCurrentBowler(bowler: any): boolean {
-    const playerId = bowler.player?._id || bowler.player;
-    const bowlerId = this.currentInnings?.currentBowler?._id || this.currentInnings?.currentBowler;
-    return playerId === bowlerId || playerId?.toString() === bowlerId?.toString();
+    return this.bowlerCardService.isCurrentBowler(bowler, this.currentInnings);
   }
 
   getHowOut(batsman: any): string {
@@ -2600,11 +2600,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getBowlerOversDisplay(bowler: any): string {
-    return `${bowler.overs || 0}.${bowler.balls || 0}`;
+    return this.bowlerCardService.getBowlerOversDisplay(bowler);
   }
 
   getBowlerEconomy(bowler: any): string {
-    return this.calcService.getBowlerEconomy(bowler.runs || 0, bowler.overs || 0, bowler.balls || 0);
+    return this.bowlerCardService.getBowlerEconomy(bowler);
   }
 
   getTotalExtras(): number {
@@ -2650,12 +2650,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getTopBowlersForInnings(inningsIndex: number, count: number): any[] {
-    const oppositeIndex = inningsIndex === 0 ? 0 : 1;
-    const innings = this.match.innings?.[oppositeIndex];
-    if (!innings?.bowlingStats) return [];
-    return [...innings.bowlingStats]
-      .sort((a: any, b: any) => (b.wickets || 0) - (a.wickets || 0) || (a.runs || 0) - (b.runs || 0))
-      .slice(0, count);
+    return this.bowlerCardService.getTopBowlersForInnings(inningsIndex, count, this.match);
   }
 
   getSecondBattingTeamName(): string {
@@ -2784,24 +2779,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getCurrentBowlerOvers(): string {
-    const bowlerId = this.currentInnings?.currentBowler?._id || this.currentInnings?.currentBowler;
-    const stats = this.currentInnings?.bowlingStats?.find((b: any) => {
-      const id = b.player?._id || b.player;
-      return id === bowlerId || id?.toString() === bowlerId?.toString();
-    });
-    if (!stats) return '0.0';
-    return `${stats.overs || 0}.${stats.balls || 0}`;
+    return this.bowlerCardService.getCurrentBowlerOvers(this.currentInnings);
   }
 
   getBestBowler(): any {
-    const bowlingStats = this.currentInnings?.bowlingStats || [];
-    if (bowlingStats.length === 0) return null;
-    return [...bowlingStats].sort((a: any, b: any) => {
-      if ((b.wickets || 0) !== (a.wickets || 0)) {
-        return (b.wickets || 0) - (a.wickets || 0);
-      }
-      return (a.runs || 0) - (b.runs || 0);
-    })[0];
+    return this.bowlerCardService.getBestBowler(this.currentInnings);
   }
 
   getTotalFours(): number {
@@ -2832,11 +2814,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   getSummaryBowlers(inningsIndex: number, count: number): any[] {
-    const innings = this.match?.innings?.[inningsIndex];
-    if (!innings?.bowlingStats) return [];
-    return [...innings.bowlingStats]
-      .sort((a: any, b: any) => (b.wickets || 0) - (a.wickets || 0) || (a.runs || 0) - (b.runs || 0))
-      .slice(0, count);
+    return this.bowlerCardService.getSummaryBowlers(inningsIndex, count, this.match);
   }
 
   getSummaryFours(inningsIndex: number): number {
