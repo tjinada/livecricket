@@ -89,11 +89,17 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== LIFECYCLE ====================
 
   ngOnInit() {
-    this.matchId = this.route.snapshot.paramMap.get('id') || '';
+    console.log('MatchDisplayComponent ngOnInit called');
+    this.matchId = this.route.snapshot.paramMap.get('matchId') || '';
+    console.log('Match ID extracted:', this.matchId);
     if (this.matchId) {
       this.loadMatch();
       this.loadDefaultBackgrounds();
       this.setupSSE();
+    } else {
+      console.error('No match ID found in route!');
+      this.error = 'No match ID provided';
+      this.loading = false;
     }
   }
 
@@ -110,8 +116,10 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== DATA LOADING ====================
 
   loadMatch() {
+    console.log('Loading match:', this.matchId);
     this.http.get<{ success: boolean; data: any }>(`/api/matches/${this.matchId}`).subscribe({
       next: (response) => {
+        console.log('Match response:', response);
         if (response.success) {
           this.match = response.data;
           this.displayView = this.match.displayView || 'live-score';
@@ -121,6 +129,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
           this.error = 'Match not found';
         }
         this.loading = false;
+        console.log('Loading complete, loading:', this.loading, 'error:', this.error, 'match:', !!this.match);
       },
       error: (err) => {
         console.error('Error loading match:', err);
