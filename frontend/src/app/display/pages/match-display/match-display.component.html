@@ -1,0 +1,290 @@
+<div class="min-h-screen bg-gray-900 text-white relative overflow-hidden">
+  <!-- Background Layer -->
+  <div class="absolute inset-0 z-0">
+    <!-- Video Background -->
+    <video 
+      *ngIf="currentBackground?.type === 'video' && currentBackground?.url"
+      [src]="currentBackground!.url!"
+      autoplay
+      loop
+      [muted]="true"
+      playsinline
+      class="w-full h-full object-cover"
+    ></video>
+    
+    <!-- Image Background -->
+    <div 
+      *ngIf="currentBackground?.type === 'image' && currentBackground?.url"
+      class="w-full h-full bg-cover bg-center"
+      [style.backgroundImage]="'url(' + currentBackground!.url! + ')'"
+    ></div>
+    
+    <!-- Default Gradient Background -->
+    <div 
+      *ngIf="!currentBackground?.url || currentBackground?.type === 'none'"
+      class="w-full h-full bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900"
+    ></div>
+    
+    <!-- Flag Overlays (only when using default backgrounds) -->
+    <ng-container *ngIf="showFlagOverlays">
+      <!-- Batting Team Flag (Left Side) -->
+      <video 
+        *ngIf="battingTeamFlagVideo"
+        [src]="battingTeamFlagVideo"
+        autoplay
+        loop
+        [muted]="true"
+        playsinline
+        class="absolute left-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
+        style="mix-blend-mode: screen;"
+      ></video>
+      
+      <!-- Bowling Team Flag (Right Side) -->
+      <video 
+        *ngIf="bowlingTeamFlagVideo"
+        [src]="bowlingTeamFlagVideo"
+        autoplay
+        loop
+        [muted]="true"
+        playsinline
+        class="absolute right-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
+        style="mix-blend-mode: screen; transform: scaleX(-1);"
+      ></video>
+    </ng-container>
+    
+    <!-- Dark Overlay for readability -->
+    <div class="absolute inset-0 bg-black/30"></div>
+    
+    <!-- Vignette Effect - dark edges, clear center -->
+    <div class="absolute inset-0" style="background: radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0,0,0,0.4) 70%, rgba(0,0,0,0.7) 100%);"></div>
+  </div>
+
+  <!-- ==================== NOTIFICATION OVERLAY (Sub-Component) ==================== -->
+  <app-notification-overlay
+    [show]="showNotification"
+    [type]="notificationType"
+    [data]="notificationData"
+    [thirdUmpireDecision]="thirdUmpireDecision"
+    [customMessage]="customMessage"
+    (dismiss)="dismissNotification()"
+  ></app-notification-overlay>
+
+  <!-- Content Layer -->
+  <div class="relative z-10 h-screen flex flex-col">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="flex items-center justify-center h-screen">
+      <div class="text-center">
+        <div class="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-xl text-gray-400">Loading match...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="!loading && error" class="flex flex-col items-center justify-center h-screen">
+      <p class="text-xl text-red-400 mb-4">{{ error }}</p>
+      <a routerLink="/display" class="text-green-400 hover:text-green-300">← Back to matches</a>
+    </div>
+
+    <!-- Match Content -->
+    <div *ngIf="!loading && !error && match" class="h-full flex flex-col">
+    
+      <!-- ==================== LIVE SCORE VIEW (Sub-Component) ==================== -->
+      <app-live-score-view
+        *ngIf="displayView === 'live-score'"
+        [format]="match.format"
+        [inningsLabel]="getInningsLabel()"
+        [battingTeamName]="getBattingTeamName()"
+        [battingTeamCode]="getBattingTeamCode()"
+        [battingTeamFlag]="getBattingTeamFlag()"
+        [bowlingTeamName]="getBowlingTeamName()"
+        [totalRuns]="currentInnings?.totalRuns || 0"
+        [totalWickets]="currentInnings?.totalWickets || 0"
+        [oversDisplay]="getOversDisplay()"
+        [isSecondInnings]="isSecondInnings()"
+        [runsNeeded]="getRunsNeeded()"
+        [ballsRemaining]="getBallsRemaining()"
+        [strikerName]="getStrikerName()"
+        [strikerImage]="getStrikerImage()"
+        [strikerRuns]="getStrikerRuns()"
+        [strikerBalls]="getStrikerBalls()"
+        [strikerSR]="getStrikerSR()"
+        [nonStrikerName]="getNonStrikerName()"
+        [nonStrikerImage]="getNonStrikerImage()"
+        [nonStrikerRuns]="getNonStrikerRuns()"
+        [nonStrikerBalls]="getNonStrikerBalls()"
+        [nonStrikerSR]="getNonStrikerSR()"
+        [bowlerName]="getCurrentBowlerName()"
+        [bowlerImage]="getCurrentBowlerImage()"
+        [bowlerFigures]="getCurrentBowlerFigures()"
+        [bowlerOvers]="getCurrentBowlerOvers()"
+        [partnershipRuns]="getPartnershipRuns()"
+        [partnershipBalls]="getPartnershipBalls()"
+        [previousOvers]="getPreviousOvers()"
+        [currentOverBalls]="getCurrentOverBalls()"
+        [remainingBallsInOver]="getRemainingBallsInOver()"
+        [lastWicket]="getLastWicket()"
+        [currentRunRate]="getCurrentRunRate()"
+        [requiredRunRate]="getRequiredRunRate()"
+      ></app-live-score-view>
+
+      <!-- ==================== LIVE MATCH SUMMARY VIEW (Sub-Component) ==================== -->
+      <app-live-match-summary-view
+        *ngIf="displayView === 'live-match-summary'"
+        [format]="match.format"
+        [inningsLabel]="getInningsLabel()"
+        [battingTeamName]="getBattingTeamName()"
+        [battingTeamCode]="getBattingTeamCode()"
+        [bowlingTeamName]="getBowlingTeamName()"
+        [totalRuns]="currentInnings?.totalRuns || 0"
+        [totalWickets]="currentInnings?.totalWickets || 0"
+        [oversDisplay]="getOversDisplay()"
+        [currentRunRate]="getCurrentRunRate()"
+        [strikerName]="getStrikerName()"
+        [strikerImage]="getStrikerImage()"
+        [strikerRuns]="getStrikerRuns()"
+        [strikerBalls]="getStrikerBalls()"
+        [nonStrikerName]="getNonStrikerName()"
+        [nonStrikerImage]="getNonStrikerImage()"
+        [nonStrikerRuns]="getNonStrikerRuns()"
+        [nonStrikerBalls]="getNonStrikerBalls()"
+        [partnershipRuns]="getPartnershipRuns()"
+        [partnershipBalls]="getPartnershipBalls()"
+        [battingStats]="getLiveMatchSummaryBattingStats()"
+        [currentBowlerName]="getCurrentBowlerName()"
+        [currentBowlerImage]="getCurrentBowlerImage()"
+        [currentBowlerFigures]="getCurrentBowlerFigures()"
+        [currentBowlerOvers]="getCurrentBowlerOvers()"
+        [currentOverBalls]="getCurrentOverBalls()"
+        [bowlingStats]="getLiveMatchSummaryBowlingStats()"
+        [totalExtras]="getTotalExtras()"
+        [extrasBreakdown]="getExtrasBreakdown()"
+        [yetToBatCount]="getYetToBatCount()"
+        [totalFours]="getTotalFours()"
+        [totalSixes]="getTotalSixes()"
+        [dotBallsPercentage]="getDotBallsPercentage()"
+        [fallOfWickets]="getLiveMatchSummaryFOW()"
+        [isSecondInnings]="isSecondInnings()"
+        [target]="getTarget()"
+        [runsNeeded]="getRunsNeeded()"
+        [ballsRemaining]="getBallsRemaining()"
+        [requiredRunRate]="getRequiredRunRate()"
+      ></app-live-match-summary-view>
+
+      <!-- ==================== FINAL MATCH SUMMARY VIEW (Sub-Component) ==================== -->
+      <app-final-match-summary-view
+        *ngIf="displayView === 'final-match-summary'"
+        [format]="match.format"
+        [inningsLabel]="getInningsLabel()"
+        [matchStatus]="match.status"
+        [firstInningsTeam]="getTeamName(match.innings[0]?.battingTeam)"
+        [firstInningsFlag]="getTeamFlag(match.innings[0]?.battingTeam)"
+        [firstInningsRuns]="match.innings[0]?.totalRuns || 0"
+        [firstInningsWickets]="match.innings[0]?.totalWickets || 0"
+        [firstInningsOvers]="getInningsOvers(match.innings[0])"
+        [firstInningsExtras]="getSummaryExtras(0)"
+        [firstInningsExtrasBreakdown]="getExtrasBreakdownForInnings(0)"
+        [firstInningsBatsmen]="getFinalSummaryBatsmen(0)"
+        [firstInningsBowlers]="getFinalSummaryBowlers(0)"
+        [secondInningsTeam]="getTeamName(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam)"
+        [secondInningsFlag]="getTeamFlag(match.innings[1]?.battingTeam || match.innings[0]?.bowlingTeam)"
+        [secondInningsRuns]="match.innings[1]?.totalRuns || 0"
+        [secondInningsWickets]="match.innings[1]?.totalWickets || 0"
+        [secondInningsOvers]="getInningsOvers(match.innings[1])"
+        [secondInningsExtras]="getSummaryExtras(1)"
+        [secondInningsExtrasBreakdown]="getExtrasBreakdownForInnings(1)"
+        [hasSecondInnings]="!!match.innings[1]"
+        [secondInningsBatsmen]="getFinalSummaryBatsmen(1)"
+        [secondInningsBowlers]="getFinalSummaryBowlers(1)"
+        [isSecondInnings]="isSecondInnings()"
+        [winnerTeam]="match.result?.winner ? getTeamName(match.result.winner) : ''"
+        [winMargin]="match.result?.winMargin || ''"
+        [runsNeeded]="getRunsNeeded()"
+        [ballsRemaining]="getBallsRemaining()"
+      ></app-final-match-summary-view>
+
+      <!-- ==================== RUN RATE GRAPH VIEW (Sub-Component) ==================== -->
+      <app-run-rate-graph-view
+        *ngIf="displayView === 'run-rate-graph'"
+        [format]="match.format"
+        [inningsLabel]="getInningsLabel()"
+        [firstInningsTeamName]="getFirstInningsTeamName()"
+        [secondInningsTeamName]="getSecondInningsTeamName()"
+        [battingTeamName]="getBattingTeamName()"
+        [battingTeamCode]="getBattingTeamCode()"
+        [hasSecondInnings]="match.innings && match.innings.length > 1"
+        [totalRuns]="currentInnings?.totalRuns || 0"
+        [totalWickets]="currentInnings?.totalWickets || 0"
+        [oversDisplay]="getOversDisplay()"
+        [currentRunRate]="getCurrentRunRate()"
+        [requiredRunRate]="getRequiredRunRate()"
+        [projectedScore]="getProjectedScore()"
+        [isSecondInnings]="isSecondInnings()"
+        [target]="getTarget()"
+        [runsNeeded]="getRunsNeeded()"
+        [ballsRemaining]="getBallsRemaining()"
+        [oversRemaining]="getOversRemaining()"
+        [totalFours]="getTotalFours()"
+        [totalSixes]="getTotalSixes()"
+        [winProbability]="getWinProbability()"
+        [firstInningsData]="getFirstInningsData()"
+        [secondInningsData]="getSecondInningsData()"
+        [yAxisLabels]="getYAxisLabels()"
+        [oversAxisLabels]="getOversAxisLabels()"
+        [xScale]="getXScale()"
+        [yScale]="getYScale()"
+        [firstInningsLinePoints]="getFirstInningsLinePointsXL()"
+        [secondInningsLinePoints]="getSecondInningsLinePointsXL()"
+        [firstInningsAreaPoints]="getFirstInningsAreaPoints()"
+        [secondInningsAreaPoints]="getSecondInningsAreaPoints()"
+      ></app-run-rate-graph-view>
+
+      <!-- ==================== CURRENT PARTNERSHIP VIEW (Sub-Component) ==================== -->
+      <app-current-partnership-view
+        *ngIf="displayView === 'current-partnership'"
+        [format]="match.format"
+        [inningsLabel]="getInningsLabel()"
+        [battingTeamName]="getBattingTeamName()"
+        [battingTeamCode]="getBattingTeamCode()"
+        [bowlingTeamName]="getBowlingTeamName()"
+        [totalRuns]="currentInnings?.totalRuns || 0"
+        [totalWickets]="currentInnings?.totalWickets || 0"
+        [oversDisplay]="getOversDisplay()"
+        [partnershipRuns]="getPartnershipRuns()"
+        [partnershipBalls]="getPartnershipBalls()"
+        [strikerName]="getPlayerName(currentInnings?.currentBatsmen?.striker)"
+        [strikerImage]="getStrikerImage()"
+        [strikerBattingStyle]="getStrikerBattingStyle()"
+        [strikerRuns]="getStrikerRuns()"
+        [strikerBalls]="getStrikerBalls()"
+        [strikerFours]="getStrikerStats()?.fours || 0"
+        [strikerSixes]="getStrikerStats()?.sixes || 0"
+        [strikerSR]="getStrikerSR()"
+        [strikerDots]="getStrikerDots()"
+        [nonStrikerName]="getPlayerName(currentInnings?.currentBatsmen?.nonStriker)"
+        [nonStrikerImage]="getNonStrikerImage()"
+        [nonStrikerBattingStyle]="getNonStrikerBattingStyle()"
+        [nonStrikerRuns]="getNonStrikerRuns()"
+        [nonStrikerBalls]="getNonStrikerBalls()"
+        [nonStrikerFours]="getNonStrikerStats()?.fours || 0"
+        [nonStrikerSixes]="getNonStrikerStats()?.sixes || 0"
+        [nonStrikerSR]="getNonStrikerSR()"
+        [nonStrikerDots]="getNonStrikerDots()"
+        [bowlerName]="getCurrentBowlerName()"
+        [bowlerImage]="getCurrentBowlerImage()"
+        [bowlerFullFigures]="getCurrentBowlerFullFigures()"
+        [currentOverBalls]="getCurrentOverBalls()"
+        [remainingBallsInOver]="getRemainingBallsInOver()"
+        [currentRunRate]="getCurrentRunRate()"
+        [requiredRunRate]="getRequiredRunRate()"
+        [isSecondInnings]="isSecondInnings()"
+        [runsNeeded]="getRunsNeeded()"
+        [ballsRemaining]="getBallsRemaining()"
+      ></app-current-partnership-view>
+      
+      <!-- View Indicator -->
+      <div class="fixed bottom-4 right-4 bg-black/50 px-3 py-1 rounded text-xs text-gray-400 backdrop-blur-sm">
+        {{ getViewName() }}
+      </div>
+    </div>
+  </div>
+</div>
