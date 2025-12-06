@@ -61,6 +61,10 @@ export class LiveScoreViewComponent {
   @Input() currentRunRate = '';
   @Input() requiredRunRate = '';
 
+  // Highlight mode inputs
+  @Input() highlightType: 'four' | 'six' | 'wicket' | 'fifty' | 'hundred' | null = null;
+  @Input() highlightData: any = null;
+
   getBallColorClass(ball: BallDisplay): { [key: string]: boolean } {
     const display = ball.display;
     return {
@@ -71,5 +75,45 @@ export class LiveScoreViewComponent {
       'bg-yellow-600 text-black': display === 'Wd' || display === 'Nb' || display === 'B' || display === 'Lb',
       'bg-blue-600 text-white': !['0', '•', '4', '6', 'W', 'Wd', 'Nb', 'B', 'Lb'].includes(display)
     };
+  }
+
+  // Highlight helper methods
+  get isHighlightMode(): boolean {
+    return this.highlightType !== null;
+  }
+
+  get highlightBorderClass(): string {
+    switch (this.highlightType) {
+      case 'four': return 'ring-4 ring-green-500/50';
+      case 'six': return 'ring-4 ring-purple-500/50';
+      case 'wicket': return 'ring-4 ring-red-500/50';
+      case 'fifty': return 'ring-4 ring-yellow-500/50';
+      case 'hundred': return 'ring-4 ring-amber-500/50';
+      default: return '';
+    }
+  }
+
+  get highlightGlowClass(): string {
+    switch (this.highlightType) {
+      case 'four': return 'shadow-[0_0_30px_rgba(34,197,94,0.3)]';
+      case 'six': return 'shadow-[0_0_30px_rgba(168,85,247,0.3)]';
+      case 'wicket': return 'shadow-[0_0_30px_rgba(239,68,68,0.3)]';
+      case 'fifty': return 'shadow-[0_0_30px_rgba(234,179,8,0.3)]';
+      case 'hundred': return 'shadow-[0_0_30px_rgba(245,158,11,0.3)]';
+      default: return '';
+    }
+  }
+
+  getHighlightPlayerName(): string {
+    if (!this.highlightData) return '';
+    return this.highlightData.batsmanName || this.highlightData.playerName || '';
+  }
+
+  getHighlightPlayerImage(): string | null {
+    if (!this.highlightData) return null;
+    const path = this.highlightData.batsmanImage || this.highlightData.playerImage;
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
   }
 }

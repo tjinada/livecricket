@@ -969,10 +969,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   onHighlightViewChange(state: HighlightViewState): void {
     this.highlightViewState = state;
     
-    // Show notification overlay if needed
-    if (state.showOverlay && state.overlayType) {
-      this.showBigNotification(state.overlayType as any, state.highlightData);
-    }
+    // Don't show notification overlay during highlights - the score is visible
+    // The highlight type badge at the top already indicates what happened
   }
 
   /**
@@ -988,5 +986,87 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
    */
   isInDisplayHighlightMode(): boolean {
     return this.displayView === 'highlight-video' && this.useDisplayBasedHighlights;
+  }
+
+  // ==================== HIGHLIGHT SCORE HELPERS ====================
+  // These return historical scores during highlight playback
+
+  /**
+   * Get total runs - uses highlight score state when in highlight mode
+   */
+  getHighlightTotalRuns(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
+      return this.highlightViewState.scoreState.runs;
+    }
+    return this.currentInnings?.totalRuns || 0;
+  }
+
+  /**
+   * Get total wickets - uses highlight score state when in highlight mode
+   */
+  getHighlightTotalWickets(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
+      return this.highlightViewState.scoreState.wickets;
+    }
+    return this.currentInnings?.totalWickets || 0;
+  }
+
+  /**
+   * Get overs display - uses highlight score state when in highlight mode
+   */
+  getHighlightOversDisplay(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
+      return this.highlightViewState.scoreState.overs;
+    }
+    return this.getOversDisplay();
+  }
+
+  /**
+   * Get striker name during highlights
+   */
+  getHighlightStrikerName(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.batsmanName) {
+      // Extract last name for display
+      const fullName = this.highlightViewState.scoreState.batsmanName;
+      return fullName?.split(' ').pop() || fullName || 'Batsman';
+    }
+    return this.getStrikerName();
+  }
+
+  /**
+   * Get striker runs during highlights
+   */
+  getHighlightStrikerRuns(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.batsmanRuns !== undefined) {
+      return this.highlightViewState.scoreState.batsmanRuns;
+    }
+    return this.getStrikerRuns();
+  }
+
+  /**
+   * Get striker balls during highlights
+   */
+  getHighlightStrikerBalls(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.batsmanBalls !== undefined) {
+      return this.highlightViewState.scoreState.batsmanBalls;
+    }
+    return this.getStrikerBalls();
+  }
+
+  /**
+   * Get current run rate during highlights
+   */
+  getHighlightCurrentRunRate(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
+      const { runs, overs } = this.highlightViewState.scoreState;
+      // Parse overs string like "6.1" to calculate balls
+      const parts = overs.split('.');
+      const completedOvers = parseInt(parts[0]) || 0;
+      const balls = parseInt(parts[1]) || 0;
+      const totalBalls = completedOvers * 6 + balls;
+      if (totalBalls === 0) return '0.00';
+      return ((runs / totalBalls) * 6).toFixed(2);
+    }
+    return this.getCurrentRunRate();
   }
 }

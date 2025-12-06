@@ -20,6 +20,16 @@ export interface HighlightViewState {
   highlightData: any;
   showOverlay: boolean;
   overlayType: 'four' | 'six' | 'wicket' | 'fifty' | 'hundred' | null;
+  // Score state at time of highlight
+  scoreState?: {
+    runs: number;
+    wickets: number;
+    overs: string;
+    batsmanName?: string;
+    batsmanRuns?: number;
+    batsmanBalls?: number;
+    bowlerName?: string;
+  };
 }
 
 interface PlayerState {
@@ -269,27 +279,27 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     switch (highlight.type) {
       case 'four':
         view = 'live-score';
-        showOverlay = true;
+        showOverlay = false; // Don't show overlay during highlights - score is visible
         overlayType = 'four';
         break;
       case 'six':
         view = 'live-score';
-        showOverlay = true;
+        showOverlay = false;
         overlayType = 'six';
         break;
       case 'wicket':
         view = 'live-score';
-        showOverlay = true;
+        showOverlay = false;
         overlayType = 'wicket';
         break;
       case 'fifty':
         view = 'live-score';
-        showOverlay = true;
+        showOverlay = false;
         overlayType = 'fifty';
         break;
       case 'hundred':
         view = 'live-score';
-        showOverlay = true;
+        showOverlay = false;
         overlayType = 'hundred';
         break;
       case 'overSummary':
@@ -308,12 +318,24 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
         view = 'live-score';
     }
 
+    // Extract score state from highlight data
+    const scoreState = highlight.data?.scoreAfter ? {
+      runs: highlight.data.scoreAfter.runs || 0,
+      wickets: highlight.data.scoreAfter.wickets || 0,
+      overs: highlight.data.scoreAfter.overs || '0.0',
+      batsmanName: highlight.data.batsmanName || highlight.data.playerName,
+      batsmanRuns: highlight.data.batsmanRuns || highlight.data.runs || 0,
+      batsmanBalls: highlight.data.batsmanBalls || highlight.data.balls || 0,
+      bowlerName: highlight.data.bowlerName
+    } : undefined;
+
     this.viewChange.emit({
       view,
       highlightType: highlight.type,
       highlightData: highlight.data,
       showOverlay,
-      overlayType
+      overlayType,
+      scoreState
     });
   }
 
