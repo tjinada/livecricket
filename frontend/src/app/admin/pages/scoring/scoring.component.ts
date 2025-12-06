@@ -8,7 +8,7 @@ import { PlayerService } from '../../../core/services/player.service';
 import { Player } from '../../../core/models';
 import { BackgroundSettingsComponent, BackgroundSettings } from '../../components/background-settings/background-settings.component';
 
-type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats';
+type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo';
 
 @Component({
   selector: 'app-scoring',
@@ -189,6 +189,21 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   ✖ Dismiss
                 </button>
               </div>
+            </div>
+          </div>
+
+          <!-- Highlight Video -->
+          <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <h3 class="font-semibold text-gray-800 mb-3">🎬 Match Highlights</h3>
+            <p class="text-sm text-gray-500 mb-3">Play a highlight video of 4s, 6s, wickets, and milestones</p>
+            <div class="space-y-2">
+              <button 
+                (click)="openHighlightVideoModal()"
+                class="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 font-medium flex items-center justify-center gap-2"
+              >
+                <span>▶</span>
+                <span>Play Highlight Video</span>
+              </button>
             </div>
           </div>
 
@@ -767,6 +782,19 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   </div>
                 </div>
               </div>
+
+              <!-- Match Highlights -->
+              <div class="bg-white rounded-lg shadow p-4">
+                <h3 class="font-semibold text-gray-800 mb-2">🎬 Match Highlights</h3>
+                <p class="text-xs text-gray-500 mb-3">Play highlights up to current score</p>
+                <button 
+                  (click)="openHighlightVideoModal()"
+                  class="w-full px-3 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <span>▶</span>
+                  <span>Play Highlights</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1340,6 +1368,78 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {{ processing ? 'Saving...' : 'Show Player Stats' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Highlight Video Modal -->
+      @if (activeModal === 'highlightVideo') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">🎬 Play Highlight Video</h3>
+            </div>
+            <div class="p-4 space-y-4">
+              <p class="text-sm text-gray-500">Select which highlights to play on the display screen.</p>
+              
+              <div class="space-y-3">
+                @if (match && match.innings && match.innings[0]) {
+                  <button 
+                    (click)="playHighlightVideo(1)"
+                    [disabled]="processing"
+                    class="w-full p-4 rounded-lg border-2 text-left hover:border-purple-500 hover:bg-purple-50 transition-colors disabled:opacity-50"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="font-semibold text-gray-800">1st Innings Highlights</p>
+                        <p class="text-sm text-gray-500">{{ getTeamNameById(match.innings[0].battingTeam) }}: {{ match.innings[0].totalRuns }}/{{ match.innings[0].totalWickets }}</p>
+                      </div>
+                      <span class="text-purple-600 text-xl">▶</span>
+                    </div>
+                  </button>
+                }
+                
+                @if (match && match.innings && match.innings[1]) {
+                  <button 
+                    (click)="playHighlightVideo(2)"
+                    [disabled]="processing"
+                    class="w-full p-4 rounded-lg border-2 text-left hover:border-purple-500 hover:bg-purple-50 transition-colors disabled:opacity-50"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="font-semibold text-gray-800">2nd Innings Highlights</p>
+                        <p class="text-sm text-gray-500">{{ getTeamNameById(match.innings[1].battingTeam) }}: {{ match.innings[1].totalRuns }}/{{ match.innings[1].totalWickets }}</p>
+                      </div>
+                      <span class="text-purple-600 text-xl">▶</span>
+                    </div>
+                  </button>
+                }
+                
+                @if (match && match.innings && match.innings.length >= 1) {
+                  <button 
+                    (click)="playHighlightVideo(null)"
+                    [disabled]="processing"
+                    class="w-full p-4 rounded-lg border-2 border-purple-500 bg-purple-50 text-left hover:bg-purple-100 transition-colors disabled:opacity-50"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="font-semibold text-purple-700">Full Match Highlights</p>
+                        <p class="text-sm text-purple-600">All 4s, 6s, wickets, and milestones</p>
+                      </div>
+                      <span class="text-purple-600 text-xl">▶▶</span>
+                    </div>
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="p-4 border-t flex justify-end">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -2591,5 +2691,31 @@ export class ScoringComponent implements OnInit, OnDestroy {
       }
     }
     return '';
+  }
+
+  // Highlight Video Methods
+  openHighlightVideoModal(): void {
+    this.activeModal = 'highlightVideo';
+  }
+
+  playHighlightVideo(inningsNumber: number | null): void {
+    this.processing = true;
+    this.error = '';
+
+    // Send view-change event with highlight-video view and innings parameter
+    this.matchService.setDisplayViewWithInnings(this.matchId, 'highlight-video', inningsNumber).subscribe({
+      next: (response: any) => {
+        if (response.success) {
+          this.closeModal();
+        } else {
+          this.error = response.message || 'Failed to start highlight video';
+        }
+        this.processing = false;
+      },
+      error: (err: any) => {
+        this.error = err.error?.message || 'Failed to start highlight video';
+        this.processing = false;
+      }
+    });
   }
 }

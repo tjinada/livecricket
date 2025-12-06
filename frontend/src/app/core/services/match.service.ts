@@ -119,6 +119,14 @@ export class MatchService {
     return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/display-view`, body);
   }
 
+  setDisplayViewWithInnings(id: string, view: string, innings: number | null): Observable<ApiResponse<any>> {
+    const body: { view: string; innings?: number | null } = { view };
+    if (innings !== null) {
+      body.innings = innings;
+    }
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/display-view`, body);
+  }
+
   setSelectedPlayerForStats(id: string, playerId: string): Observable<ApiResponse<any>> {
     return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${id}/selected-player`, { playerId });
   }

@@ -1,0 +1,500 @@
+<!-- Highlight Video Player - Full Screen Overlay -->
+<div class="fixed inset-0 z-50 bg-black">
+  
+  <!-- Loading State -->
+  <div *ngIf="loading" class="absolute inset-0 flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-white text-xl font-medium">Loading Highlights...</p>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="absolute inset-0 flex items-center justify-center">
+    <div class="text-center max-w-md">
+      <div class="w-20 h-20 bg-red-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </div>
+      <p class="text-white text-xl font-medium mb-2">Failed to Load Highlights</p>
+      <p class="text-gray-400 mb-4">{{ error }}</p>
+      <button 
+        (click)="loadHighlights()" 
+        class="px-6 py-2 bg-white text-black rounded-full font-medium hover:bg-gray-200 transition-colors">
+        Try Again
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="highlightVideo && !loading && !error" class="h-full flex flex-col">
+    
+    <!-- Close Button -->
+    <button 
+      (click)="onClose()"
+      class="absolute top-6 right-6 z-20 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+
+    <!-- Match Info Header -->
+    <div class="absolute top-6 left-6 z-20">
+      <div class="flex items-center gap-4 text-white">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl font-bold">{{ highlightVideo.team1.code }}</span>
+          <span class="text-gray-400">vs</span>
+          <span class="text-2xl font-bold">{{ highlightVideo.team2.code }}</span>
+        </div>
+        <span class="px-3 py-1 bg-white/10 rounded-full text-sm">{{ highlightVideo.format }}</span>
+      </div>
+    </div>
+
+    <!-- Highlight Display Area -->
+    <div class="flex-1 flex items-center justify-center relative overflow-hidden">
+      
+      <!-- No Highlights -->
+      <div *ngIf="highlightVideo.highlights.length === 0" class="text-center text-white">
+        <p class="text-2xl font-medium mb-2">No Highlights Available</p>
+        <p class="text-gray-400">This match has no 4s, 6s, or wickets recorded yet.</p>
+      </div>
+
+      <!-- Current Highlight -->
+      <ng-container *ngIf="playerState.currentHighlight">
+        
+        <!-- FOUR Highlight -->
+        <div *ngIf="playerState.currentHighlight.type === 'four'" 
+             class="text-center animate-fade-in">
+          <div class="mb-8">
+            <div class="inline-block px-6 py-2 bg-green-500 text-white text-lg font-bold rounded-full mb-6 animate-pulse">
+              FOUR!
+            </div>
+          </div>
+          
+          <!-- Player Image -->
+          <div class="w-48 h-48 mx-auto mb-6 relative">
+            <div class="absolute inset-0 bg-gradient-to-br from-green-400 to-green-600 rounded-full animate-pulse"></div>
+            <img *ngIf="getImageUrl(playerState.currentHighlight.data.batsmanImage)"
+                 [src]="getImageUrl(playerState.currentHighlight.data.batsmanImage)"
+                 class="w-full h-full object-cover rounded-full relative z-10 border-4 border-green-400"
+                 alt="Batsman">
+            <div *ngIf="!getImageUrl(playerState.currentHighlight.data.batsmanImage)"
+                 class="w-full h-full bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center relative z-10">
+              <span class="text-6xl font-bold text-white">
+                {{ playerState.currentHighlight.data.batsmanName?.charAt(0) || '?' }}
+              </span>
+            </div>
+          </div>
+          
+          <h2 class="text-4xl font-bold text-white mb-2">
+            {{ playerState.currentHighlight.data.batsmanName }}
+          </h2>
+          <p class="text-6xl font-bold text-green-400 mb-4">
+            {{ playerState.currentHighlight.data.batsmanRuns }}*
+          </p>
+          <p class="text-xl text-gray-300">
+            {{ playerState.currentHighlight.data.scoreAfter.runs }}/{{ playerState.currentHighlight.data.scoreAfter.wickets }}
+            ({{ playerState.currentHighlight.data.scoreAfter.overs }} ov)
+          </p>
+        </div>
+
+        <!-- SIX Highlight -->
+        <div *ngIf="playerState.currentHighlight.type === 'six'" 
+             class="text-center animate-fade-in">
+          <div class="mb-8">
+            <div class="inline-block px-8 py-3 bg-purple-600 text-white text-2xl font-bold rounded-full mb-6 animate-bounce">
+              MAXIMUM! 🔥
+            </div>
+          </div>
+          
+          <!-- Player Image -->
+          <div class="w-56 h-56 mx-auto mb-6 relative">
+            <div class="absolute inset-0 bg-gradient-to-br from-purple-400 to-purple-700 rounded-full animate-pulse"></div>
+            <img *ngIf="getImageUrl(playerState.currentHighlight.data.batsmanImage)"
+                 [src]="getImageUrl(playerState.currentHighlight.data.batsmanImage)"
+                 class="w-full h-full object-cover rounded-full relative z-10 border-4 border-purple-400"
+                 alt="Batsman">
+            <div *ngIf="!getImageUrl(playerState.currentHighlight.data.batsmanImage)"
+                 class="w-full h-full bg-gradient-to-br from-purple-400 to-purple-700 rounded-full flex items-center justify-center relative z-10">
+              <span class="text-7xl font-bold text-white">
+                {{ playerState.currentHighlight.data.batsmanName?.charAt(0) || '?' }}
+              </span>
+            </div>
+          </div>
+          
+          <h2 class="text-5xl font-bold text-white mb-2">
+            {{ playerState.currentHighlight.data.batsmanName }}
+          </h2>
+          <p class="text-7xl font-bold text-purple-400 mb-4">
+            {{ playerState.currentHighlight.data.batsmanRuns }}*
+          </p>
+          <p class="text-xl text-gray-300">
+            {{ playerState.currentHighlight.data.scoreAfter.runs }}/{{ playerState.currentHighlight.data.scoreAfter.wickets }}
+            ({{ playerState.currentHighlight.data.scoreAfter.overs }} ov)
+          </p>
+        </div>
+
+        <!-- WICKET Highlight -->
+        <div *ngIf="playerState.currentHighlight.type === 'wicket'" 
+             class="text-center animate-fade-in">
+          <div class="mb-8">
+            <div class="inline-block px-8 py-3 bg-red-600 text-white text-2xl font-bold rounded-full mb-6">
+              OUT!
+            </div>
+          </div>
+          
+          <!-- Player Image -->
+          <div class="w-48 h-48 mx-auto mb-6 relative">
+            <div class="absolute inset-0 bg-gradient-to-br from-red-400 to-red-700 rounded-full"></div>
+            <img *ngIf="getImageUrl(playerState.currentHighlight.data.dismissedImage)"
+                 [src]="getImageUrl(playerState.currentHighlight.data.dismissedImage)"
+                 class="w-full h-full object-cover rounded-full relative z-10 border-4 border-red-400 grayscale"
+                 alt="Dismissed Batsman">
+            <div *ngIf="!getImageUrl(playerState.currentHighlight.data.dismissedImage)"
+                 class="w-full h-full bg-gradient-to-br from-red-400 to-red-700 rounded-full flex items-center justify-center relative z-10">
+              <span class="text-6xl font-bold text-white">
+                {{ playerState.currentHighlight.data.dismissedName?.charAt(0) || '?' }}
+              </span>
+            </div>
+          </div>
+          
+          <h2 class="text-4xl font-bold text-white mb-2">
+            {{ playerState.currentHighlight.data.dismissedName }}
+          </h2>
+          <p class="text-3xl text-red-400 mb-2">
+            {{ playerState.currentHighlight.data.dismissedRuns }}
+            <span class="text-xl text-gray-400">
+              ({{ playerState.currentHighlight.data.dismissalType }})
+            </span>
+          </p>
+          <p class="text-xl text-gray-300 mb-2">
+            b. {{ playerState.currentHighlight.data.bowlerName }}
+            <span *ngIf="playerState.currentHighlight.data.fielderName">
+              c. {{ playerState.currentHighlight.data.fielderName }}
+            </span>
+          </p>
+          <p class="text-lg text-gray-400">
+            {{ playerState.currentHighlight.data.scoreAfter.runs }}/{{ playerState.currentHighlight.data.scoreAfter.wickets }}
+            ({{ playerState.currentHighlight.data.scoreAfter.overs }} ov)
+          </p>
+        </div>
+
+        <!-- FIFTY/HUNDRED Milestone -->
+        <div *ngIf="playerState.currentHighlight.type === 'fifty' || playerState.currentHighlight.type === 'hundred'" 
+             class="text-center animate-fade-in">
+          <div class="mb-8">
+            <div [class]="'inline-block px-8 py-3 text-white text-2xl font-bold rounded-full mb-6 animate-pulse ' + 
+                 (playerState.currentHighlight.type === 'hundred' ? 'bg-amber-500' : 'bg-yellow-500')">
+              {{ playerState.currentHighlight.type === 'hundred' ? '💯 CENTURY! 💯' : '🎯 FIFTY! 🎯' }}
+            </div>
+          </div>
+          
+          <!-- Player Image -->
+          <div class="w-64 h-64 mx-auto mb-6 relative">
+            <div [class]="'absolute inset-0 rounded-full animate-pulse ' + 
+                  (playerState.currentHighlight.type === 'hundred' ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-yellow-400 to-yellow-600')">
+            </div>
+            <img *ngIf="getImageUrl(playerState.currentHighlight.data.playerImage)"
+                 [src]="getImageUrl(playerState.currentHighlight.data.playerImage)"
+                 [class]="'w-full h-full object-cover rounded-full relative z-10 border-4 ' + 
+                  (playerState.currentHighlight.type === 'hundred' ? 'border-amber-400' : 'border-yellow-400')"
+                 alt="Player">
+            <div *ngIf="!getImageUrl(playerState.currentHighlight.data.playerImage)"
+                 [class]="'w-full h-full rounded-full flex items-center justify-center relative z-10 ' +
+                  (playerState.currentHighlight.type === 'hundred' ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-yellow-400 to-yellow-600')">
+              <span class="text-8xl font-bold text-white">
+                {{ playerState.currentHighlight.data.playerName?.charAt(0) || '?' }}
+              </span>
+            </div>
+          </div>
+          
+          <h2 class="text-5xl font-bold text-white mb-4">
+            {{ playerState.currentHighlight.data.playerName }}
+          </h2>
+          <p [class]="'text-8xl font-bold mb-4 ' + 
+               (playerState.currentHighlight.type === 'hundred' ? 'text-amber-400' : 'text-yellow-400')">
+            {{ playerState.currentHighlight.data.runs }}*
+          </p>
+          <div class="flex items-center justify-center gap-8 text-xl text-gray-300">
+            <span>{{ playerState.currentHighlight.data.balls }} balls</span>
+            <span>{{ playerState.currentHighlight.data.fours }} × 4</span>
+            <span>{{ playerState.currentHighlight.data.sixes }} × 6</span>
+            <span>SR: {{ playerState.currentHighlight.data.strikeRate }}</span>
+          </div>
+        </div>
+
+        <!-- OVER SUMMARY -->
+        <div *ngIf="playerState.currentHighlight.type === 'overSummary'" 
+             class="text-center animate-fade-in w-full max-w-4xl mx-auto px-8">
+          <div class="mb-8">
+            <div class="inline-block px-6 py-2 bg-blue-600 text-white text-lg font-bold rounded-full">
+              AFTER {{ playerState.currentHighlight.data.oversCompleted }} OVERS
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-b from-blue-900/50 to-black/50 rounded-3xl p-8 backdrop-blur">
+            <h2 class="text-4xl font-bold text-white mb-2">
+              {{ playerState.currentHighlight.data.battingTeam }}
+            </h2>
+            <p class="text-7xl font-bold text-blue-400 mb-4">
+              {{ playerState.currentHighlight.data.totalRuns }}/{{ playerState.currentHighlight.data.totalWickets }}
+            </p>
+            <p class="text-2xl text-gray-300 mb-8">
+              Run Rate: {{ playerState.currentHighlight.data.runRate }}
+            </p>
+            
+            <div class="grid grid-cols-2 gap-8">
+              <!-- Top Scorer -->
+              <div *ngIf="playerState.currentHighlight.data.topScorer" class="text-center">
+                <p class="text-gray-400 text-sm mb-2 uppercase tracking-wider">Top Scorer</p>
+                <div class="flex items-center justify-center gap-4">
+                  <div class="w-16 h-16 rounded-full overflow-hidden bg-blue-600">
+                    <img *ngIf="getImageUrl(playerState.currentHighlight.data.topScorer.image)"
+                         [src]="getImageUrl(playerState.currentHighlight.data.topScorer.image)"
+                         class="w-full h-full object-cover">
+                  </div>
+                  <div class="text-left">
+                    <p class="text-xl font-bold text-white">{{ playerState.currentHighlight.data.topScorer.name }}</p>
+                    <p class="text-2xl font-bold text-blue-400">
+                      {{ playerState.currentHighlight.data.topScorer.runs }}
+                      <span class="text-sm text-gray-400">({{ playerState.currentHighlight.data.topScorer.balls }})</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Best Bowler -->
+              <div *ngIf="playerState.currentHighlight.data.bestBowler" class="text-center">
+                <p class="text-gray-400 text-sm mb-2 uppercase tracking-wider">Best Bowler</p>
+                <div class="flex items-center justify-center gap-4">
+                  <div class="w-16 h-16 rounded-full overflow-hidden bg-green-600">
+                    <img *ngIf="getImageUrl(playerState.currentHighlight.data.bestBowler.image)"
+                         [src]="getImageUrl(playerState.currentHighlight.data.bestBowler.image)"
+                         class="w-full h-full object-cover">
+                  </div>
+                  <div class="text-left">
+                    <p class="text-xl font-bold text-white">{{ playerState.currentHighlight.data.bestBowler.name }}</p>
+                    <p class="text-2xl font-bold text-green-400">
+                      {{ playerState.currentHighlight.data.bestBowler.wickets }}/{{ playerState.currentHighlight.data.bestBowler.runs }}
+                      <span class="text-sm text-gray-400">({{ playerState.currentHighlight.data.bestBowler.overs }})</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INNINGS SUMMARY -->
+        <div *ngIf="playerState.currentHighlight.type === 'inningsSummary'" 
+             class="text-center animate-fade-in w-full max-w-5xl mx-auto px-8">
+          <div class="mb-6">
+            <div class="inline-block px-6 py-2 bg-indigo-600 text-white text-lg font-bold rounded-full">
+              INNINGS {{ playerState.currentHighlight.data.inningsNumber }} COMPLETE
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-b from-indigo-900/50 to-black/50 rounded-3xl p-8 backdrop-blur">
+            <h2 class="text-4xl font-bold text-white mb-2">
+              {{ playerState.currentHighlight.data.battingTeam }}
+            </h2>
+            <p class="text-8xl font-bold text-indigo-400 mb-2">
+              {{ playerState.currentHighlight.data.totalRuns }}/{{ playerState.currentHighlight.data.totalWickets }}
+            </p>
+            <p class="text-2xl text-gray-300 mb-8">
+              ({{ playerState.currentHighlight.data.overs }} overs) • RR: {{ playerState.currentHighlight.data.runRate }}
+            </p>
+            
+            <div class="grid grid-cols-2 gap-8">
+              <!-- Top Batsmen -->
+              <div>
+                <h3 class="text-gray-400 text-sm mb-4 uppercase tracking-wider">Top Batsmen</h3>
+                <div class="space-y-3">
+                  <div *ngFor="let batsman of playerState.currentHighlight.data.topBatsmen" 
+                       class="flex items-center gap-3 bg-white/5 rounded-xl p-3">
+                    <div class="w-12 h-12 rounded-full overflow-hidden bg-indigo-600 flex-shrink-0">
+                      <img *ngIf="getImageUrl(batsman.image)" 
+                           [src]="getImageUrl(batsman.image)" 
+                           class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 text-left">
+                      <p class="text-white font-medium">{{ batsman.name }}</p>
+                      <p class="text-sm text-gray-400">{{ batsman.fours }}×4 {{ batsman.sixes }}×6</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-2xl font-bold" [class.text-indigo-400]="!batsman.isOut" [class.text-gray-400]="batsman.isOut">
+                        {{ batsman.runs }}<span *ngIf="!batsman.isOut">*</span>
+                      </p>
+                      <p class="text-sm text-gray-500">({{ batsman.balls }})</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Top Bowlers -->
+              <div>
+                <h3 class="text-gray-400 text-sm mb-4 uppercase tracking-wider">Top Bowlers</h3>
+                <div class="space-y-3">
+                  <div *ngFor="let bowler of playerState.currentHighlight.data.topBowlers" 
+                       class="flex items-center gap-3 bg-white/5 rounded-xl p-3">
+                    <div class="w-12 h-12 rounded-full overflow-hidden bg-green-600 flex-shrink-0">
+                      <img *ngIf="getImageUrl(bowler.image)" 
+                           [src]="getImageUrl(bowler.image)" 
+                           class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 text-left">
+                      <p class="text-white font-medium">{{ bowler.name }}</p>
+                      <p class="text-sm text-gray-400">{{ bowler.overs }} ov</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-2xl font-bold text-green-400">
+                        {{ bowler.wickets }}/{{ bowler.runs }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MATCH SUMMARY -->
+        <div *ngIf="playerState.currentHighlight.type === 'matchSummary'" 
+             class="text-center animate-fade-in w-full max-w-5xl mx-auto px-8">
+          <div class="mb-6">
+            <div class="inline-block px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-2xl font-bold rounded-full">
+              MATCH RESULT
+            </div>
+          </div>
+          
+          <div class="bg-gradient-to-b from-cyan-900/30 to-black/50 rounded-3xl p-8 backdrop-blur">
+            <!-- Teams and Scores -->
+            <div class="flex items-center justify-center gap-8 mb-8">
+              <div class="text-center">
+                <p class="text-3xl font-bold text-white">{{ playerState.currentHighlight.data.team1.code }}</p>
+                <p *ngIf="playerState.currentHighlight.data.innings[0]" class="text-4xl font-bold text-cyan-400">
+                  {{ playerState.currentHighlight.data.innings[0].totalRuns }}/{{ playerState.currentHighlight.data.innings[0].totalWickets }}
+                </p>
+                <p *ngIf="playerState.currentHighlight.data.innings[0]" class="text-gray-400">
+                  ({{ playerState.currentHighlight.data.innings[0].overs }} ov)
+                </p>
+              </div>
+              
+              <div class="text-gray-500 text-3xl">vs</div>
+              
+              <div class="text-center">
+                <p class="text-3xl font-bold text-white">{{ playerState.currentHighlight.data.team2.code }}</p>
+                <p *ngIf="playerState.currentHighlight.data.innings[1]" class="text-4xl font-bold text-cyan-400">
+                  {{ playerState.currentHighlight.data.innings[1].totalRuns }}/{{ playerState.currentHighlight.data.innings[1].totalWickets }}
+                </p>
+                <p *ngIf="playerState.currentHighlight.data.innings[1]" class="text-gray-400">
+                  ({{ playerState.currentHighlight.data.innings[1].overs }} ov)
+                </p>
+              </div>
+            </div>
+            
+            <!-- Result -->
+            <div class="bg-gradient-to-r from-yellow-500/20 to-amber-500/20 rounded-2xl p-6 mb-8">
+              <p class="text-3xl font-bold text-white">
+                {{ playerState.currentHighlight.data.result.winner }} won by {{ playerState.currentHighlight.data.result.winMargin }}
+              </p>
+            </div>
+            
+            <!-- Player of the Match -->
+            <div *ngIf="playerState.currentHighlight.data.playerOfMatch" class="text-center">
+              <p class="text-gray-400 text-sm uppercase tracking-wider mb-4">Player of the Match</p>
+              <div class="inline-flex items-center gap-4 bg-white/10 rounded-2xl p-4 pr-8">
+                <div class="w-20 h-20 rounded-full overflow-hidden bg-yellow-500">
+                  <img *ngIf="getImageUrl(playerState.currentHighlight.data.playerOfMatch.image)"
+                       [src]="getImageUrl(playerState.currentHighlight.data.playerOfMatch.image)"
+                       class="w-full h-full object-cover">
+                </div>
+                <div class="text-left">
+                  <p class="text-2xl font-bold text-white">{{ playerState.currentHighlight.data.playerOfMatch.name }}</p>
+                  <p class="text-xl text-yellow-400">{{ playerState.currentHighlight.data.playerOfMatch.performance }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </ng-container>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="bg-gradient-to-t from-black via-black/90 to-transparent pt-16 pb-8 px-8">
+      <!-- Progress Bar -->
+      <div class="max-w-4xl mx-auto mb-6">
+        <div class="flex items-center gap-4 text-white text-sm mb-2">
+          <span>{{ formatTime(getCurrentElapsedTime()) }}</span>
+          <div class="flex-1">
+            <div class="h-1 bg-white/20 rounded-full overflow-hidden">
+              <div class="h-full bg-white rounded-full transition-all duration-100"
+                   [style.width.%]="playerState.progress"></div>
+            </div>
+          </div>
+          <span>{{ formatTime(playerState.totalTime) }}</span>
+        </div>
+        
+        <!-- Highlight Markers -->
+        <div class="relative h-3" *ngIf="highlightVideo">
+          <div *ngFor="let highlight of highlightVideo.highlights; let i = index"
+               class="absolute top-0 w-1.5 h-3 rounded-full cursor-pointer hover:scale-150 transition-transform"
+               [class]="getHighlightTypeColor(highlight.type)"
+               [style.left.%]="getHighlightPosition(i)"
+               [class.ring-2]="i === playerState.currentIndex"
+               [class.ring-white]="i === playerState.currentIndex"
+               (click)="goToHighlight(i)"
+               [title]="getHighlightTypeLabel(highlight.type)">
+          </div>
+        </div>
+      </div>
+      
+      <!-- Playback Controls -->
+      <div class="flex items-center justify-center gap-8">
+        <!-- Restart -->
+        <button (click)="restart()" 
+                class="w-12 h-12 flex items-center justify-center text-white/60 hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+        </button>
+        
+        <!-- Skip Backward -->
+        <button (click)="skipBackward()" 
+                [disabled]="playerState.currentIndex === 0"
+                class="w-12 h-12 flex items-center justify-center text-white disabled:text-white/30 transition-colors">
+          <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z"></path>
+          </svg>
+        </button>
+        
+        <!-- Play/Pause -->
+        <button (click)="togglePlayPause()" 
+                class="w-20 h-20 bg-white rounded-full flex items-center justify-center text-black hover:scale-105 transition-transform">
+          <svg *ngIf="!playerState.isPlaying" class="w-10 h-10 ml-1" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+          <svg *ngIf="playerState.isPlaying" class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+          </svg>
+        </button>
+        
+        <!-- Skip Forward -->
+        <button (click)="skipForward()" 
+                [disabled]="highlightVideo && playerState.currentIndex >= highlightVideo.highlights.length - 1"
+                class="w-12 h-12 flex items-center justify-center text-white disabled:text-white/30 transition-colors">
+          <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"></path>
+          </svg>
+        </button>
+        
+        <!-- Highlight Counter -->
+        <div class="w-24 text-center text-white/60 text-sm">
+          {{ playerState.currentIndex + 1 }} / {{ highlightVideo.highlights.length }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

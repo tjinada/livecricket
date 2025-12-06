@@ -415,9 +415,9 @@ router.post('/:id/start', auth, async (req, res, next) => {
 // PUT /api/matches/:id/display-view - Change display view (protected)
 router.put('/:id/display-view', auth, async (req, res, next) => {
   try {
-    const { view, selectedPlayer } = req.body;
+    const { view, selectedPlayer, innings } = req.body;
     
-    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats'];
+    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats', 'highlight-video'];
     if (!validViews.includes(view)) {
       return res.status(400).json({
         success: false,
@@ -446,10 +446,14 @@ router.put('/:id/display-view', auth, async (req, res, next) => {
       });
     }
     
-    // Broadcast view change to SSE clients (include selected player for player-stats view)
+    // Broadcast view change to SSE clients
     const broadcastData = { view };
     if (view === 'player-stats' && match.selectedPlayerForStats) {
       broadcastData.selectedPlayer = match.selectedPlayerForStats;
+    }
+    // Include innings parameter for highlight-video view
+    if (view === 'highlight-video' && innings !== undefined) {
+      broadcastData.innings = innings;
     }
     broadcastToMatch(req.params.id, 'view-change', broadcastData);
     

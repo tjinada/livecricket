@@ -23,7 +23,10 @@ import {
   FinalMatchSummaryViewComponent,
   RunRateGraphViewComponent,
   CurrentPartnershipViewComponent,
-  PlayerStatsViewComponent
+  PlayerStatsViewComponent,
+  HighlightVideoPlayerComponent,
+  DisplayHighlightPlayerComponent,
+  HighlightViewState
 } from './components';
 
 @Component({
@@ -38,7 +41,9 @@ import {
     FinalMatchSummaryViewComponent,
     RunRateGraphViewComponent,
     CurrentPartnershipViewComponent,
-    PlayerStatsViewComponent
+    PlayerStatsViewComponent,
+    HighlightVideoPlayerComponent,
+    DisplayHighlightPlayerComponent
   ],
   templateUrl: './match-display.component.html'
 })
@@ -57,7 +62,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   
   // Notification overlay properties
   showNotification = false;
-  notificationType: 'six' | 'four' | 'wicket' | 'third-umpire' | 'custom-message' | null = null;
+  notificationType: 'six' | 'four' | 'wicket' | 'fifty' | 'hundred' | 'third-umpire' | 'custom-message' | null = null;
   notificationData: any = null;
   notificationDuration = 10000;
   private notificationTimeout: any = null;
@@ -67,6 +72,11 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   
   // Custom Message properties
   customMessage: string = '';
+  
+  // Highlight Video properties
+  highlightInningsNumber: number | null = null;
+  useDisplayBasedHighlights = true; // Use actual display views for highlights
+  highlightViewState: HighlightViewState | null = null;
   
   // SSE subscription
   private sseSubscription: Subscription | null = null;
@@ -229,6 +239,12 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       case 'view-change':
         if (event.data?.view) {
           this.displayView = event.data.view;
+          // Handle highlight video innings selection
+          if (event.data.view === 'highlight-video') {
+            this.highlightInningsNumber = event.data.innings || null;
+          } else {
+            this.highlightInningsNumber = null;
+          }
           this.updateBackground();
         }
         this.reloadMatch();
@@ -261,7 +277,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   
   // ==================== NOTIFICATIONS ====================
 
-  showBigNotification(type: 'six' | 'four' | 'wicket', data: any) {
+  showBigNotification(type: 'six' | 'four' | 'wicket' | 'fifty' | 'hundred', data: any) {
     if (this.notificationTimeout) {
       clearTimeout(this.notificationTimeout);
     }
@@ -326,9 +342,19 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       'run-rate-graph': 'Run Rate Graph',
       'current-partnership': 'Current Partnership',
       'final-match-summary': 'Final Match Summary',
-      'player-stats': 'Player Stats'
+      'player-stats': 'Player Stats',
+      'highlight-video': 'Highlight Video'
     };
     return names[this.displayView] || 'Live Score';
+  }
+
+  // ==================== HIGHLIGHT VIDEO HELPERS ====================
+
+  onHighlightVideoClose(): void {
+    // When highlight video is closed, return to live-score view
+    this.displayView = 'live-score';
+    this.highlightInningsNumber = null;
+    this.updateBackground();
   }
 
   getPlayerName(player: any): string {
@@ -933,5 +959,34 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       if (stats) return stats;
     }
     return null;
+  }
+
+  // ==================== DISPLAY-BASED HIGHLIGHTS ====================
+
+  /**
+   * Handle view change from display highlight player
+   */
+  onHighlightViewChange(state: HighlightViewState): void {
+    this.highlightViewState = state;
+    
+    // Show notification overlay if needed
+    if (state.showOverlay && state.overlayType) {
+      this.showBigNotification(state.overlayType as any, state.highlightData);
+    }
+  }
+
+  /**
+   * Get the view to display during highlight playback
+   */
+  getHighlightDisplayView(): string {
+    if (!this.highlightViewState) return 'live-score';
+    return this.highlightViewState.view;
+  }
+
+  /**
+   * Check if we're in highlight playback mode with display views
+   */
+  isInDisplayHighlightMode(): boolean {
+    return this.displayView === 'highlight-video' && this.useDisplayBasedHighlights;
   }
 }

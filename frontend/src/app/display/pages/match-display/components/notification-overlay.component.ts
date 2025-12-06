@@ -126,6 +126,85 @@ import { CommonModule } from '@angular/common';
         <div class="absolute inset-0 bg-red-600/10 animate-pulse"></div>
       </div>
 
+      <!-- FIFTY Overlay -->
+      <div *ngIf="type === 'fifty'" class="text-center relative z-10" (click)="onDismiss()">
+        <div class="absolute inset-0 bg-gradient-radial from-yellow-600/40 via-yellow-900/20 to-transparent"></div>
+        <div class="relative">
+          <div class="text-[18rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-yellow-400 to-amber-600 leading-none drop-shadow-2xl" style="text-shadow: 0 0 80px rgba(234, 179, 8, 0.8), 0 0 120px rgba(234, 179, 8, 0.5);">
+            50
+          </div>
+          <div class="text-6xl font-black uppercase tracking-[0.2em] text-white mt-[-2rem]" style="text-shadow: 0 0 40px rgba(234, 179, 8, 0.8);">
+            FIFTY!
+          </div>
+          <div class="mt-8 bg-black/60 backdrop-blur-md rounded-2xl px-10 py-6 inline-flex items-center gap-8 border border-yellow-500/40">
+            <img 
+              *ngIf="getPlayerImage()" 
+              [src]="getPlayerImage()"
+              class="w-36 h-36 rounded-full object-cover border-4 border-yellow-500 shadow-2xl"
+            >
+            <div *ngIf="!getPlayerImage()" class="w-36 h-36 rounded-full bg-gray-700 flex items-center justify-center border-4 border-yellow-500">
+              <span class="text-6xl">⭐</span>
+            </div>
+            <div>
+              <div class="text-4xl font-bold text-white">{{ getPlayerName() }}</div>
+              <div class="text-3xl text-yellow-400 mt-2">
+                {{ getPlayerRuns() }} ({{ getPlayerBalls() }})
+              </div>
+              <div class="mt-2 text-xl text-gray-300 flex gap-4">
+                <span>4s: {{ data?.fours || 0 }}</span>
+                <span>6s: {{ data?.sixes || 0 }}</span>
+                <span>SR: {{ data?.strikeRate || '0.00' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-2xl text-gray-300">
+            {{ data?.scoreAfter?.runs || data?.totalScore || 0 }}/{{ data?.scoreAfter?.wickets || data?.totalWickets || 0 }}
+          </div>
+        </div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] border-4 border-yellow-500/20 rounded-full animate-ping"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] border-2 border-amber-500/30 rounded-full animate-ping" style="animation-delay: 0.2s;"></div>
+      </div>
+
+      <!-- HUNDRED (Century) Overlay -->
+      <div *ngIf="type === 'hundred'" class="text-center animate-pulse relative z-10" (click)="onDismiss()">
+        <div class="absolute inset-0 bg-gradient-radial from-amber-600/50 via-orange-900/30 to-transparent"></div>
+        <div class="relative">
+          <div class="text-[20rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-400 to-orange-600 leading-none drop-shadow-2xl animate-bounce" style="text-shadow: 0 0 100px rgba(245, 158, 11, 0.9), 0 0 150px rgba(245, 158, 11, 0.6);">
+            💯
+          </div>
+          <div class="text-7xl font-black uppercase tracking-[0.2em] text-white mt-[-2rem]" style="text-shadow: 0 0 50px rgba(245, 158, 11, 0.9);">
+            CENTURY!
+          </div>
+          <div class="mt-8 bg-black/70 backdrop-blur-md rounded-2xl px-12 py-8 inline-flex items-center gap-10 border border-amber-500/50">
+            <img 
+              *ngIf="getPlayerImage()" 
+              [src]="getPlayerImage()"
+              class="w-40 h-40 rounded-full object-cover border-4 border-amber-500 shadow-2xl"
+            >
+            <div *ngIf="!getPlayerImage()" class="w-40 h-40 rounded-full bg-gray-700 flex items-center justify-center border-4 border-amber-500">
+              <span class="text-7xl">🏆</span>
+            </div>
+            <div>
+              <div class="text-5xl font-bold text-white">{{ getPlayerName() }}</div>
+              <div class="text-4xl text-amber-400 mt-3">
+                {{ getPlayerRuns() }}* ({{ getPlayerBalls() }})
+              </div>
+              <div class="mt-3 text-2xl text-gray-300 flex gap-6">
+                <span>4s: {{ data?.fours || 0 }}</span>
+                <span>6s: {{ data?.sixes || 0 }}</span>
+                <span>SR: {{ data?.strikeRate || '0.00' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-6 text-2xl text-gray-300">
+            {{ data?.scoreAfter?.runs || data?.totalScore || 0 }}/{{ data?.scoreAfter?.wickets || data?.totalWickets || 0 }}
+          </div>
+        </div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border-4 border-amber-500/30 rounded-full animate-ping"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] border-2 border-orange-500/40 rounded-full animate-ping" style="animation-delay: 0.15s;"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] border-2 border-yellow-500/30 rounded-full animate-ping" style="animation-delay: 0.3s;"></div>
+      </div>
+
       <!-- THIRD UMPIRE DECISION Overlay -->
       <div *ngIf="type === 'third-umpire'" class="text-center relative z-10 w-full px-8">
         <!-- Decision pending state -->
@@ -243,7 +322,7 @@ import { CommonModule } from '@angular/common';
 })
 export class NotificationOverlayComponent {
   @Input() show = false;
-  @Input() type: 'six' | 'four' | 'wicket' | 'third-umpire' | 'custom-message' | null = null;
+  @Input() type: 'six' | 'four' | 'wicket' | 'fifty' | 'hundred' | 'third-umpire' | 'custom-message' | null = null;
   @Input() data: any = null;
   @Input() thirdUmpireDecision: 'out' | 'not-out' | null = null;
   @Input() customMessage = '';
@@ -252,5 +331,28 @@ export class NotificationOverlayComponent {
 
   onDismiss(): void {
     this.dismiss.emit();
+  }
+
+  // Helper methods for data field compatibility
+  // Backend sends playerName/playerImage for milestones, batsmanName/batsmanImage for boundaries
+  getPlayerName(): string {
+    return this.data?.playerName || this.data?.batsmanName || 'Batsman';
+  }
+
+  getPlayerImage(): string | null {
+    const path = this.data?.playerImage || this.data?.batsmanImage;
+    if (!path) return null;
+    // If it's already a full URL, return as-is
+    if (path.startsWith('http')) return path;
+    // Otherwise build the ESPN image URL
+    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+  }
+
+  getPlayerRuns(): number {
+    return this.data?.runs || this.data?.batsmanRuns || 0;
+  }
+
+  getPlayerBalls(): number {
+    return this.data?.balls || this.data?.batsmanBalls || 0;
   }
 }
