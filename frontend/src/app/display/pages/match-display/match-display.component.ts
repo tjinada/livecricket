@@ -171,8 +171,20 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   updateBackground() {
+    // During highlight mode, use the actual view being displayed for background selection
+    let viewForBackground = this.displayView;
+    if (this.displayView === 'highlight-video' && this.useDisplayBasedHighlights && this.highlightViewState?.view) {
+      viewForBackground = this.highlightViewState.view;
+    }
+    // Default to live-score if we're in highlight mode but don't have a valid view yet
+    // Also handle 'intro' view which doesn't have its own background
+    if (this.displayView === 'highlight-video' && 
+        (viewForBackground === 'highlight-video' || viewForBackground === 'intro')) {
+      viewForBackground = 'live-score';
+    }
+    
     const state = this.backgroundService.updateBackground(
-      this.displayView,
+      viewForBackground,
       this.match,
       this.currentInnings
     );
@@ -969,6 +981,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   onHighlightViewChange(state: HighlightViewState): void {
     this.highlightViewState = state;
     
+    // Update background when highlight view changes
+    this.updateBackground();
+    
     // Don't show notification overlay during highlights - the score is visible
     // The highlight type badge at the top already indicates what happened
   }
@@ -1025,20 +1040,32 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
    * Get striker name during highlights
    */
   getHighlightStrikerName(): string {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.batsmanName) {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.strikerName) {
       // Extract last name for display
-      const fullName = this.highlightViewState.scoreState.batsmanName;
+      const fullName = this.highlightViewState.scoreState.strikerName;
       return fullName?.split(' ').pop() || fullName || 'Batsman';
     }
     return this.getStrikerName();
   }
 
   /**
+   * Get striker image during highlights
+   */
+  getHighlightStrikerImage(): string | null {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.strikerImage) {
+      const path = this.highlightViewState.scoreState.strikerImage;
+      if (path.startsWith('http')) return path;
+      return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+    }
+    return this.getStrikerImage();
+  }
+
+  /**
    * Get striker runs during highlights
    */
   getHighlightStrikerRuns(): number {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.batsmanRuns !== undefined) {
-      return this.highlightViewState.scoreState.batsmanRuns;
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.strikerRuns !== undefined) {
+      return this.highlightViewState.scoreState.strikerRuns;
     }
     return this.getStrikerRuns();
   }
@@ -1047,10 +1074,134 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
    * Get striker balls during highlights
    */
   getHighlightStrikerBalls(): number {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.batsmanBalls !== undefined) {
-      return this.highlightViewState.scoreState.batsmanBalls;
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.strikerBalls !== undefined) {
+      return this.highlightViewState.scoreState.strikerBalls;
     }
     return this.getStrikerBalls();
+  }
+
+  /**
+   * Get striker strike rate during highlights
+   */
+  getHighlightStrikerSR(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
+      const { strikerRuns, strikerBalls } = this.highlightViewState.scoreState;
+      if (strikerBalls && strikerBalls > 0) {
+        return ((strikerRuns || 0) / strikerBalls * 100).toFixed(1);
+      }
+      return '0.0';
+    }
+    return this.getStrikerSR();
+  }
+
+  /**
+   * Get non-striker name during highlights
+   */
+  getHighlightNonStrikerName(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.nonStrikerName) {
+      const fullName = this.highlightViewState.scoreState.nonStrikerName;
+      return fullName?.split(' ').pop() || fullName || 'Batsman';
+    }
+    return this.getNonStrikerName();
+  }
+
+  /**
+   * Get non-striker image during highlights
+   */
+  getHighlightNonStrikerImage(): string | null {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.nonStrikerImage) {
+      const path = this.highlightViewState.scoreState.nonStrikerImage;
+      if (path.startsWith('http')) return path;
+      return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+    }
+    return this.getNonStrikerImage();
+  }
+
+  /**
+   * Get non-striker runs during highlights
+   */
+  getHighlightNonStrikerRuns(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.nonStrikerRuns !== undefined) {
+      return this.highlightViewState.scoreState.nonStrikerRuns;
+    }
+    return this.getNonStrikerRuns();
+  }
+
+  /**
+   * Get non-striker balls during highlights
+   */
+  getHighlightNonStrikerBalls(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.nonStrikerBalls !== undefined) {
+      return this.highlightViewState.scoreState.nonStrikerBalls;
+    }
+    return this.getNonStrikerBalls();
+  }
+
+  /**
+   * Get non-striker strike rate during highlights
+   */
+  getHighlightNonStrikerSR(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
+      const { nonStrikerRuns, nonStrikerBalls } = this.highlightViewState.scoreState;
+      if (nonStrikerBalls && nonStrikerBalls > 0) {
+        return ((nonStrikerRuns || 0) / nonStrikerBalls * 100).toFixed(1);
+      }
+      return '0.0';
+    }
+    return this.getNonStrikerSR();
+  }
+
+  /**
+   * Get bowler name during highlights
+   */
+  getHighlightBowlerName(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.bowlerName) {
+      const fullName = this.highlightViewState.scoreState.bowlerName;
+      return fullName?.split(' ').pop() || fullName || 'Bowler';
+    }
+    return this.getCurrentBowlerName();
+  }
+
+  /**
+   * Get bowler image during highlights
+   */
+  getHighlightBowlerImage(): string | null {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.bowlerImage) {
+      const path = this.highlightViewState.scoreState.bowlerImage;
+      if (path.startsWith('http')) return path;
+      return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+    }
+    return this.getCurrentBowlerImage();
+  }
+
+  /**
+   * Get bowler figures during highlights
+   */
+  getHighlightBowlerFigures(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.bowlerFigures) {
+      return this.highlightViewState.scoreState.bowlerFigures;
+    }
+    return this.getCurrentBowlerFigures();
+  }
+
+  /**
+   * Get bowler overs during highlights
+   */
+  getHighlightBowlerOvers(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.bowlerOvers) {
+      return this.highlightViewState.scoreState.bowlerOvers;
+    }
+    return this.getCurrentBowlerOvers();
+  }
+
+  /**
+   * Get current over balls during highlights
+   */
+  getHighlightCurrentOverBalls(): any[] {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.currentOverBalls) {
+      return this.highlightViewState.scoreState.currentOverBalls;
+    }
+    return this.getCurrentOverBalls();
   }
 
   /**
@@ -1068,5 +1219,63 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       return ((runs / totalBalls) * 6).toFixed(2);
     }
     return this.getCurrentRunRate();
+  }
+
+  /**
+   * Check if highlight is from second innings
+   */
+  isHighlightSecondInnings(): boolean {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
+      // First check scoreAfter which has the accurate data
+      const scoreAfter = this.highlightViewState.highlightData.scoreAfter;
+      if (scoreAfter?.isSecondInnings !== undefined) {
+        return scoreAfter.isSecondInnings;
+      }
+      // Fallback to highlight data fields
+      return this.highlightViewState.highlightData.inningsNumber === 2 ||
+             this.highlightViewState.highlightData.isSecondInnings === true;
+    }
+    return this.isSecondInnings();
+  }
+
+  /**
+   * Get runs needed during highlights
+   */
+  getHighlightRunsNeeded(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
+      const scoreAfter = this.highlightViewState.highlightData.scoreAfter;
+      // Use runsNeeded from scoreAfter if available (most accurate)
+      if (scoreAfter?.runsNeeded !== undefined && scoreAfter.runsNeeded !== null) {
+        return scoreAfter.runsNeeded;
+      }
+      // Fallback to calculating from target
+      if (scoreAfter?.target !== undefined && scoreAfter?.runs !== undefined) {
+        return Math.max(0, scoreAfter.target - scoreAfter.runs);
+      }
+    }
+    return this.getRunsNeeded();
+  }
+
+  /**
+   * Get balls remaining during highlights
+   */
+  getHighlightBallsRemaining(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
+      const scoreAfter = this.highlightViewState.highlightData.scoreAfter;
+      // Use ballsRemaining from scoreAfter if available (most accurate)
+      if (scoreAfter?.ballsRemaining !== undefined && scoreAfter.ballsRemaining !== null) {
+        return scoreAfter.ballsRemaining;
+      }
+      // Fallback to calculating from overs
+      if (scoreAfter?.overs && scoreAfter?.totalOvers) {
+        const parts = scoreAfter.overs.split('.');
+        const completedOvers = parseInt(parts[0]) || 0;
+        const balls = parseInt(parts[1]) || 0;
+        const totalBallsUsed = completedOvers * 6 + balls;
+        const totalBalls = scoreAfter.totalOvers * 6;
+        return Math.max(0, totalBalls - totalBallsUsed);
+      }
+    }
+    return this.getBallsRemaining();
   }
 }

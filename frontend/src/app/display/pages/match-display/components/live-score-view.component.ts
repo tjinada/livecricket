@@ -116,4 +116,144 @@ export class LiveScoreViewComponent {
     if (path.startsWith('http')) return path;
     return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
   }
+
+  // ==================== WICKET HIGHLIGHT HELPERS ====================
+
+  /**
+   * Check if current highlight is a wicket
+   */
+  get isWicketHighlight(): boolean {
+    return this.highlightType === 'wicket';
+  }
+
+  /**
+   * Get dismissed player name
+   */
+  getDismissedName(): string {
+    return this.highlightData?.dismissedName || 'Batsman';
+  }
+
+  /**
+   * Get dismissed player image URL
+   */
+  getDismissedImage(): string | null {
+    const path = this.highlightData?.dismissedImage;
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+  }
+
+  /**
+   * Get dismissed player's final score
+   */
+  getDismissedRuns(): number {
+    return this.highlightData?.dismissedRuns || 0;
+  }
+
+  /**
+   * Get dismissed player's balls faced
+   */
+  getDismissedBalls(): number {
+    return this.highlightData?.dismissedBalls || 0;
+  }
+
+  /**
+   * Get dismissed player's fours
+   */
+  getDismissedFours(): number {
+    return this.highlightData?.dismissedFours || 0;
+  }
+
+  /**
+   * Get dismissed player's sixes
+   */
+  getDismissedSixes(): number {
+    return this.highlightData?.dismissedSixes || 0;
+  }
+
+  /**
+   * Get dismissal type (bowled, caught, lbw, etc.)
+   */
+  getDismissalType(): string {
+    return this.highlightData?.dismissalType || 'out';
+  }
+
+  /**
+   * Get formatted dismissal description (e.g., "c Smith b Anderson")
+   */
+  getDismissalDescription(): string {
+    return this.highlightData?.dismissalDescription || 'out';
+  }
+
+  /**
+   * Get dismissal type label for display
+   */
+  getDismissalTypeLabel(): string {
+    const type = this.getDismissalType();
+    switch (type) {
+      case 'bowled': return 'BOWLED!';
+      case 'caught': return 'CAUGHT!';
+      case 'lbw': return 'LBW!';
+      case 'stumped': return 'STUMPED!';
+      case 'run-out': return 'RUN OUT!';
+      case 'hit-wicket': return 'HIT WICKET!';
+      default: return 'OUT!';
+    }
+  }
+
+  /**
+   * Get bowler name for wicket
+   */
+  getWicketBowlerName(): string {
+    return this.highlightData?.bowlerName || 'Bowler';
+  }
+
+  /**
+   * Get bowler image for wicket
+   */
+  getWicketBowlerImage(): string | null {
+    const path = this.highlightData?.bowlerImage;
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+  }
+
+  /**
+   * Get bowler figures at time of wicket
+   */
+  getWicketBowlerFigures(): string {
+    return this.highlightData?.bowlerFigures || '0-0';
+  }
+
+  /**
+   * Get fielder name (for catches/stumpings/run outs)
+   */
+  getFielderName(): string | null {
+    return this.highlightData?.fielderName || null;
+  }
+
+  /**
+   * Get fielder image
+   */
+  getFielderImage(): string | null {
+    const path = this.highlightData?.fielderImage;
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+  }
+
+  /**
+   * Check if dismissal involves a fielder (caught, stumped, run out)
+   */
+  hasFielder(): boolean {
+    const type = this.getDismissalType();
+    return (type === 'caught' || type === 'stumped' || type === 'run-out') && !!this.getFielderName();
+  }
+
+  /**
+   * Check if bowler gets credit for wicket (not run out)
+   */
+  bowlerGetsCredit(): boolean {
+    return this.getDismissalType() !== 'run-out';
+  }
 }

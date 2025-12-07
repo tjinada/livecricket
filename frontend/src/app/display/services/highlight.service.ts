@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 export interface HighlightData {
-  type: 'four' | 'six' | 'wicket' | 'fifty' | 'hundred' | 'overSummary' | 'inningsSummary' | 'matchSummary';
+  type: 'matchIntro' | 'inningsIntro' | 'chaseSetup' | 'four' | 'six' | 'wicket' | 'fifty' | 'hundred' | 'overSummary' | 'inningsSummary' | 'matchSummary';
   duration: number;
   sequence?: number;
   timestamp?: string;

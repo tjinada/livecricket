@@ -7,7 +7,7 @@
       [src]="currentBackground!.url!"
       autoplay
       loop
-      [muted]="true"
+      muted
       playsinline
       class="w-full h-full object-cover"
     ></video>
@@ -33,7 +33,7 @@
         [src]="battingTeamFlagVideo"
         autoplay
         loop
-        [muted]="true"
+        muted
         playsinline
         class="absolute left-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
         style="mix-blend-mode: screen;"
@@ -45,7 +45,7 @@
         [src]="bowlingTeamFlagVideo"
         autoplay
         loop
-        [muted]="true"
+        muted
         playsinline
         class="absolute right-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
         style="mix-blend-mode: screen; transform: scaleX(-1);"
@@ -321,29 +321,29 @@
           [totalRuns]="getHighlightTotalRuns()"
           [totalWickets]="getHighlightTotalWickets()"
           [oversDisplay]="getHighlightOversDisplay()"
-          [isSecondInnings]="isSecondInnings()"
-          [runsNeeded]="getRunsNeeded()"
-          [ballsRemaining]="getBallsRemaining()"
+          [isSecondInnings]="isHighlightSecondInnings()"
+          [runsNeeded]="getHighlightRunsNeeded()"
+          [ballsRemaining]="getHighlightBallsRemaining()"
           [strikerName]="getHighlightStrikerName()"
-          [strikerImage]="getStrikerImage()"
+          [strikerImage]="getHighlightStrikerImage()"
           [strikerRuns]="getHighlightStrikerRuns()"
           [strikerBalls]="getHighlightStrikerBalls()"
-          [strikerSR]="getStrikerSR()"
-          [nonStrikerName]="getNonStrikerName()"
-          [nonStrikerImage]="getNonStrikerImage()"
-          [nonStrikerRuns]="getNonStrikerRuns()"
-          [nonStrikerBalls]="getNonStrikerBalls()"
-          [nonStrikerSR]="getNonStrikerSR()"
-          [bowlerName]="getCurrentBowlerName()"
-          [bowlerImage]="getCurrentBowlerImage()"
-          [bowlerFigures]="getCurrentBowlerFigures()"
-          [bowlerOvers]="getCurrentBowlerOvers()"
-          [partnershipRuns]="getPartnershipRuns()"
-          [partnershipBalls]="getPartnershipBalls()"
-          [previousOvers]="getPreviousOvers()"
-          [currentOverBalls]="getCurrentOverBalls()"
-          [remainingBallsInOver]="getRemainingBallsInOver()"
-          [lastWicket]="getLastWicket()"
+          [strikerSR]="getHighlightStrikerSR()"
+          [nonStrikerName]="getHighlightNonStrikerName()"
+          [nonStrikerImage]="getHighlightNonStrikerImage()"
+          [nonStrikerRuns]="getHighlightNonStrikerRuns()"
+          [nonStrikerBalls]="getHighlightNonStrikerBalls()"
+          [nonStrikerSR]="getHighlightNonStrikerSR()"
+          [bowlerName]="getHighlightBowlerName()"
+          [bowlerImage]="getHighlightBowlerImage()"
+          [bowlerFigures]="getHighlightBowlerFigures()"
+          [bowlerOvers]="getHighlightBowlerOvers()"
+          [partnershipRuns]="0"
+          [partnershipBalls]="0"
+          [previousOvers]="[]"
+          [currentOverBalls]="getHighlightCurrentOverBalls()"
+          [remainingBallsInOver]="[]"
+          [lastWicket]="null"
           [currentRunRate]="getHighlightCurrentRunRate()"
           [requiredRunRate]="getRequiredRunRate()"
           [highlightType]="highlightViewState?.overlayType || null"
@@ -424,6 +424,104 @@
           [runsNeeded]="getRunsNeeded()"
           [ballsRemaining]="getBallsRemaining()"
         ></app-final-match-summary-view>
+
+        <!-- Intro View for matchIntro, inningsIntro, chaseSetup highlight types -->
+        <div *ngIf="getHighlightDisplayView() === 'intro'" 
+             class="flex-1 flex items-center justify-center min-h-0">
+          
+          <!-- Match Intro Card -->
+          <div *ngIf="highlightViewState?.highlightType === 'matchIntro'" 
+               class="text-center animate-fade-in">
+            <!-- Teams VS -->
+            <div class="flex items-center justify-center gap-8 mb-8">
+              <!-- Team 1 -->
+              <div class="flex flex-col items-center">
+                <img *ngIf="highlightViewState?.highlightData?.team1?.flagUrl" 
+                     [src]="highlightViewState!.highlightData!.team1!.flagUrl" 
+                     class="w-32 h-24 object-contain mb-4 drop-shadow-2xl">
+                <span class="text-4xl font-bold text-white">
+                  {{ highlightViewState?.highlightData?.team1?.code || 'T1' }}
+                </span>
+              </div>
+              
+              <!-- VS -->
+              <div class="text-5xl font-black text-yellow-400 px-6">VS</div>
+              
+              <!-- Team 2 -->
+              <div class="flex flex-col items-center">
+                <img *ngIf="highlightViewState?.highlightData?.team2?.flagUrl" 
+                     [src]="highlightViewState!.highlightData!.team2!.flagUrl" 
+                     class="w-32 h-24 object-contain mb-4 drop-shadow-2xl">
+                <span class="text-4xl font-bold text-white">
+                  {{ highlightViewState?.highlightData?.team2?.code || 'T2' }}
+                </span>
+              </div>
+            </div>
+            
+            <!-- Match Info -->
+            <div class="bg-black/40 backdrop-blur-sm rounded-2xl px-12 py-6 inline-block">
+              <div class="text-3xl font-bold text-white mb-2">
+                {{ highlightViewState?.highlightData?.format }} Match
+              </div>
+              <div *ngIf="highlightViewState?.highlightData?.venue" 
+                   class="text-xl text-gray-300">
+                {{ highlightViewState!.highlightData!.venue }}
+              </div>
+              <div *ngIf="highlightViewState?.highlightData?.toss?.winner" 
+                   class="text-lg text-gray-400 mt-3">
+                {{ highlightViewState!.highlightData!.toss!.winnerCode }} won toss, elected to 
+                {{ highlightViewState!.highlightData!.toss!.decision }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Innings Intro Card (1st Innings) -->
+          <div *ngIf="highlightViewState?.highlightType === 'inningsIntro'" 
+               class="text-center animate-fade-in">
+            <div class="flex items-center justify-center gap-6 mb-6">
+              <img *ngIf="highlightViewState?.highlightData?.battingTeamFlag" 
+                   [src]="highlightViewState!.highlightData!.battingTeamFlag" 
+                   class="w-24 h-18 object-contain drop-shadow-2xl">
+              <span class="text-5xl font-bold text-white">
+                {{ highlightViewState?.highlightData?.battingTeamCode || 'TM' }}
+              </span>
+            </div>
+            
+            <div class="bg-blue-600/80 backdrop-blur-sm rounded-2xl px-16 py-8 inline-block">
+              <div class="text-4xl font-black text-white mb-2 tracking-wider">
+                {{ highlightViewState?.highlightData?.headline || 'BAT FIRST' }}
+              </div>
+              <div class="text-2xl text-blue-100">
+                {{ highlightViewState?.highlightData?.format }} • {{ highlightViewState?.highlightData?.totalOvers }} Overs
+              </div>
+            </div>
+          </div>
+
+          <!-- Chase Setup Card (2nd Innings) -->
+          <div *ngIf="highlightViewState?.highlightType === 'chaseSetup'" 
+               class="text-center animate-fade-in">
+            <div class="flex items-center justify-center gap-6 mb-6">
+              <img *ngIf="highlightViewState?.highlightData?.battingTeamFlag" 
+                   [src]="highlightViewState!.highlightData!.battingTeamFlag" 
+                   class="w-24 h-18 object-contain drop-shadow-2xl">
+              <span class="text-5xl font-bold text-white">
+                {{ highlightViewState?.highlightData?.battingTeamCode || 'TM' }}
+              </span>
+            </div>
+            
+            <div class="bg-gradient-to-r from-orange-600 to-amber-500 backdrop-blur-sm rounded-2xl px-16 py-8 inline-block shadow-2xl">
+              <div class="text-6xl font-black text-white mb-3">
+                {{ highlightViewState?.highlightData?.headline || 'TARGET: 0' }}
+              </div>
+              <div class="text-2xl text-orange-100 mb-2">
+                {{ highlightViewState?.highlightData?.subheadline }}
+              </div>
+              <div class="text-xl text-orange-200">
+                {{ highlightViewState?.highlightData?.narrative }}
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Highlight player controls overlay -->
         <app-display-highlight-player
