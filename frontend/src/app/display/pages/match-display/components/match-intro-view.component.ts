@@ -14,28 +14,28 @@ import { CommonModule } from '@angular/common';
       </div>
       
       <!-- ==================== MATCH INTRO (VS Display) ==================== -->
-      <div *ngIf="introType === 'matchIntro'" class="relative z-20 text-center">
+      <div *ngIf="introType === 'matchIntro'" class="relative z-20 text-center px-8">
         
         <!-- Teams Row -->
-        <div class="flex items-center justify-center gap-6 md:gap-12 lg:gap-20 mb-10">
+        <div class="flex items-center justify-center gap-12 md:gap-20 lg:gap-32 xl:gap-40 mb-12">
           
           <!-- Team 1 -->
           <div class="flex flex-col items-center team-entry team-1"
                [class.animate-team-1]="animationStarted">
-            <div class="relative mb-4">
-              <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl blur-xl scale-110 opacity-50"></div>
-              <div class="relative w-24 h-20 md:w-32 md:h-24 lg:w-40 lg:h-32 rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl flag-container">
+            <div class="relative mb-6">
+              <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl blur-xl scale-110 opacity-50"></div>
+              <div class="relative w-36 h-28 md:w-44 md:h-36 lg:w-52 lg:h-44 xl:w-60 xl:h-48 rounded-2xl overflow-hidden border-3 border-white/30 shadow-2xl flag-container">
                 <img *ngIf="team1Flag" 
                      [src]="team1Flag" 
                      class="w-full h-full object-cover"
                      [alt]="team1Code">
                 <div *ngIf="!team1Flag" 
                      class="w-full h-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
-                  <span class="text-3xl font-bold text-white/60">{{ team1Code }}</span>
+                  <span class="text-4xl font-bold text-white/60">{{ team1Code }}</span>
                 </div>
               </div>
             </div>
-            <span class="text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-wider team-code"
+            <span class="text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black text-white tracking-wider team-code"
                   style="text-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 2px 10px rgba(0,0,0,0.8);">
               {{ team1Code }}
             </span>
@@ -43,7 +43,7 @@ import { CommonModule } from '@angular/common';
           
           <!-- VS Badge -->
           <div class="vs-badge" [class.animate-vs]="animationStarted">
-            <span class="text-4xl md:text-5xl lg:text-6xl font-black text-white/90 tracking-widest"
+            <span class="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white/90 tracking-widest"
                   style="text-shadow: 0 0 30px rgba(255,255,255,0.3), 0 4px 15px rgba(0,0,0,0.5);">
               VS
             </span>
@@ -52,20 +52,20 @@ import { CommonModule } from '@angular/common';
           <!-- Team 2 -->
           <div class="flex flex-col items-center team-entry team-2"
                [class.animate-team-2]="animationStarted">
-            <div class="relative mb-4">
-              <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl blur-xl scale-110 opacity-50"></div>
-              <div class="relative w-24 h-20 md:w-32 md:h-24 lg:w-40 lg:h-32 rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl flag-container">
+            <div class="relative mb-6">
+              <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl blur-xl scale-110 opacity-50"></div>
+              <div class="relative w-36 h-28 md:w-44 md:h-36 lg:w-52 lg:h-44 xl:w-60 xl:h-48 rounded-2xl overflow-hidden border-3 border-white/30 shadow-2xl flag-container">
                 <img *ngIf="team2Flag" 
                      [src]="team2Flag" 
                      class="w-full h-full object-cover"
                      [alt]="team2Code">
                 <div *ngIf="!team2Flag" 
                      class="w-full h-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
-                  <span class="text-3xl font-bold text-white/60">{{ team2Code }}</span>
+                  <span class="text-4xl font-bold text-white/60">{{ team2Code }}</span>
                 </div>
               </div>
             </div>
-            <span class="text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-wider team-code"
+            <span class="text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black text-white tracking-wider team-code"
                   style="text-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 2px 10px rgba(0,0,0,0.8);">
               {{ team2Code }}
             </span>
@@ -74,17 +74,17 @@ import { CommonModule } from '@angular/common';
         
         <!-- Match Info Card -->
         <div class="info-card" [class.animate-info-card]="animationStarted">
-          <div class="relative bg-white/10 backdrop-blur-xl rounded-2xl px-10 py-6 md:px-14 md:py-8 inline-block border border-white/20 shadow-2xl overflow-hidden">
-            <div class="absolute inset-0 rounded-2xl p-[1px] pointer-events-none"
+          <div class="relative bg-white/10 backdrop-blur-xl rounded-3xl px-14 py-8 md:px-20 md:py-10 lg:px-24 lg:py-12 inline-block border border-white/20 shadow-2xl overflow-hidden">
+            <div class="absolute inset-0 rounded-3xl p-[1px] pointer-events-none"
                  style="background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(255,255,255,0.1) 100%);"></div>
-            <div class="absolute inset-0 rounded-2xl pointer-events-none"
+            <div class="absolute inset-0 rounded-3xl pointer-events-none"
                  style="box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), inset 0 -1px 1px rgba(0,0,0,0.1);"></div>
             <div class="relative z-10">
-              <div class="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 tracking-wide">
+              <div class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 tracking-wide">
                 {{ format }} Match
               </div>
-              <div *ngIf="venue" class="text-lg md:text-xl text-gray-300 mb-1">{{ venue }}</div>
-              <div *ngIf="tossWinner" class="text-base md:text-lg text-gray-400 mt-4 pt-4 border-t border-white/10">
+              <div *ngIf="venue" class="text-xl md:text-2xl lg:text-3xl text-gray-300 mb-2">{{ venue }}</div>
+              <div *ngIf="tossWinner" class="text-lg md:text-xl lg:text-2xl text-gray-400 mt-5 pt-5 border-t border-white/10">
                 <span class="text-white font-semibold">{{ tossWinnerCode }}</span> won toss, elected to 
                 <span class="text-yellow-400 font-semibold">{{ tossDecision }}</span>
               </div>
@@ -94,58 +94,58 @@ import { CommonModule } from '@angular/common';
       </div>
       
       <!-- ==================== INNINGS INTRO ==================== -->
-      <div *ngIf="introType === 'inningsIntro'" class="relative z-20 text-center">
-        <div class="flex items-center justify-center gap-6 mb-8 team-entry team-1" [class.animate-team-1]="animationStarted">
+      <div *ngIf="introType === 'inningsIntro'" class="relative z-20 text-center px-8">
+        <div class="flex items-center justify-center gap-8 mb-10 team-entry team-1" [class.animate-team-1]="animationStarted">
           <div class="relative">
-            <div class="absolute inset-0 bg-blue-500/30 rounded-xl blur-xl scale-110"></div>
-            <div class="relative w-28 h-22 md:w-36 md:h-28 rounded-xl overflow-hidden border-2 border-blue-400/50 shadow-2xl">
+            <div class="absolute inset-0 bg-blue-500/30 rounded-2xl blur-xl scale-110"></div>
+            <div class="relative w-40 h-32 md:w-52 md:h-40 lg:w-60 lg:h-48 rounded-2xl overflow-hidden border-3 border-blue-400/50 shadow-2xl">
               <img *ngIf="battingTeamFlag" [src]="battingTeamFlag" class="w-full h-full object-cover">
             </div>
           </div>
-          <span class="text-6xl md:text-7xl font-black text-white tracking-wider"
+          <span class="text-7xl md:text-8xl lg:text-9xl font-black text-white tracking-wider"
                 style="text-shadow: 0 4px 20px rgba(59,130,246,0.5), 0 2px 10px rgba(0,0,0,0.8);">
             {{ battingTeamCode }}
           </span>
         </div>
         <div class="info-card" [class.animate-info-card]="animationStarted">
-          <div class="relative bg-gradient-to-br from-blue-600/90 to-blue-800/90 backdrop-blur-xl rounded-2xl px-12 py-8 md:px-20 md:py-10 inline-block border border-blue-400/30 shadow-2xl overflow-hidden">
+          <div class="relative bg-gradient-to-br from-blue-600/90 to-blue-800/90 backdrop-blur-xl rounded-3xl px-16 py-10 md:px-24 md:py-12 lg:px-32 lg:py-14 inline-block border border-blue-400/30 shadow-2xl overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent shimmer-effect"></div>
             <div class="relative z-10">
-              <div class="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 tracking-wider"
+              <div class="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-4 tracking-wider"
                    style="text-shadow: 0 4px 15px rgba(0,0,0,0.4);">
                 {{ headline || 'BAT FIRST' }}
               </div>
-              <div class="text-xl md:text-2xl text-blue-100">{{ format }} &bull; {{ totalOvers }} Overs</div>
+              <div class="text-2xl md:text-3xl lg:text-4xl text-blue-100">{{ format }} &bull; {{ totalOvers }} Overs</div>
             </div>
           </div>
         </div>
       </div>
       
       <!-- ==================== CHASE SETUP ==================== -->
-      <div *ngIf="introType === 'chaseSetup'" class="relative z-20 text-center">
-        <div class="flex items-center justify-center gap-6 mb-8 team-entry team-1" [class.animate-team-1]="animationStarted">
+      <div *ngIf="introType === 'chaseSetup'" class="relative z-20 text-center px-8">
+        <div class="flex items-center justify-center gap-8 mb-10 team-entry team-1" [class.animate-team-1]="animationStarted">
           <div class="relative">
-            <div class="absolute inset-0 bg-orange-500/30 rounded-xl blur-xl scale-110"></div>
-            <div class="relative w-28 h-22 md:w-36 md:h-28 rounded-xl overflow-hidden border-2 border-orange-400/50 shadow-2xl">
+            <div class="absolute inset-0 bg-orange-500/30 rounded-2xl blur-xl scale-110"></div>
+            <div class="relative w-40 h-32 md:w-52 md:h-40 lg:w-60 lg:h-48 rounded-2xl overflow-hidden border-3 border-orange-400/50 shadow-2xl">
               <img *ngIf="battingTeamFlag" [src]="battingTeamFlag" class="w-full h-full object-cover">
             </div>
           </div>
-          <span class="text-6xl md:text-7xl font-black text-white tracking-wider"
+          <span class="text-7xl md:text-8xl lg:text-9xl font-black text-white tracking-wider"
                 style="text-shadow: 0 4px 20px rgba(249,115,22,0.5), 0 2px 10px rgba(0,0,0,0.8);">
             {{ battingTeamCode }}
           </span>
         </div>
         <div class="info-card" [class.animate-info-card]="animationStarted">
-          <div class="relative bg-gradient-to-br from-orange-500/90 via-amber-500/90 to-orange-600/90 backdrop-blur-xl rounded-2xl px-12 py-8 md:px-20 md:py-10 inline-block border border-orange-300/30 shadow-2xl overflow-hidden">
-            <div class="absolute inset-0 rounded-2xl border-4 border-yellow-400/20 animate-pulse"></div>
+          <div class="relative bg-gradient-to-br from-orange-500/90 via-amber-500/90 to-orange-600/90 backdrop-blur-xl rounded-3xl px-16 py-10 md:px-24 md:py-12 lg:px-32 lg:py-14 inline-block border border-orange-300/30 shadow-2xl overflow-hidden">
+            <div class="absolute inset-0 rounded-3xl border-4 border-yellow-400/20 animate-pulse"></div>
             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent shimmer-effect"></div>
             <div class="relative z-10">
-              <div class="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-3 tracking-wider"
+              <div class="text-6xl md:text-7xl lg:text-8xl font-black text-white mb-4 tracking-wider"
                    style="text-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 40px rgba(251,191,36,0.3);">
                 {{ headline || 'TARGET: 0' }}
               </div>
-              <div class="text-xl md:text-2xl text-orange-100 mb-2">{{ subheadline }}</div>
-              <div class="text-lg md:text-xl text-orange-200/80">{{ narrative }}</div>
+              <div class="text-2xl md:text-3xl lg:text-4xl text-orange-100 mb-3">{{ subheadline }}</div>
+              <div class="text-xl md:text-2xl lg:text-3xl text-orange-200/80">{{ narrative }}</div>
             </div>
           </div>
         </div>
