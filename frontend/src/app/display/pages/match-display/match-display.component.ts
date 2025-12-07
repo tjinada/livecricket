@@ -28,6 +28,7 @@ import {
   DisplayHighlightPlayerComponent,
   HighlightViewState
 } from './components';
+import { MatchIntroViewComponent } from './components/match-intro-view.component';
 
 @Component({
   selector: 'app-match-display',
@@ -43,7 +44,8 @@ import {
     CurrentPartnershipViewComponent,
     PlayerStatsViewComponent,
     HighlightVideoPlayerComponent,
-    DisplayHighlightPlayerComponent
+    DisplayHighlightPlayerComponent,
+    MatchIntroViewComponent
   ],
   templateUrl: './match-display.component.html'
 })

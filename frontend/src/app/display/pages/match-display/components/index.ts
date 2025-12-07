@@ -9,3 +9,4 @@ export * from './current-partnership-view.component';
 export * from './player-stats-view.component';
 export * from './highlight-video-player.component';
 export * from './display-highlight-player.component';
+export * from './match-intro-view.component';
