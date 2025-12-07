@@ -6,7 +6,22 @@ import { OverDisplay, BallDisplay } from './match-display.interfaces';
   selector: 'app-live-score-view',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './live-score-view.component.html'
+  templateUrl: './live-score-view.component.html',
+  styles: [`
+    @keyframes slideInRight {
+      0% { 
+        opacity: 0; 
+        transform: translateX(100px); 
+      }
+      100% { 
+        opacity: 1; 
+        transform: translateX(0); 
+      }
+    }
+    :host ::ng-deep .animate-slideInRight {
+      animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  `]
 })
 export class LiveScoreViewComponent {
   // Match info
@@ -116,6 +131,16 @@ export class LiveScoreViewComponent {
     if (path.startsWith('http')) return path;
     // Path like /lsci/db/PICTURES/... - match PlayerCacheService format
     return `https://img1.hscicdn.com/image/upload${path}`;
+  }
+
+  getHighlightPlayerRuns(): number {
+    if (!this.highlightData) return 0;
+    return this.highlightData.batsmanRuns || this.highlightData.runs || 0;
+  }
+
+  getHighlightPlayerBalls(): number {
+    if (!this.highlightData) return 0;
+    return this.highlightData.batsmanBalls || this.highlightData.balls || 0;
   }
 
   // ==================== WICKET HIGHLIGHT HELPERS ====================

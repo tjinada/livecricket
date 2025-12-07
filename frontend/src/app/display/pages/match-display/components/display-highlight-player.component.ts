@@ -145,7 +145,8 @@ interface PlayerState {
         </div>
 
         <!-- Current Highlight Label - Top Center with Importance Indicator -->
-        <div *ngIf="playerState.currentHighlight" 
+        <!-- HIDDEN for boundary/milestone types since live-score-view shows the card -->
+        <div *ngIf="playerState.currentHighlight && !isOverlayType()" 
              class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20"
              [class.animate-highlight-enter]="!playerState.isTransitioning">
           <div class="flex flex-col items-center gap-2">
@@ -592,6 +593,16 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     
     // Access importance from the highlight data (added in Phase 3)
     return (highlight as any).importance || null;
+  }
+
+  /**
+   * Check if current highlight type shows an overlay card (boundaries, milestones)
+   * These are handled by live-score-view's right-side card now
+   */
+  isOverlayType(): boolean {
+    const highlight = this.playerState.currentHighlight;
+    if (!highlight) return false;
+    return ['four', 'six', 'wicket', 'fifty', 'hundred'].includes(highlight.type);
   }
 
   /**
