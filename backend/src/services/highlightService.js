@@ -303,6 +303,41 @@ async function generateInningsHighlights(matchId, inningsNumber) {
   // Track cumulative stats for each bowler: { overs, balls, runs, wickets, name, image }
   const bowlerStats = {};
   
+  // Build player lookup from Match data (more reliable for images)
+  // This uses the same data source that works for innings summary
+  // Include players from ALL innings to cover both batting and bowling teams
+  const playerLookup = {};
+  console.log('[DEBUG] Building playerLookup from match innings...');
+  for (const inn of match.innings || []) {
+    console.log(`[DEBUG] Processing innings ${inn.inningsNumber}, battingStats count: ${inn.battingStats?.length}, bowlingStats count: ${inn.bowlingStats?.length}`);
+    for (const bs of inn.battingStats || []) {
+      if (bs.player?._id) {
+        const id = bs.player._id.toString();
+        if (!playerLookup[id]) {
+          playerLookup[id] = {
+            name: bs.player.name,
+            headshotPath: bs.player.headshotPath || null
+          };
+          console.log(`[DEBUG] Added batsman to lookup: ${bs.player.name}, id: ${id}, headshotPath: ${bs.player.headshotPath || 'NULL'}`);
+        }
+      }
+    }
+    for (const bws of inn.bowlingStats || []) {
+      if (bws.player?._id) {
+        const id = bws.player._id.toString();
+        if (!playerLookup[id]) {
+          playerLookup[id] = {
+            name: bws.player.name,
+            headshotPath: bws.player.headshotPath || null
+          };
+          console.log(`[DEBUG] Added bowler to lookup: ${bws.player.name}, id: ${id}, headshotPath: ${bws.player.headshotPath || 'NULL'}`);
+        }
+      }
+    }
+  }
+  console.log(`[DEBUG] playerLookup has ${Object.keys(playerLookup).length} players`);
+  console.log('[DEBUG] playerLookup:', JSON.stringify(playerLookup, null, 2));
+  
   // Track current over balls for display
   let currentOverBalls = [];
   let currentOverNumber = 0;
@@ -376,15 +411,25 @@ async function generateInningsHighlights(matchId, inningsNumber) {
   
   /**
    * Helper to get batsman stats object, creating if needed
+   * Uses playerLookup for reliable image data (from Match innings stats)
    */
   const getBatsmanStats = (player) => {
     if (!player) return null;
     const id = player._id?.toString() || player.toString();
     if (!batsmanStats[id]) {
+      // Prefer image from playerLookup (Match innings data) over Ball populate
+      // This is the same data source that works for innings summary
+      const lookupData = playerLookup[id];
+      const finalImage = lookupData?.headshotPath !== undefined ? lookupData.headshotPath : (player.headshotPath || null);
+      console.log(`[DEBUG] getBatsmanStats creating entry for ${player.name || id}:`);
+      console.log(`[DEBUG]   - player.headshotPath from Ball: ${player.headshotPath || 'NULL'}`);
+      console.log(`[DEBUG]   - lookupData found: ${lookupData ? 'YES' : 'NO'}`);
+      console.log(`[DEBUG]   - lookupData.headshotPath: ${lookupData?.headshotPath || 'NULL'}`);
+      console.log(`[DEBUG]   - Final image used: ${finalImage || 'NULL'}`);
       batsmanStats[id] = {
         id,
-        name: player.name || 'Batsman',
-        image: player.headshotPath || null,
+        name: lookupData?.name || player.name || 'Batsman',
+        image: finalImage,
         runs: 0,
         balls: 0,
         fours: 0,
@@ -396,15 +441,19 @@ async function generateInningsHighlights(matchId, inningsNumber) {
   
   /**
    * Helper to get bowler stats object, creating if needed
+   * Uses playerLookup for reliable image data (from Match innings stats)
    */
   const getBowlerStats = (player) => {
     if (!player) return null;
     const id = player._id?.toString() || player.toString();
     if (!bowlerStats[id]) {
+      // Prefer image from playerLookup (Match innings data) over Ball populate
+      // This is the same data source that works for innings summary
+      const lookupData = playerLookup[id];
       bowlerStats[id] = {
         id,
-        name: player.name || 'Bowler',
-        image: player.headshotPath || null,
+        name: lookupData?.name || player.name || 'Bowler',
+        image: lookupData?.headshotPath !== undefined ? lookupData.headshotPath : (player.headshotPath || null),
         overs: 0,
         balls: 0,
         runs: 0,
@@ -435,6 +484,14 @@ async function generateInningsHighlights(matchId, inningsNumber) {
     const strikerStats = getBatsmanStats(striker);
     const nonStrikerStats = getBatsmanStats(nonStriker);
     const currentBowlerStats = getBowlerStats(bowler);
+    
+    // Debug log for first few calls
+    if (runningBalls <= 6) {
+      console.log(`[DEBUG] buildScoreState at ball ${runningBalls}:`);
+      console.log(`[DEBUG]   strikerStats.image: ${strikerStats?.image || 'NULL'}`);
+      console.log(`[DEBUG]   nonStrikerStats.image: ${nonStrikerStats?.image || 'NULL'}`);
+      console.log(`[DEBUG]   currentBowlerStats.image: ${currentBowlerStats?.image || 'NULL'}`);
+    }
     
     // Calculate chase data for second innings
     const ballsRemaining = isSecondInnings ? (totalOvers * 6) - runningBalls : 0;
@@ -686,6 +743,10 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       const dismissedId = dismissedPlayer?._id?.toString() || dismissedPlayer?.toString();
       const dismissedStats = batsmanStats[dismissedId];
       
+      // Get dismissed player image from playerLookup (same source as batsman/bowler images)
+      const dismissedLookup = dismissedId ? playerLookup[dismissedId] : null;
+      const dismissedImage = dismissedLookup?.headshotPath || dismissedStats?.image || dismissedPlayer?.headshotPath || null;
+      
       // Track first wicket and partnership broken
       const isFirstWicket = !hadFirstWicket;
       hadFirstWicket = true;
@@ -757,7 +818,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
         },
         data: {
           dismissedName: dismissedPlayer?.name || ball.batsman?.name || 'Batsman',
-          dismissedImage: dismissedPlayer?.headshotPath || ball.batsman?.headshotPath || null,
+          dismissedImage: dismissedImage,
           dismissedRuns: dismissedStats?.runs || 0,
           dismissedBalls: dismissedStats?.balls || 0,
           dismissedFours: dismissedStats?.fours || 0,

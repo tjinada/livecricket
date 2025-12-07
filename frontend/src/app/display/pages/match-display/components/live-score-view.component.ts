@@ -114,7 +114,8 @@ export class LiveScoreViewComponent {
     const path = this.highlightData.batsmanImage || this.highlightData.playerImage;
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+    // Path like /lsci/db/PICTURES/... - match PlayerCacheService format
+    return `https://img1.hscicdn.com/image/upload${path}`;
   }
 
   // ==================== WICKET HIGHLIGHT HELPERS ====================
@@ -140,7 +141,8 @@ export class LiveScoreViewComponent {
     const path = this.highlightData?.dismissedImage;
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+    // Path like /lsci/db/PICTURES/... - match PlayerCacheService format
+    return `https://img1.hscicdn.com/image/upload${path}`;
   }
 
   /**
@@ -215,7 +217,8 @@ export class LiveScoreViewComponent {
     const path = this.highlightData?.bowlerImage;
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+    // Path like /lsci/db/PICTURES/... - match PlayerCacheService format
+    return `https://img1.hscicdn.com/image/upload${path}`;
   }
 
   /**
@@ -239,7 +242,8 @@ export class LiveScoreViewComponent {
     const path = this.highlightData?.fielderImage;
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+    // Path like /lsci/db/PICTURES/... - match PlayerCacheService format
+    return `https://img1.hscicdn.com/image/upload${path}`;
   }
 
   /**

@@ -348,6 +348,22 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
         this.highlightVideo = data;
         this.playerState.totalTime = data.totalDuration;
         
+        // DEBUG: Log the highlight data received from API
+        console.log('[DEBUG FE] Highlight data received from API:', {
+          totalHighlights: data.highlights.length,
+          firstFewHighlights: data.highlights.slice(0, 3).map((h: any) => ({
+            type: h.type,
+            scoreAfter: h.data?.scoreAfter ? {
+              strikerName: h.data.scoreAfter.strikerName,
+              strikerImage: h.data.scoreAfter.strikerImage,
+              nonStrikerName: h.data.scoreAfter.nonStrikerName,
+              nonStrikerImage: h.data.scoreAfter.nonStrikerImage,
+              bowlerName: h.data.scoreAfter.bowlerName,
+              bowlerImage: h.data.scoreAfter.bowlerImage
+            } : 'NO scoreAfter'
+          }))
+        });
+        
         if (data.highlights.length > 0) {
           this.playerState.currentHighlight = data.highlights[0];
           this.emitViewChange();

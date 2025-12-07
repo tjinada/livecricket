@@ -1052,10 +1052,20 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
    * Get striker image during highlights
    */
   getHighlightStrikerImage(): string | null {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.strikerImage) {
+    // When in highlight mode with scoreState, use the image from scoreState (even if null)
+    // Only fall back to current match data if NOT in highlight mode
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
       const path = this.highlightViewState.scoreState.strikerImage;
+      console.log('[DEBUG FE] getHighlightStrikerImage - scoreState:', {
+        isHighlightMode: true,
+        strikerName: this.highlightViewState.scoreState.strikerName,
+        strikerImage: path,
+        fullScoreState: this.highlightViewState.scoreState
+      });
+      if (!path) return null;
       if (path.startsWith('http')) return path;
-      return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+      // Path like /lsci/db/PICTURES/... - match PlayerCacheService format
+      return `https://img1.hscicdn.com/image/upload${path}`;
     }
     return this.getStrikerImage();
   }
@@ -1109,10 +1119,14 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
    * Get non-striker image during highlights
    */
   getHighlightNonStrikerImage(): string | null {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.nonStrikerImage) {
+    // When in highlight mode with scoreState, use the image from scoreState (even if null)
+    // Only fall back to current match data if NOT in highlight mode
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
       const path = this.highlightViewState.scoreState.nonStrikerImage;
+      if (!path) return null;
       if (path.startsWith('http')) return path;
-      return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+      // Path like /lsci/db/PICTURES/... - match PlayerCacheService format
+      return `https://img1.hscicdn.com/image/upload${path}`;
     }
     return this.getNonStrikerImage();
   }
@@ -1166,10 +1180,14 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
    * Get bowler image during highlights
    */
   getHighlightBowlerImage(): string | null {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState?.bowlerImage) {
+    // When in highlight mode with scoreState, use the image from scoreState (even if null)
+    // Only fall back to current match data if NOT in highlight mode
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
       const path = this.highlightViewState.scoreState.bowlerImage;
+      if (!path) return null;
       if (path.startsWith('http')) return path;
-      return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+      // Path like /lsci/db/PICTURES/... - match PlayerCacheService format
+      return `https://img1.hscicdn.com/image/upload${path}`;
     }
     return this.getCurrentBowlerImage();
   }
