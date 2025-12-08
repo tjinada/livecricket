@@ -21,6 +21,7 @@ const HIGHLIGHT_DURATIONS = {
   // Phase 6: Intro & Narrative elements
   matchIntro: 5000,      // Match setup card
   inningsIntro: 4000,    // Innings context card
+  inningsStart: 3000,    // 0/0 state with opening batsmen/bowler
   chaseSetup: 4000,      // "Team needs X from Y overs"
   
   // Action highlights
@@ -293,6 +294,74 @@ async function generateInningsHighlights(matchId, inningsNumber) {
         headline: `TARGET: ${target}`,
         subheadline: `${innings.battingTeam?.code || 'TM'} need ${target} runs from ${match.format === 'T20' ? 20 : 50} overs`,
         narrative: `Required rate: ${requiredRate} per over`
+      }
+    });
+  }
+  
+  // ========== INNINGS START (0/0 state) ==========
+  // Add an "inningsStart" highlight showing 0/0 with opening batsmen and bowler
+  // This uses the first ball's players to get the openers
+  if (balls.length > 0) {
+    const firstBall = balls[0];
+    
+    // Get opener names and images from the first ball
+    const openingStriker = firstBall.batsman;
+    const openingNonStriker = firstBall.nonStriker;
+    const openingBowler = firstBall.bowler;
+    
+    // Calculate totalOvers locally for this block
+    const matchTotalOvers = match.format === 'T20' ? 20 : 50;
+    
+    highlights.push({
+      type: 'inningsStart',
+      duration: HIGHLIGHT_DURATIONS.inningsStart,
+      sequence: 0, // After intro, before first ball highlight
+      timestamp: new Date(),
+      data: {
+        inningsNumber: inningsNumber,
+        battingTeam: innings.battingTeam?.name || 'Team',
+        battingTeamCode: innings.battingTeam?.code || 'TM',
+        battingTeamFlag: innings.battingTeam?.flagUrl || null,
+        bowlingTeam: innings.bowlingTeam?.name || 'Team',
+        format: match.format,
+        totalOvers: matchTotalOvers,
+        // Score state at 0/0
+        scoreAfter: {
+          runs: 0,
+          wickets: 0,
+          overs: '0.0',
+          // Striker info
+          strikerName: openingStriker?.name || 'Opener',
+          strikerImage: openingStriker?.headshotPath || null,
+          strikerRuns: 0,
+          strikerBalls: 0,
+          strikerFours: 0,
+          strikerSixes: 0,
+          // Non-striker info
+          nonStrikerName: openingNonStriker?.name || 'Opener',
+          nonStrikerImage: openingNonStriker?.headshotPath || null,
+          nonStrikerRuns: 0,
+          nonStrikerBalls: 0,
+          nonStrikerFours: 0,
+          nonStrikerSixes: 0,
+          // Bowler info
+          bowlerName: openingBowler?.name || 'Bowler',
+          bowlerImage: openingBowler?.headshotPath || null,
+          bowlerOvers: '0.0',
+          bowlerRuns: 0,
+          bowlerWickets: 0,
+          bowlerFigures: '0-0',
+          // Current over balls
+          currentOverBalls: [],
+          currentOverNumber: 1,
+          // Chase data (second innings only)
+          inningsNumber: inningsNumber,
+          isSecondInnings: isSecondInnings,
+          target: isSecondInnings ? target : null,
+          runsNeeded: isSecondInnings ? target : null,
+          ballsRemaining: isSecondInnings ? (matchTotalOvers * 6) : null,
+          totalOvers: matchTotalOvers
+        }
       }
     });
   }

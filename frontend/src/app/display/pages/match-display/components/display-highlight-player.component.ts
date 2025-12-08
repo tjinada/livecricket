@@ -542,6 +542,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     const labels: Record<string, string> = {
       'matchIntro': '🏏 MATCH',
       'inningsIntro': '🏏 1ST INNINGS',
+      'inningsStart': '🏏 MATCH BEGINS',
       'chaseSetup': '🎯 THE CHASE',
       'four': '🏏 FOUR!',
       'six': '🔥 SIX!',
@@ -559,6 +560,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     const colors: Record<string, string> = {
       'matchIntro': 'bg-slate-700',
       'inningsIntro': 'bg-blue-700',
+      'inningsStart': 'bg-emerald-700',
       'chaseSetup': 'bg-orange-600',
       'four': 'bg-green-500',
       'six': 'bg-purple-600',
@@ -744,6 +746,11 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
       case 'inningsIntro':
       case 'chaseSetup':
         view = 'intro';
+        break;
+      case 'inningsStart':
+        // Show live-score view at 0/0 with no overlay
+        view = 'live-score';
+        overlayType = null;
         break;
       case 'four':
         overlayType = 'four';
