@@ -26,8 +26,9 @@ export interface HighlightViewState {
     level: 'routine' | 'notable' | 'significant' | 'crucial' | 'epic';
     factors: string[];
   };
-  // Phase 5: Transition state
+  // Transition state - now includes type for smarter transitions
   isTransitioning?: boolean;
+  transitionType?: 'none' | 'crossfade' | 'major';  // none = same view type, crossfade = different view, major = innings change
   // Full score state at time of highlight
   scoreState?: {
     // Team score
@@ -79,8 +80,9 @@ interface PlayerState {
   progress: number;
   elapsedTime: number;
   totalTime: number;
-  // Phase 5: Transition state
+  // Transition state
   isTransitioning: boolean;
+  transitionType: 'none' | 'crossfade' | 'major';
 }
 
 @Component({
@@ -91,11 +93,13 @@ interface PlayerState {
     <!-- Highlight Player Overlay - Transparent, shows controls at bottom -->
     <div class="fixed inset-0 z-50 pointer-events-none">
       
-      <!-- Phase 5: Transition Overlay - Fade effect between highlights -->
+      <!-- Crossfade Transition Overlay - Only for view changes (not same-view highlights) -->
       <div 
-        class="absolute inset-0 bg-black pointer-events-none transition-opacity duration-300 z-30"
-        [class.opacity-0]="!playerState.isTransitioning"
-        [class.opacity-100]="playerState.isTransitioning">
+        class="absolute inset-0 bg-black/60 pointer-events-none z-30 transition-opacity"
+        [class.duration-300]="playerState.transitionType === 'crossfade'"
+        [class.duration-500]="playerState.transitionType === 'major'"
+        [class.opacity-0]="!playerState.isTransitioning || playerState.transitionType === 'none'"
+        [class.opacity-100]="playerState.isTransitioning && playerState.transitionType !== 'none'">
       </div>
       
       <!-- Loading State -->
@@ -315,7 +319,8 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     progress: 0,
     elapsedTime: 0,
     totalTime: 0,
-    isTransitioning: false
+    isTransitioning: false,
+    transitionType: 'none'
   };
 
   private progressSubscription: Subscription | null = null;
@@ -508,17 +513,23 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
       this.currentHighlightElapsed = 0;
       
       if (this.playerState.currentIndex < this.highlightVideo!.highlights.length - 1) {
-        // Phase 5: Trigger transition before changing highlight
+        // Trigger transition and get the type
         this.triggerTransition();
+        
+        // Determine delay based on transition type
+        // For 'none' transitions, change immediately
+        // For crossfade/major, wait for half the transition duration
+        const transitionDelay = this.playerState.transitionType === 'none' ? 0 
+          : this.playerState.transitionType === 'major' ? 250 : 150;
         
         this.playerState.currentIndex++;
         this.playerState.currentHighlight = this.highlightVideo!.highlights[this.playerState.currentIndex];
         
-        // Emit after transition starts (actual content change)
+        // Emit after appropriate delay
         setTimeout(() => {
           this.emitViewChange();
           this.playCurrentHighlight();
-        }, 150); // Half of transition duration
+        }, transitionDelay);
       } else {
         this.playerState.isPlaying = false;
         this.stopProgressTimer();
@@ -698,29 +709,87 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Trigger transition effect when changing highlights
+   * Determine what type of transition is needed between two highlights
    */
-  private triggerTransition(): void {
-    this.playerState.isTransitioning = true;
+  private getTransitionType(currentHighlight: HighlightData, nextHighlight: HighlightData): 'none' | 'crossfade' | 'major' {
+    const currentView = this.getViewForHighlight(currentHighlight);
+    const nextView = this.getViewForHighlight(nextHighlight);
     
-    // Emit transitioning state
-    if (this.playerState.currentHighlight) {
-      this.viewChange.emit({
-        ...this.buildViewState(),
-        isTransitioning: true
-      });
+    // Major transition: innings changes (inningsIntro, chaseSetup, inningsSummary)
+    const majorTypes = ['inningsIntro', 'chaseSetup', 'inningsSummary', 'matchSummary'];
+    if (majorTypes.includes(nextHighlight.type)) {
+      return 'major';
     }
     
-    // Clear transition after animation
-    setTimeout(() => {
-      this.playerState.isTransitioning = false;
-      if (this.playerState.currentHighlight) {
+    // Same view type (e.g., live-score to live-score): no transition needed
+    // The notification cards provide visual continuity
+    if (currentView === nextView) {
+      return 'none';
+    }
+    
+    // Different view types: gentle crossfade
+    return 'crossfade';
+  }
+  
+  /**
+   * Get the view type for a highlight
+   */
+  private getViewForHighlight(highlight: HighlightData): string {
+    switch (highlight.type) {
+      case 'matchIntro':
+      case 'inningsIntro':
+      case 'chaseSetup':
+        return 'intro';
+      case 'overSummary':
+      case 'inningsSummary':
+        return 'live-match-summary';
+      case 'matchSummary':
+        return 'final-match-summary';
+      default:
+        return 'live-score';
+    }
+  }
+
+  /**
+   * Trigger transition effect when changing highlights
+   * Now uses smart transition type detection
+   */
+  private triggerTransition(): void {
+    if (!this.highlightVideo) return;
+    
+    const currentHighlight = this.playerState.currentHighlight;
+    const nextIndex = this.playerState.currentIndex + 1;
+    
+    if (!currentHighlight || nextIndex >= this.highlightVideo.highlights.length) return;
+    
+    const nextHighlight = this.highlightVideo.highlights[nextIndex];
+    const transitionType = this.getTransitionType(currentHighlight, nextHighlight);
+    
+    this.playerState.transitionType = transitionType;
+    
+    // Only show visual transition for crossfade and major
+    if (transitionType !== 'none') {
+      this.playerState.isTransitioning = true;
+      
+      // Emit transitioning state
+      this.viewChange.emit({
+        ...this.buildViewState(),
+        isTransitioning: true,
+        transitionType
+      });
+      
+      // Clear transition after animation
+      const duration = transitionType === 'major' ? 500 : 300;
+      setTimeout(() => {
+        this.playerState.isTransitioning = false;
+        this.playerState.transitionType = 'none';
         this.viewChange.emit({
           ...this.buildViewState(),
-          isTransitioning: false
+          isTransitioning: false,
+          transitionType: 'none'
         });
-      }
-    }, 300);
+      }, duration);
+    }
   }
 
   /**
