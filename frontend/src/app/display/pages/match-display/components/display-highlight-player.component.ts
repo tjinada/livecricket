@@ -552,6 +552,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
   getHighlightTypeLabel(type: string): string {
     const labels: Record<string, string> = {
       'matchIntro': '🏏 MATCH',
+      'teamLineup': '📋 STARTING XI',
       'inningsIntro': '🏏 1ST INNINGS',
       'inningsStart': '🏏 MATCH BEGINS',
       'chaseSetup': '🎯 THE CHASE',
@@ -570,6 +571,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
   getHighlightTypeColor(type: string): string {
     const colors: Record<string, string> = {
       'matchIntro': 'bg-slate-700',
+      'teamLineup': 'bg-teal-600',
       'inningsIntro': 'bg-blue-700',
       'inningsStart': 'bg-emerald-700',
       'chaseSetup': 'bg-orange-600',
@@ -737,6 +739,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
   private getViewForHighlight(highlight: HighlightData): string {
     switch (highlight.type) {
       case 'matchIntro':
+      case 'teamLineup':
       case 'inningsIntro':
       case 'chaseSetup':
         return 'intro';
@@ -812,6 +815,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
 
     switch (highlight.type) {
       case 'matchIntro':
+      case 'teamLineup':
       case 'inningsIntro':
       case 'chaseSetup':
         view = 'intro';

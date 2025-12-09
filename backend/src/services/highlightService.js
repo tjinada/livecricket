@@ -11,7 +11,7 @@
  * - Includes current over balls in each highlight
  */
 
-const { Ball, Match } = require('../models');
+const { Ball, Match, Player } = require('../models');
 
 /**
  * Highlight types and their BASE durations (in milliseconds)
@@ -20,6 +20,7 @@ const { Ball, Match } = require('../models');
 const HIGHLIGHT_DURATIONS = {
   // Phase 6: Intro & Narrative elements
   matchIntro: 5000,      // Match setup card
+  teamLineup: 6000,      // Starting XI display for each team
   inningsIntro: 4000,    // Innings context card
   inningsStart: 3000,    // 0/0 state with opening batsmen/bowler
   chaseSetup: 4000,      // "Team needs X from Y overs"
@@ -1300,6 +1301,126 @@ async function generateMatchSummary(matchId) {
 }
 
 /**
+ * Generate team lineup highlights for both teams
+ * Shows the Starting XI for each team after match intro
+ * 
+ * @param {Object} match - Populated match object
+ * @returns {Promise<Array>} Array of teamLineup highlight objects
+ */
+async function generateTeamLineups(match) {
+  const lineups = [];
+  
+  // Determine batting team first (based on toss)
+  let battingFirstTeam, bowlingFirstTeam;
+  let battingFirstSquad, bowlingFirstSquad;
+  
+  if (match.toss?.winner && match.toss?.decision) {
+    const tossWinnerId = match.toss.winner._id?.toString() || match.toss.winner.toString();
+    const team1Id = match.team1._id?.toString() || match.team1.toString();
+    
+    if (match.toss.decision === 'bat') {
+      // Toss winner chose to bat
+      if (tossWinnerId === team1Id) {
+        battingFirstTeam = match.team1;
+        bowlingFirstTeam = match.team2;
+        battingFirstSquad = match.squads?.team1 || [];
+        bowlingFirstSquad = match.squads?.team2 || [];
+      } else {
+        battingFirstTeam = match.team2;
+        bowlingFirstTeam = match.team1;
+        battingFirstSquad = match.squads?.team2 || [];
+        bowlingFirstSquad = match.squads?.team1 || [];
+      }
+    } else {
+      // Toss winner chose to bowl
+      if (tossWinnerId === team1Id) {
+        battingFirstTeam = match.team2;
+        bowlingFirstTeam = match.team1;
+        battingFirstSquad = match.squads?.team2 || [];
+        bowlingFirstSquad = match.squads?.team1 || [];
+      } else {
+        battingFirstTeam = match.team1;
+        bowlingFirstTeam = match.team2;
+        battingFirstSquad = match.squads?.team1 || [];
+        bowlingFirstSquad = match.squads?.team2 || [];
+      }
+    }
+  } else {
+    // No toss info, default to team1 batting first
+    battingFirstTeam = match.team1;
+    bowlingFirstTeam = match.team2;
+    battingFirstSquad = match.squads?.team1 || [];
+    bowlingFirstSquad = match.squads?.team2 || [];
+  }
+  
+  // Helper to format role for display
+  const formatRole = (role) => {
+    const roleMap = {
+      'batsman': 'Batsman',
+      'bowler': 'Bowler',
+      'all-rounder': 'All-Rounder',
+      'wicket-keeper': 'WK-Batsman'
+    };
+    return roleMap[role] || role;
+  };
+  
+  // Helper to build lineup for a team
+  // NOTE: squadPlayer.player is already populated with name, role, headshotPath
+  const buildLineup = async (team, squad, teamType) => {
+    // Get Playing XI only, sorted by batting order
+    const playingXI = squad
+      .filter(p => p.isPlayingXI)
+      .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99));
+    
+    if (playingXI.length === 0) {
+      return null; // No playing XI set
+    }
+    
+    // Build player list directly from populated squad data
+    // squadPlayer.player is already populated via generateHighlightVideo's populate call
+    const playerList = playingXI.map(squadPlayer => {
+      const player = squadPlayer.player; // Already populated object
+      
+      return {
+        name: player?.name || 'Player',
+        image: player?.headshotPath || null,
+        role: formatRole(player?.role || 'batsman')
+      };
+    });
+    
+    return {
+      type: 'teamLineup',
+      duration: HIGHLIGHT_DURATIONS.teamLineup,
+      sequence: teamType === 'batting' ? -99 : -98, // After matchIntro (-100)
+      timestamp: new Date(),
+      data: {
+        teamName: team?.name || 'Team',
+        teamCode: team?.code || 'TM',
+        teamFlag: team?.flagUrl || null,
+        teamType: teamType, // 'batting' or 'bowling' (which team bats first)
+        players: playerList,
+        headline: `${team?.name?.toUpperCase() || 'TEAM'} - STARTING XI`,
+        playerCount: playerList.length
+      }
+    };
+  };
+  
+  // Generate lineup for batting team first
+  const battingLineup = await buildLineup(battingFirstTeam, battingFirstSquad, 'batting');
+  if (battingLineup) {
+    lineups.push(battingLineup);
+  }
+  
+  // Generate lineup for bowling team
+  const bowlingLineup = await buildLineup(bowlingFirstTeam, bowlingFirstSquad, 'bowling');
+  if (bowlingLineup) {
+    lineups.push(bowlingLineup);
+  }
+  
+  return lineups;
+}
+
+/**
  * Generate full video highlight sequence for an innings or match
  * 
  * @param {string} matchId - Match ID
@@ -1314,7 +1435,9 @@ async function generateHighlightVideo(matchId, options = {}) {
   const match = await Match.findById(matchId)
     .populate('team1', 'name code flagUrl')
     .populate('team2', 'name code flagUrl')
-    .populate('toss.winner', 'name code');
+    .populate('toss.winner', 'name code')
+    .populate('squads.team1.player', 'name role headshotPath')
+    .populate('squads.team2.player', 'name role headshotPath');
 
   if (!match) {
     throw new Error('Match not found');
@@ -1354,6 +1477,11 @@ async function generateHighlightVideo(matchId, options = {}) {
         subheadline: `${match.format} Match${match.venue ? ' • ' + match.venue : ''}`
       }
     });
+    
+    // ========== TEAM LINEUPS (After Match Intro) ==========
+    // Show Starting XI for both teams
+    const teamLineups = await generateTeamLineups(match);
+    highlights.push(...teamLineups);
   }
 
   // Generate highlights for specified innings or all
@@ -1419,6 +1547,7 @@ function formatDuration(ms) {
 module.exports = {
   generateInningsHighlights,
   generateMatchSummary,
+  generateTeamLineups,
   generateHighlightVideo,
   calculateImportance,
   HIGHLIGHT_DURATIONS,

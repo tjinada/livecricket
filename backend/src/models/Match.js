@@ -11,6 +11,14 @@ const squadPlayerSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isCaptain: {
+    type: Boolean,
+    default: false
+  },
+  isWicketkeeper: {
+    type: Boolean,
+    default: false
+  },
   battingOrder: {
     type: Number,
     min: 1,

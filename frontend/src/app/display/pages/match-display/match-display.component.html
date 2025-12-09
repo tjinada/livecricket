@@ -469,6 +469,17 @@
             [subheadline]="highlightViewState?.highlightData?.subheadline || ''"
             [narrative]="highlightViewState?.highlightData?.narrative || ''"
           ></app-match-intro-view>
+          
+          <!-- Team Lineup (Starting XI) -->
+          <app-match-intro-view
+            *ngIf="highlightViewState?.highlightType === 'teamLineup'"
+            [introType]="'teamLineup'"
+            [lineupTeamName]="highlightViewState?.highlightData?.teamName || 'Team'"
+            [lineupTeamCode]="highlightViewState?.highlightData?.teamCode || 'TM'"
+            [lineupTeamFlag]="highlightViewState?.highlightData?.teamFlag"
+            [lineupPlayers]="highlightViewState?.highlightData?.players || []"
+            [lineupHeadline]="highlightViewState?.highlightData?.headline || ''"
+          ></app-match-intro-view>
         </div>
 
         <!-- Highlight player controls overlay -->

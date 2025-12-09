@@ -1,6 +1,13 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+// Simple interface for lineup player data
+interface LineupPlayer {
+  name: string;
+  image: string | null;
+  role: string;
+}
+
 @Component({
   selector: 'app-match-intro-view',
   standalone: true,
@@ -151,6 +158,80 @@ import { CommonModule } from '@angular/common';
         </div>
       </div>
       
+      <!-- ==================== TEAM LINEUP (Starting XI) ==================== -->
+      <div *ngIf="introType === 'teamLineup'" class="relative z-20 w-full max-w-7xl mx-auto px-6 py-4">
+        
+        <!-- Header with Team Flag and Name -->
+        <div class="flex items-center justify-center gap-6 mb-8 team-entry team-1" [class.animate-team-1]="animationStarted">
+          <div class="relative">
+            <div class="absolute inset-0 bg-teal-500/30 rounded-xl blur-xl scale-110"></div>
+            <div class="relative w-24 h-20 md:w-28 md:h-24 rounded-xl overflow-hidden border-2 border-teal-400/50 shadow-xl">
+              <img *ngIf="lineupTeamFlag" [src]="lineupTeamFlag" class="w-full h-full object-cover" [alt]="lineupTeamCode">
+              <div *ngIf="!lineupTeamFlag" class="w-full h-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
+                <span class="text-xl font-bold text-white/60">{{ lineupTeamCode }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-wider"
+                 style="text-shadow: 0 4px 20px rgba(20,184,166,0.5), 0 2px 10px rgba(0,0,0,0.8);">
+              {{ lineupHeadline || (lineupTeamName + ' - STARTING XI') }}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Players Grid - Two Rows -->
+        <div class="space-y-4 info-card" [class.animate-info-card]="animationStarted">
+          
+          <!-- Top Row (5 players) -->
+          <div class="flex justify-center gap-4 md:gap-6">
+            <div *ngFor="let player of topRowPlayers; let i = index" 
+                 class="flex flex-col items-center bg-white/5 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-white/10 hover:bg-white/10 transition-all"
+                 [style.animation-delay.ms]="i * 100">
+              <!-- Player Image -->
+              <div class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full overflow-hidden border-2 border-white/20 mb-2 bg-gradient-to-br from-gray-700 to-gray-900">
+                <img *ngIf="getPlayerImageUrl(player.image)" [src]="getPlayerImageUrl(player.image)" class="w-full h-full object-cover" [alt]="player.name">
+                <div *ngIf="!getPlayerImageUrl(player.image)" class="w-full h-full flex items-center justify-center">
+                  <span class="text-2xl md:text-3xl text-white/40">👤</span>
+                </div>
+              </div>
+              <!-- Player Name & Role -->
+              <div class="text-center">
+                <div class="text-sm md:text-base lg:text-lg font-semibold text-white truncate max-w-24 md:max-w-28 lg:max-w-32"
+                     [title]="player.name">
+                  {{ player.name }}
+                </div>
+                <div class="text-xs md:text-sm text-gray-400">{{ player.role }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Bottom Row (6 players) -->
+          <div class="flex justify-center gap-4 md:gap-6">
+            <div *ngFor="let player of bottomRowPlayers; let i = index" 
+                 class="flex flex-col items-center bg-white/5 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-white/10 hover:bg-white/10 transition-all"
+                 [style.animation-delay.ms]="(i + 5) * 100">
+              <!-- Player Image -->
+              <div class="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full overflow-hidden border-2 border-white/20 mb-2 bg-gradient-to-br from-gray-700 to-gray-900">
+                <img *ngIf="getPlayerImageUrl(player.image)" [src]="getPlayerImageUrl(player.image)" class="w-full h-full object-cover" [alt]="player.name">
+                <div *ngIf="!getPlayerImageUrl(player.image)" class="w-full h-full flex items-center justify-center">
+                  <span class="text-2xl md:text-3xl text-white/40">👤</span>
+                </div>
+              </div>
+              <!-- Player Name & Role -->
+              <div class="text-center">
+                <div class="text-sm md:text-base lg:text-lg font-semibold text-white truncate max-w-24 md:max-w-28 lg:max-w-32"
+                     [title]="player.name">
+                  {{ player.name }}
+                </div>
+                <div class="text-xs md:text-sm text-gray-400">{{ player.role }}</div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
     </div>
   `,
   styles: [`
@@ -209,7 +290,7 @@ import { CommonModule } from '@angular/common';
   `]
 })
 export class MatchIntroViewComponent implements OnInit, OnDestroy {
-  @Input() introType: 'matchIntro' | 'inningsIntro' | 'chaseSetup' = 'matchIntro';
+  @Input() introType: 'matchIntro' | 'teamLineup' | 'inningsIntro' | 'chaseSetup' = 'matchIntro';
   @Input() team1Code: string = 'T1';
   @Input() team1Flag: string | null = null;
   @Input() team1Name: string = 'Team 1';
@@ -229,7 +310,31 @@ export class MatchIntroViewComponent implements OnInit, OnDestroy {
   @Input() subheadline: string = '';
   @Input() narrative: string = '';
   
+  // Team Lineup specific inputs
+  @Input() lineupTeamName: string = '';
+  @Input() lineupTeamCode: string = '';
+  @Input() lineupTeamFlag: string | null = null;
+  @Input() lineupPlayers: LineupPlayer[] = [];
+  @Input() lineupHeadline: string = '';
+  
   animationStarted = false;
+  
+  // Helper to split players into two rows (5 + 6)
+  get topRowPlayers(): LineupPlayer[] {
+    return this.lineupPlayers.slice(0, 5);
+  }
+  
+  get bottomRowPlayers(): LineupPlayer[] {
+    return this.lineupPlayers.slice(5);
+  }
+  
+  // Helper to transform headshotPath to full Cloudinary URL
+  getPlayerImageUrl(path: string | null): string | null {
+    if (!path) return null;
+    if (path.startsWith('http')) return path; // Already a full URL
+    // Path like /lsci/db/PICTURES/... needs Cloudinary prefix
+    return `https://img1.hscicdn.com/image/upload${path}`;
+  }
   
   ngOnInit(): void {
     setTimeout(() => {
