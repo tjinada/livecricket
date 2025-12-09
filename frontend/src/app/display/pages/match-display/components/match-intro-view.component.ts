@@ -100,62 +100,131 @@ interface LineupPlayer {
         </div>
       </div>
       
-      <!-- ==================== INNINGS INTRO ==================== -->
-      <div *ngIf="introType === 'inningsIntro'" class="relative z-20 text-center px-8">
-        <div class="flex items-center justify-center gap-8 mb-10 team-entry team-1" [class.animate-team-1]="animationStarted">
-          <div class="relative">
-            <div class="absolute inset-0 bg-blue-500/30 rounded-2xl blur-xl scale-110"></div>
-            <div class="relative w-40 h-32 md:w-52 md:h-40 lg:w-60 lg:h-48 rounded-2xl overflow-hidden border-3 border-blue-400/50 shadow-2xl">
-              <img *ngIf="battingTeamFlag" [src]="battingTeamFlag" class="w-full h-full object-cover">
-            </div>
-          </div>
-          <span class="text-7xl md:text-8xl lg:text-9xl font-black text-white tracking-wider"
-                style="text-shadow: 0 4px 20px rgba(59,130,246,0.5), 0 2px 10px rgba(0,0,0,0.8);">
-            {{ battingTeamCode }}
-          </span>
-        </div>
-        <div class="info-card" [class.animate-info-card]="animationStarted">
-          <div class="relative bg-gradient-to-br from-blue-600/90 to-blue-800/90 backdrop-blur-xl rounded-3xl px-16 py-10 md:px-24 md:py-12 lg:px-32 lg:py-14 inline-block border border-blue-400/30 shadow-2xl overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent shimmer-effect"></div>
-            <div class="relative z-10">
-              <div class="text-5xl md:text-6xl lg:text-7xl font-black text-white mb-4 tracking-wider"
-                   style="text-shadow: 0 4px 15px rgba(0,0,0,0.4);">
-                {{ headline || 'BAT FIRST' }}
+      <!-- ==================== INNINGS INTRO (Clean Design) ==================== -->
+      <div *ngIf="introType === 'inningsIntro'" class="relative z-20 text-center px-8 w-full">
+        
+        <!-- Unified Card with Flag -->
+        <div class="team-entry team-1" [class.animate-team-1]="animationStarted">
+          <div class="relative inline-block">
+            <!-- Subtle outer glow -->
+            <div class="absolute -inset-4 bg-white/5 rounded-[3rem] blur-2xl"></div>
+            
+            <!-- Main unified card -->
+            <div class="relative bg-gradient-to-b from-black/40 via-black/50 to-black/60 backdrop-blur-xl rounded-[2.5rem] px-16 py-12 md:px-24 md:py-14 lg:px-32 lg:py-16 border border-white/10 shadow-2xl overflow-hidden"
+                 style="box-shadow: 0 25px 80px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);">
+              
+              <!-- Top shine -->
+              <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+              
+              <!-- Flag Section -->
+              <div class="mb-8">
+                <div class="relative inline-block">
+                  <!-- Flag glow -->
+                  <div class="absolute -inset-3 bg-white/10 rounded-2xl blur-xl"></div>
+                  <!-- Flag -->
+                  <div class="relative w-48 h-36 md:w-64 md:h-48 lg:w-72 lg:h-56 rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl"
+                       style="box-shadow: 0 20px 50px -10px rgba(0,0,0,0.5);">
+                    <img *ngIf="battingTeamFlag" [src]="battingTeamFlag" class="w-full h-full object-cover">
+                    <div *ngIf="!battingTeamFlag" class="w-full h-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
+                      <span class="text-5xl font-black text-white/40">{{ battingTeamCode }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="text-2xl md:text-3xl lg:text-4xl text-blue-100">{{ format }} &bull; {{ totalOvers }} Overs</div>
+              
+              <!-- Team Code -->
+              <div class="mb-6">
+                <span class="text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-widest"
+                      style="text-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                  {{ battingTeamCode }}
+                </span>
+              </div>
+              
+              <!-- Divider -->
+              <div class="w-32 h-1 bg-gradient-to-r from-transparent via-white/40 to-transparent mx-auto mb-6"></div>
+              
+              <!-- Action Text -->
+              <div class="mb-4">
+                <span class="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-wide"
+                      style="text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
+                  {{ headline || 'BAT FIRST' }}
+                </span>
+              </div>
+              
+              <!-- Format Info -->
+              <div class="flex items-center justify-center gap-3 text-xl md:text-2xl text-white/70">
+                <span>{{ format }}</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-white/40"></span>
+                <span>{{ totalOvers }} Overs</span>
+              </div>
+              
             </div>
           </div>
         </div>
+        
       </div>
       
-      <!-- ==================== CHASE SETUP ==================== -->
-      <div *ngIf="introType === 'chaseSetup'" class="relative z-20 text-center px-8">
-        <div class="flex items-center justify-center gap-8 mb-10 team-entry team-1" [class.animate-team-1]="animationStarted">
-          <div class="relative">
-            <div class="absolute inset-0 bg-orange-500/30 rounded-2xl blur-xl scale-110"></div>
-            <div class="relative w-40 h-32 md:w-52 md:h-40 lg:w-60 lg:h-48 rounded-2xl overflow-hidden border-3 border-orange-400/50 shadow-2xl">
-              <img *ngIf="battingTeamFlag" [src]="battingTeamFlag" class="w-full h-full object-cover">
-            </div>
-          </div>
-          <span class="text-7xl md:text-8xl lg:text-9xl font-black text-white tracking-wider"
-                style="text-shadow: 0 4px 20px rgba(249,115,22,0.5), 0 2px 10px rgba(0,0,0,0.8);">
-            {{ battingTeamCode }}
-          </span>
-        </div>
-        <div class="info-card" [class.animate-info-card]="animationStarted">
-          <div class="relative bg-gradient-to-br from-orange-500/90 via-amber-500/90 to-orange-600/90 backdrop-blur-xl rounded-3xl px-16 py-10 md:px-24 md:py-12 lg:px-32 lg:py-14 inline-block border border-orange-300/30 shadow-2xl overflow-hidden">
-            <div class="absolute inset-0 rounded-3xl border-4 border-yellow-400/20 animate-pulse"></div>
-            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent shimmer-effect"></div>
-            <div class="relative z-10">
-              <div class="text-6xl md:text-7xl lg:text-8xl font-black text-white mb-4 tracking-wider"
-                   style="text-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 40px rgba(251,191,36,0.3);">
-                {{ headline || 'TARGET: 0' }}
+      <!-- ==================== CHASE SETUP (Clean Design) ==================== -->
+      <div *ngIf="introType === 'chaseSetup'" class="relative z-20 text-center px-8 w-full">
+        
+        <!-- Unified Card with Flag -->
+        <div class="team-entry team-1" [class.animate-team-1]="animationStarted">
+          <div class="relative inline-block">
+            <!-- Amber outer glow for chase -->
+            <div class="absolute -inset-4 bg-amber-500/10 rounded-[3rem] blur-2xl"></div>
+            
+            <!-- Main unified card -->
+            <div class="relative bg-gradient-to-b from-black/40 via-black/50 to-black/60 backdrop-blur-xl rounded-[2.5rem] px-16 py-12 md:px-24 md:py-14 lg:px-32 lg:py-16 border border-amber-500/20 shadow-2xl overflow-hidden"
+                 style="box-shadow: 0 25px 80px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);">
+              
+              <!-- Top shine with amber tint -->
+              <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent"></div>
+              
+              <!-- Flag Section -->
+              <div class="mb-8">
+                <div class="relative inline-block">
+                  <!-- Flag glow with amber tint -->
+                  <div class="absolute -inset-3 bg-amber-500/15 rounded-2xl blur-xl"></div>
+                  <!-- Flag -->
+                  <div class="relative w-48 h-36 md:w-64 md:h-48 lg:w-72 lg:h-56 rounded-xl overflow-hidden border-2 border-amber-400/30 shadow-2xl"
+                       style="box-shadow: 0 20px 50px -10px rgba(0,0,0,0.5);">
+                    <img *ngIf="battingTeamFlag" [src]="battingTeamFlag" class="w-full h-full object-cover">
+                    <div *ngIf="!battingTeamFlag" class="w-full h-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
+                      <span class="text-5xl font-black text-white/40">{{ battingTeamCode }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="text-2xl md:text-3xl lg:text-4xl text-orange-100 mb-3">{{ subheadline }}</div>
-              <div class="text-xl md:text-2xl lg:text-3xl text-orange-200/80">{{ narrative }}</div>
+              
+              <!-- Team Code -->
+              <div class="mb-6">
+                <span class="text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-widest"
+                      style="text-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                  {{ battingTeamCode }}
+                </span>
+              </div>
+              
+              <!-- Divider with amber -->
+              <div class="w-32 h-1 bg-gradient-to-r from-transparent via-amber-400/60 to-transparent mx-auto mb-6"></div>
+              
+              <!-- Target Text -->
+              <div class="mb-3">
+                <span class="text-5xl md:text-6xl lg:text-7xl font-black text-amber-400 tracking-wide"
+                      style="text-shadow: 0 4px 20px rgba(251,191,36,0.4), 0 2px 10px rgba(0,0,0,0.5);">
+                  {{ headline || 'TARGET: 0' }}
+                </span>
+              </div>
+              
+              <!-- Subheadline -->
+              <div class="text-xl md:text-2xl lg:text-3xl text-white/80 mb-2">{{ subheadline }}</div>
+              
+              <!-- Narrative -->
+              <div class="text-lg md:text-xl text-white/60">{{ narrative }}</div>
+              
             </div>
           </div>
         </div>
+        
       </div>
       
       <!-- ==================== TEAM LINEUP (Starting XI) ==================== -->
@@ -236,10 +305,14 @@ interface LineupPlayer {
   `,
   styles: [`
     .team-entry { opacity: 0; }
-    .team-1 { transform: translateX(-60px); }
+    .team-1 { transform: scale(0.95) translateY(20px); }
     .team-2 { transform: translateX(60px); }
-    .animate-team-1 { animation: slideInLeft 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards; }
+    .animate-team-1 { animation: scaleIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards; }
     .animate-team-2 { animation: slideInRight 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards; }
+    @keyframes scaleIn {
+      0% { opacity: 0; transform: scale(0.9) translateY(30px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
     @keyframes slideInLeft {
       0% { opacity: 0; transform: translateX(-60px) scale(0.9); }
       100% { opacity: 1; transform: translateX(0) scale(1); }
@@ -249,14 +322,14 @@ interface LineupPlayer {
       100% { opacity: 1; transform: translateX(0) scale(1); }
     }
     .vs-badge { opacity: 0; transform: scale(0.5); }
-    .animate-vs { animation: vsPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.7s forwards; }
+    .animate-vs { animation: vsPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s forwards; }
     @keyframes vsPopIn {
       0% { opacity: 0; transform: scale(0.5); }
       70% { transform: scale(1.1); }
       100% { opacity: 1; transform: scale(1); }
     }
     .info-card { opacity: 0; transform: translateY(40px); }
-    .animate-info-card { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.0s forwards; }
+    .animate-info-card { animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.9s forwards; }
     @keyframes slideUpFade {
       0% { opacity: 0; transform: translateY(40px); }
       100% { opacity: 1; transform: translateY(0); }
@@ -282,7 +355,7 @@ interface LineupPlayer {
       0% { text-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 2px 10px rgba(0,0,0,0.8); }
       100% { text-shadow: 0 4px 25px rgba(0,0,0,0.6), 0 2px 15px rgba(0,0,0,0.9), 0 0 40px rgba(255,255,255,0.1); }
     }
-    .shimmer-effect { animation: shimmer 2s ease-in-out infinite; }
+    .shimmer-effect { animation: shimmer 2.5s ease-in-out infinite; }
     @keyframes shimmer {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
