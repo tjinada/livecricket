@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, Input, Output, EventEmitter, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HighlightService, HighlightVideo, HighlightData } from '../../../services/highlight.service';
 import { interval, Subscription } from 'rxjs';
 
@@ -138,6 +138,23 @@ interface PlayerState {
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
+        </button>
+
+        <!-- Record Button - Top right, next to close -->
+        <button 
+          (click)="toggleRecording()"
+          [disabled]="!canRecord"
+          class="absolute top-6 right-20 z-20 h-12 px-4 rounded-full flex items-center justify-center gap-2 text-white transition-colors pointer-events-auto backdrop-blur-sm"
+          [ngClass]="{
+            'bg-red-600 hover:bg-red-700': isRecording,
+            'bg-black/60 hover:bg-black/80': !isRecording,
+            'opacity-50 cursor-not-allowed': !canRecord
+          }">
+          <div *ngIf="isRecording" class="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+          <svg *ngIf="!isRecording" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"></circle>
+          </svg>
+          <span class="text-sm font-medium">{{ isRecording ? formatRecordingTime(recordingDuration) : 'Record' }}</span>
         </button>
 
         <!-- Highlight Info Badge - Top left -->
@@ -300,22 +317,214 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     transitionType: 'none'
   };
 
+  // Screen recording state
+  isRecording = false;
+  canRecord = false;
+  recordingDuration = 0;
+  private mediaRecorder: MediaRecorder | null = null;
+  private recordedChunks: Blob[] = [];
+  private recordingTimer: any = null;
+  private mediaStream: MediaStream | null = null;
+
   private progressSubscription: Subscription | null = null;
   private highlightTimer: any = null;
   private currentHighlightElapsed = 0;
   private readonly PROGRESS_INTERVAL = 50;
 
-  constructor(private highlightService: HighlightService) {}
+  constructor(
+    private highlightService: HighlightService,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {}
 
   ngOnInit() {
     this.loadHighlights();
+    this.checkRecordingSupport();
   }
 
   ngOnDestroy() {
     this.pause();
+    this.stopRecording();
     if (this.highlightTimer) {
       clearTimeout(this.highlightTimer);
     }
+  }
+
+  /**
+   * Check if screen recording is supported
+   */
+  private checkRecordingSupport(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      this.canRecord = !!(navigator.mediaDevices && (navigator.mediaDevices as any).getDisplayMedia);
+    }
+  }
+
+  /**
+   * Toggle screen recording on/off
+   */
+  async toggleRecording(): Promise<void> {
+    if (this.isRecording) {
+      this.stopRecording();
+    } else {
+      await this.startRecording();
+    }
+  }
+
+  /**
+   * Start screen recording
+   */
+  private async startRecording(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    try {
+      // Request screen capture - browser will show picker
+      // selfBrowserSurface: 'include' (Chrome 107+) explicitly includes current tab in picker
+      // preferCurrentTab: true (Chrome 94+) pre-selects current tab
+      const stream = await (navigator.mediaDevices as any).getDisplayMedia({
+        video: {
+          displaySurface: 'browser',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
+        },
+        audio: false, // No audio since videos are muted
+        selfBrowserSurface: 'include', // Chrome 107+: Include this tab in picker
+        preferCurrentTab: true // Chrome 94+: Pre-select current tab
+      });
+
+      this.mediaStream = stream;
+
+      // Check for supported mime type
+      const mimeType = this.getSupportedMimeType();
+      if (!mimeType) {
+        throw new Error('No supported video format found');
+      }
+
+      this.mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 5000000 // 5 Mbps for good quality
+      });
+
+      this.recordedChunks = [];
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.recordedChunks.push(event.data);
+        }
+      };
+
+      this.mediaRecorder.onstop = () => {
+        this.downloadRecording();
+      };
+
+      // Handle user stopping share via browser UI
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          if (this.isRecording) {
+            this.stopRecording();
+          }
+        };
+      }
+
+      this.mediaRecorder.start(1000); // Collect data every second
+      this.isRecording = true;
+      this.recordingDuration = 0;
+
+      // Start recording timer
+      this.recordingTimer = setInterval(() => {
+        this.recordingDuration += 1000;
+      }, 1000);
+
+      console.log('[Highlights] Recording started');
+    } catch (err: any) {
+      console.error('[Highlights] Recording error:', err);
+      // User cancelled or error occurred
+      this.isRecording = false;
+    }
+  }
+
+  /**
+   * Stop screen recording and trigger download
+   */
+  private stopRecording(): void {
+    if (this.recordingTimer) {
+      clearInterval(this.recordingTimer);
+      this.recordingTimer = null;
+    }
+
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+    }
+
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach(track => track.stop());
+      this.mediaStream = null;
+    }
+
+    this.isRecording = false;
+    console.log('[Highlights] Recording stopped');
+  }
+
+  /**
+   * Download the recorded video
+   */
+  private downloadRecording(): void {
+    if (this.recordedChunks.length === 0) return;
+
+    const mimeType = this.getSupportedMimeType() || 'video/webm';
+    const blob = new Blob(this.recordedChunks, { type: mimeType });
+    const url = URL.createObjectURL(blob);
+
+    // Generate filename
+    const teamCodes = this.highlightVideo 
+      ? `${this.highlightVideo.team1.code}_vs_${this.highlightVideo.team2.code}`
+      : 'highlights';
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const filename = `${teamCodes}_highlights_${timestamp}.${extension}`;
+
+    // Create download link
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Cleanup
+    URL.revokeObjectURL(url);
+    this.recordedChunks = [];
+
+    console.log('[Highlights] Video downloaded:', filename);
+  }
+
+  /**
+   * Get a supported MIME type for recording
+   */
+  private getSupportedMimeType(): string | null {
+    const types = [
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+      'video/mp4'
+    ];
+
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Format recording duration for display
+   */
+  formatRecordingTime(ms: number): string {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `REC ${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
   loadHighlights() {

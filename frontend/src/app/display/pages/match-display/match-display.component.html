@@ -4,12 +4,14 @@
     <!-- Video Background -->
     <video 
       *ngIf="currentBackground?.type === 'video' && currentBackground?.url"
+      #bgVideo
       [src]="currentBackground!.url!"
       autoplay
       loop
-      muted
+      [muted]="true"
       playsinline
       class="w-full h-full object-cover"
+      (loadedmetadata)="bgVideo.muted = true"
     ></video>
     
     <!-- Image Background -->
@@ -30,25 +32,29 @@
       <!-- Batting Team Flag (Left Side) -->
       <video 
         *ngIf="battingTeamFlagVideo"
+        #batFlagVideo
         [src]="battingTeamFlagVideo"
         autoplay
         loop
-        muted
+        [muted]="true"
         playsinline
         class="absolute left-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
         style="mix-blend-mode: screen;"
+        (loadedmetadata)="batFlagVideo.muted = true"
       ></video>
       
       <!-- Bowling Team Flag (Right Side) -->
       <video 
         *ngIf="bowlingTeamFlagVideo"
+        #bowlFlagVideo
         [src]="bowlingTeamFlagVideo"
         autoplay
         loop
-        muted
+        [muted]="true"
         playsinline
         class="absolute right-0 bottom-0 h-2/3 w-auto object-contain opacity-40 pointer-events-none"
         style="mix-blend-mode: screen; transform: scaleX(-1);"
+        (loadedmetadata)="bowlFlagVideo.muted = true"
       ></video>
     </ng-container>
     
