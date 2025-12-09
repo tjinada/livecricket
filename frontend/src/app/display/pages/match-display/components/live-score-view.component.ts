@@ -21,6 +21,20 @@ import { OverDisplay, BallDisplay } from './match-display.interfaces';
     :host ::ng-deep .animate-slideInRight {
       animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
+    
+    @keyframes wicketCardIn {
+      0% { 
+        opacity: 0; 
+        transform: scale(0.85) translateY(20px);
+      }
+      100% { 
+        opacity: 1; 
+        transform: scale(1) translateY(0);
+      }
+    }
+    :host ::ng-deep .animate-wicketCardIn {
+      animation: wicketCardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
   `]
 })
 export class LiveScoreViewComponent {
@@ -196,6 +210,16 @@ export class LiveScoreViewComponent {
    */
   getDismissedSixes(): number {
     return this.highlightData?.dismissedSixes || 0;
+  }
+
+  /**
+   * Get dismissed player's strike rate
+   */
+  getDismissedStrikeRate(): string {
+    const runs = this.getDismissedRuns();
+    const balls = this.getDismissedBalls();
+    if (!balls || balls === 0) return '0.0';
+    return ((runs / balls) * 100).toFixed(1);
   }
 
   /**

@@ -72,79 +72,118 @@ import { CommonModule } from '@angular/common';
         </div>
       </div>
 
-      <!-- ==================== WICKET OVERLAY (Bottom positioned, doesn't cover score) ==================== -->
+      <!-- ==================== WICKET OVERLAY (Clean Minimal Focus - Option D) ==================== -->
       <div *ngIf="type === 'wicket'" 
-           class="fixed inset-x-0 bottom-0 z-50 flex justify-center pb-32"
+           class="fixed inset-0 z-50 flex items-center justify-center"
            (click)="onDismiss()">
-        <!-- Semi-transparent backdrop at bottom only -->
-        <div class="absolute inset-x-0 bottom-0 h-[70%] bg-gradient-to-t from-black/90 via-black/60 to-transparent"></div>
         
-        <div class="relative bg-gradient-to-b from-red-900/95 to-red-950/95 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-red-500/50 overflow-hidden max-w-2xl w-full mx-6"
-             style="box-shadow: 0 0 60px rgba(239, 68, 68, 0.4), 0 -20px 80px rgba(239, 68, 68, 0.3);">
+        <!-- Full screen subtle backdrop -->
+        <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/70 to-black/80 backdrop-blur-sm"></div>
+        
+        <!-- Red vignette effect -->
+        <div class="absolute inset-0 pointer-events-none"
+             style="background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(127, 29, 29, 0.4) 100%);"></div>
+        
+        <!-- Main Card -->
+        <div class="relative animate-wicketCardIn">
+          <!-- Outer glow -->
+          <div class="absolute -inset-4 bg-red-500/20 rounded-[3rem] blur-2xl"></div>
           
-          <!-- Animated Header -->
-          <div class="bg-gradient-to-r from-red-600 via-red-500 to-red-600 px-8 py-4 text-center relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 animate-pulse"></div>
-            <div class="relative flex items-center justify-center gap-4">
-              <span class="text-4xl animate-bounce">🎯</span>
-              <span class="text-3xl font-black text-white uppercase tracking-widest"
-                    style="text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
-                {{ getDismissalTypeLabel() }}
-              </span>
-              <span class="text-4xl animate-bounce">🎯</span>
-            </div>
-          </div>
-          
-          <!-- Main Content -->
-          <div class="px-8 py-6">
-            <!-- Dismissed Batsman Card -->
-            <div class="flex items-center gap-6">
-              <!-- Player Image with X -->
-              <div class="relative flex-shrink-0">
-                <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-red-400 shadow-xl">
-                  <img *ngIf="data?.dismissedImage" [src]="data?.dismissedImage" 
-                       class="w-full h-full object-cover grayscale opacity-80">
-                  <div *ngIf="!data?.dismissedImage" 
-                       class="w-full h-full bg-gray-700 flex items-center justify-center">
-                    <span class="text-4xl">🏏</span>
+          <!-- Card Container -->
+          <div class="relative bg-gradient-to-b from-black/70 via-black/80 to-black/90 backdrop-blur-xl rounded-[2.5rem] px-12 py-10 md:px-16 md:py-12 border border-red-500/30 shadow-2xl overflow-hidden min-w-[400px]"
+               style="box-shadow: 0 25px 80px -20px rgba(0,0,0,0.8), 0 0 60px rgba(239, 68, 68, 0.2);">
+            
+            <!-- Top red accent line -->
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
+            
+            <!-- Batsman Photo (Hero) -->
+            <div class="flex justify-center mb-6">
+              <div class="relative">
+                <!-- Pulsing red ring -->
+                <div class="absolute -inset-2 bg-red-500/40 rounded-full blur-md animate-pulse"></div>
+                <!-- Photo container -->
+                <div class="relative w-36 h-36 md:w-44 md:h-44 rounded-full overflow-hidden border-4 border-red-500 shadow-2xl"
+                     style="box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);">
+                  <img *ngIf="getDismissedImage()" 
+                       [src]="getDismissedImage()" 
+                       class="w-full h-full object-cover">
+                  <div *ngIf="!getDismissedImage()" 
+                       class="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                    <span class="text-5xl text-gray-500">🏏</span>
                   </div>
-                </div>
-                <div class="absolute inset-0 flex items-center justify-center">
-                  <span class="text-red-500 text-5xl font-black opacity-80">✕</span>
-                </div>
-              </div>
-              
-              <!-- Player Info -->
-              <div class="flex-1 min-w-0">
-                <div class="text-2xl font-bold text-white truncate">{{ data?.dismissedName }}</div>
-                <div class="text-red-300 text-base italic">{{ data?.dismissalDescription || getDismissalDescription() }}</div>
-              </div>
-              
-              <!-- Score -->
-              <div class="text-right flex-shrink-0">
-                <div class="text-4xl font-black text-white">{{ data?.dismissedRuns }}</div>
-                <div class="text-gray-400">({{ data?.dismissedBalls }} balls)</div>
-                <div class="flex gap-2 mt-1 justify-end text-sm">
-                  <span class="text-green-400">{{ data?.dismissedFours || 0 }} × 4s</span>
-                  <span class="text-purple-400">{{ data?.dismissedSixes || 0 }} × 6s</span>
                 </div>
               </div>
             </div>
             
-            <!-- Bowler Credit -->
-            <div *ngIf="data?.bowlerName" class="mt-4 pt-4 border-t border-red-500/30 flex items-center justify-center gap-4 bg-green-900/30 rounded-xl px-4 py-3">
-              <div class="w-14 h-14 rounded-full overflow-hidden border-2 border-green-400 flex-shrink-0">
-                <img *ngIf="data?.bowlerImage" [src]="data?.bowlerImage" class="w-full h-full object-cover">
-                <div *ngIf="!data?.bowlerImage" class="w-full h-full bg-gray-700 flex items-center justify-center">
-                  <span class="text-xl">⚾</span>
-                </div>
-              </div>
-              <div>
-                <div class="text-green-400 text-xs uppercase font-semibold">Bowler</div>
-                <div class="text-white text-lg font-bold">{{ data?.bowlerName }}</div>
-                <div *ngIf="data?.bowlerFigures" class="text-green-300 text-sm">{{ data?.bowlerFigures }}</div>
+            <!-- Player Name -->
+            <div class="text-center mb-3">
+              <h2 class="text-3xl md:text-4xl font-bold text-white tracking-wide">
+                {{ data?.dismissedName }}
+              </h2>
+            </div>
+            
+            <!-- OUT Badge -->
+            <div class="flex justify-center mb-5">
+              <div class="bg-red-600 px-6 py-2 rounded-full">
+                <span class="text-xl md:text-2xl font-black text-white uppercase tracking-widest">
+                  {{ getDismissalTypeLabel() }}
+                </span>
               </div>
             </div>
+            
+            <!-- Score Display -->
+            <div class="text-center mb-4">
+              <div class="inline-flex items-baseline gap-1">
+                <span class="text-6xl md:text-7xl font-black text-white"
+                      style="text-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                  {{ data?.dismissedRuns }}
+                </span>
+                <span class="text-2xl md:text-3xl text-gray-400 font-medium">
+                  ({{ data?.dismissedBalls }})
+                </span>
+              </div>
+            </div>
+            
+            <!-- Stats Row -->
+            <div class="flex justify-center gap-6 mb-6">
+              <div class="flex items-center gap-2">
+                <span class="text-green-400 text-lg font-semibold">{{ data?.dismissedFours || 0 }}</span>
+                <span class="text-gray-500 text-sm">× 4s</span>
+              </div>
+              <div class="w-px h-5 bg-gray-600"></div>
+              <div class="flex items-center gap-2">
+                <span class="text-purple-400 text-lg font-semibold">{{ data?.dismissedSixes || 0 }}</span>
+                <span class="text-gray-500 text-sm">× 6s</span>
+              </div>
+              <div class="w-px h-5 bg-gray-600"></div>
+              <div class="flex items-center gap-2">
+                <span class="text-blue-400 text-lg font-semibold">{{ getStrikeRate() }}</span>
+                <span class="text-gray-500 text-sm">SR</span>
+              </div>
+            </div>
+            
+            <!-- Divider -->
+            <div class="w-24 h-px bg-gradient-to-r from-transparent via-gray-500 to-transparent mx-auto mb-5"></div>
+            
+            <!-- Dismissal Description -->
+            <div class="text-center mb-4">
+              <span class="text-lg md:text-xl text-gray-300 italic">
+                {{ data?.dismissalDescription || getDismissalDescription() }}
+              </span>
+            </div>
+            
+            <!-- Bowler Info -->
+            <div *ngIf="data?.bowlerName" class="flex justify-center items-center gap-3 text-gray-400">
+              <div class="w-8 h-8 rounded-full overflow-hidden border border-gray-600 flex-shrink-0">
+                <img *ngIf="getBowlerImage()" [src]="getBowlerImage()" class="w-full h-full object-cover">
+                <div *ngIf="!getBowlerImage()" class="w-full h-full bg-gray-800 flex items-center justify-center">
+                  <span class="text-xs">🎯</span>
+                </div>
+              </div>
+              <span class="text-sm">{{ data?.bowlerName }}</span>
+              <span *ngIf="data?.bowlerFigures" class="text-green-400 text-sm font-medium">{{ data?.bowlerFigures }}</span>
+            </div>
+            
           </div>
         </div>
       </div>
@@ -269,6 +308,20 @@ import { CommonModule } from '@angular/common';
       animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     
+    @keyframes wicketCardIn {
+      0% { 
+        opacity: 0; 
+        transform: scale(0.8) translateY(30px);
+      }
+      100% { 
+        opacity: 1; 
+        transform: scale(1) translateY(0);
+      }
+    }
+    .animate-wicketCardIn {
+      animation: wicketCardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    
     @keyframes third-umpire-notout-highlight {
       0%, 50% { 
         color: #22c55e;
@@ -323,6 +376,13 @@ export class NotificationOverlayComponent {
     return ((runs / balls) * 100).toFixed(2);
   }
 
+  getStrikeRate(): string {
+    const runs = this.data?.dismissedRuns || 0;
+    const balls = this.data?.dismissedBalls || 0;
+    if (!balls || balls === 0) return '0.00';
+    return ((runs / balls) * 100).toFixed(1);
+  }
+
   getDismissalTypeLabel(): string {
     const type = this.data?.dismissalType;
     const labels: Record<string, string> = {
@@ -333,7 +393,7 @@ export class NotificationOverlayComponent {
       'stumped': 'STUMPED!',
       'hit-wicket': 'HIT WICKET!'
     };
-    return labels[type] || 'WICKET!';
+    return labels[type] || 'OUT!';
   }
 
   getDismissalDescription(): string {
@@ -350,6 +410,20 @@ export class NotificationOverlayComponent {
       case 'hit-wicket': return `hit wicket b ${bowler}`;
       default: return '';
     }
+  }
+
+  getDismissedImage(): string | null {
+    const path = this.data?.dismissedImage;
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
+  }
+
+  getBowlerImage(): string | null {
+    const path = this.data?.bowlerImage;
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `https://img1.hscicdn.com/image/upload/f_auto,t_h_100_2x/lsci${path}`;
   }
 
   getPlayerName(): string {

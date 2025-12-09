@@ -63,77 +63,118 @@
     </div>
   </div>
 
-  <!-- ENHANCED WICKET HIGHLIGHT DISPLAY - BOTTOM POSITIONED -->
+  <!-- WICKET HIGHLIGHT DISPLAY - Clean Minimal Focus (Option D) -->
   <div 
     *ngIf="isWicketHighlight" 
-    class="fixed inset-x-0 bottom-24 z-40 flex justify-center px-6"
+    class="fixed inset-0 z-40 flex items-center justify-center pointer-events-none"
   >
-    <div class="bg-gradient-to-b from-red-900/95 to-red-950/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-red-500/50 overflow-hidden max-w-xl w-full"
-         style="box-shadow: 0 0 60px rgba(239, 68, 68, 0.4), 0 -10px 60px rgba(239, 68, 68, 0.3);">
+    <!-- Subtle backdrop -->
+    <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/40"></div>
+    
+    <!-- Red vignette effect -->
+    <div class="absolute inset-0"
+         style="background: radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(127, 29, 29, 0.3) 100%);"></div>
+    
+    <!-- Main Card -->
+    <div class="relative animate-wicketCardIn pointer-events-auto">
+      <!-- Outer glow -->
+      <div class="absolute -inset-3 bg-red-500/20 rounded-[2.5rem] blur-xl"></div>
       
-      <!-- Animated Header -->
-      <div class="bg-gradient-to-r from-red-600 via-red-500 to-red-600 px-6 py-3 text-center relative overflow-hidden">
-        <div class="absolute inset-0 bg-white/10 animate-pulse"></div>
-        <div class="relative flex items-center justify-center gap-3">
-          <span class="text-3xl animate-bounce">🎯</span>
-          <span class="text-2xl font-black text-white uppercase tracking-widest"
-                style="text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
-            {{ getDismissalTypeLabel() }}
-          </span>
-          <span class="text-3xl animate-bounce">🎯</span>
-        </div>
-      </div>
-      
-      <!-- Main Content -->
-      <div class="px-6 py-4">
-        <!-- Dismissed Batsman Card -->
-        <div class="flex items-center gap-4">
-          <!-- Player Image with X -->
-          <div class="relative flex-shrink-0">
-            <div class="w-20 h-20 rounded-full overflow-hidden border-3 border-red-400 shadow-xl">
-              <img *ngIf="getDismissedImage()" [src]="getDismissedImage()" 
-                   class="w-full h-full object-cover grayscale opacity-80">
+      <!-- Card Container -->
+      <div class="relative bg-gradient-to-b from-black/80 via-black/85 to-black/90 backdrop-blur-xl rounded-[2rem] px-10 py-8 border border-red-500/30 shadow-2xl overflow-hidden min-w-[360px]"
+           style="box-shadow: 0 25px 60px -15px rgba(0,0,0,0.7), 0 0 50px rgba(239, 68, 68, 0.15);">
+        
+        <!-- Top red accent line -->
+        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent"></div>
+        
+        <!-- Batsman Photo (Hero) -->
+        <div class="flex justify-center mb-5">
+          <div class="relative">
+            <!-- Pulsing red ring -->
+            <div class="absolute -inset-2 bg-red-500/40 rounded-full blur-md animate-pulse"></div>
+            <!-- Photo container -->
+            <div class="relative w-32 h-32 rounded-full overflow-hidden border-4 border-red-500 shadow-2xl"
+                 style="box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);">
+              <img *ngIf="getDismissedImage()" 
+                   [src]="getDismissedImage()" 
+                   class="w-full h-full object-cover">
               <div *ngIf="!getDismissedImage()" 
-                   class="w-full h-full bg-gray-700 flex items-center justify-center">
-                <span class="text-3xl">🏏</span>
+                   class="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                <span class="text-4xl text-gray-500">🏏</span>
               </div>
-            </div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <span class="text-red-500 text-4xl font-black opacity-80">✕</span>
-            </div>
-          </div>
-          
-          <!-- Player Info -->
-          <div class="flex-1 min-w-0">
-            <div class="text-xl font-bold text-white truncate">{{ getDismissedName() }}</div>
-            <div class="text-red-300 text-sm italic">{{ getDismissalDescription() }}</div>
-          </div>
-          
-          <!-- Score -->
-          <div class="text-right flex-shrink-0">
-            <div class="text-3xl font-black text-white">{{ getDismissedRuns() }}</div>
-            <div class="text-gray-400 text-sm">({{ getDismissedBalls() }} balls)</div>
-            <div class="flex gap-2 mt-1 justify-end text-xs">
-              <span class="text-green-400">{{ getDismissedFours() }} × 4s</span>
-              <span class="text-purple-400">{{ getDismissedSixes() }} × 6s</span>
             </div>
           </div>
         </div>
         
-        <!-- Bowler Credit Row -->
-        <div *ngIf="bowlerGetsCredit()" class="mt-3 pt-3 border-t border-red-500/30 flex items-center justify-center gap-3 bg-green-900/30 rounded-lg px-3 py-2">
-          <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-green-400 flex-shrink-0">
-            <img *ngIf="getWicketBowlerImage()" [src]="getWicketBowlerImage()" class="w-full h-full object-cover">
-            <div *ngIf="!getWicketBowlerImage()" class="w-full h-full bg-gray-700 flex items-center justify-center">
-              <span class="text-lg">⚾</span>
-            </div>
-          </div>
-          <div>
-            <div class="text-green-400 text-xs uppercase font-semibold">Bowler</div>
-            <div class="text-white text-base font-bold">{{ getWicketBowlerName() }}</div>
-            <div *ngIf="getWicketBowlerFigures()" class="text-green-300 text-xs">{{ getWicketBowlerFigures() }}</div>
+        <!-- Player Name -->
+        <div class="text-center mb-2">
+          <h2 class="text-2xl font-bold text-white tracking-wide">
+            {{ getDismissedName() }}
+          </h2>
+        </div>
+        
+        <!-- OUT Badge -->
+        <div class="flex justify-center mb-4">
+          <div class="bg-red-600 px-5 py-1.5 rounded-full">
+            <span class="text-lg font-black text-white uppercase tracking-widest">
+              {{ getDismissalTypeLabel() }}
+            </span>
           </div>
         </div>
+        
+        <!-- Score Display -->
+        <div class="text-center mb-3">
+          <div class="inline-flex items-baseline gap-1">
+            <span class="text-5xl font-black text-white"
+                  style="text-shadow: 0 3px 15px rgba(0,0,0,0.5);">
+              {{ getDismissedRuns() }}
+            </span>
+            <span class="text-xl text-gray-400 font-medium">
+              ({{ getDismissedBalls() }})
+            </span>
+          </div>
+        </div>
+        
+        <!-- Stats Row -->
+        <div class="flex justify-center gap-5 mb-5">
+          <div class="flex items-center gap-1.5">
+            <span class="text-green-400 text-base font-semibold">{{ getDismissedFours() }}</span>
+            <span class="text-gray-500 text-sm">× 4s</span>
+          </div>
+          <div class="w-px h-4 bg-gray-600"></div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-purple-400 text-base font-semibold">{{ getDismissedSixes() }}</span>
+            <span class="text-gray-500 text-sm">× 6s</span>
+          </div>
+          <div class="w-px h-4 bg-gray-600"></div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-blue-400 text-base font-semibold">{{ getDismissedStrikeRate() }}</span>
+            <span class="text-gray-500 text-sm">SR</span>
+          </div>
+        </div>
+        
+        <!-- Divider -->
+        <div class="w-20 h-px bg-gradient-to-r from-transparent via-gray-500 to-transparent mx-auto mb-4"></div>
+        
+        <!-- Dismissal Description -->
+        <div class="text-center mb-3">
+          <span class="text-base text-gray-300 italic">
+            {{ getDismissalDescription() }}
+          </span>
+        </div>
+        
+        <!-- Bowler Info -->
+        <div *ngIf="bowlerGetsCredit()" class="flex justify-center items-center gap-2.5 text-gray-400">
+          <div class="w-7 h-7 rounded-full overflow-hidden border border-gray-600 flex-shrink-0">
+            <img *ngIf="getWicketBowlerImage()" [src]="getWicketBowlerImage()" class="w-full h-full object-cover">
+            <div *ngIf="!getWicketBowlerImage()" class="w-full h-full bg-gray-800 flex items-center justify-center">
+              <span class="text-xs">🎯</span>
+            </div>
+          </div>
+          <span class="text-sm">{{ getWicketBowlerName() }}</span>
+          <span *ngIf="getWicketBowlerFigures()" class="text-green-400 text-sm font-medium">{{ getWicketBowlerFigures() }}</span>
+        </div>
+        
       </div>
     </div>
   </div>
