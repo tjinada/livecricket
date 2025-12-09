@@ -131,8 +131,9 @@ interface PlayerState {
       <!-- Main Content - Control Panel only, display view is behind -->
       <div *ngIf="highlightVideo && !loading && !error" class="h-full flex flex-col pointer-events-none">
         
-        <!-- Close Button - Always visible -->
+        <!-- Close Button - Hidden during recording -->
         <button 
+          *ngIf="!isRecording"
           (click)="onClose()"
           class="absolute top-6 right-6 z-20 w-12 h-12 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-colors pointer-events-auto backdrop-blur-sm">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,25 +141,33 @@ interface PlayerState {
           </svg>
         </button>
 
-        <!-- Record Button - Top right, next to close -->
+        <!-- Record Button - Shows different states -->
+        <!-- When not recording: shows full button with Record label -->
+        <!-- When recording: shows minimal stop button in corner -->
         <button 
+          *ngIf="!isRecording"
           (click)="toggleRecording()"
           [disabled]="!canRecord"
-          class="absolute top-6 right-20 z-20 h-12 px-4 rounded-full flex items-center justify-center gap-2 text-white transition-colors pointer-events-auto backdrop-blur-sm"
-          [ngClass]="{
-            'bg-red-600 hover:bg-red-700': isRecording,
-            'bg-black/60 hover:bg-black/80': !isRecording,
-            'opacity-50 cursor-not-allowed': !canRecord
-          }">
-          <div *ngIf="isRecording" class="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-          <svg *ngIf="!isRecording" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          class="absolute top-6 right-20 z-20 h-12 px-4 rounded-full flex items-center justify-center gap-2 text-white transition-colors pointer-events-auto backdrop-blur-sm bg-black/60 hover:bg-black/80"
+          [class.opacity-50]="!canRecord"
+          [class.cursor-not-allowed]="!canRecord">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10"></circle>
           </svg>
-          <span class="text-sm font-medium">{{ isRecording ? formatRecordingTime(recordingDuration) : 'Record' }}</span>
+          <span class="text-sm font-medium">Record</span>
+        </button>
+        
+        <!-- Minimal stop recording button - only shows during recording -->
+        <button 
+          *ngIf="isRecording"
+          (click)="toggleRecording()"
+          class="absolute bottom-4 right-4 z-20 h-10 px-3 rounded-full flex items-center justify-center gap-2 text-white bg-red-600 hover:bg-red-700 transition-colors pointer-events-auto shadow-lg">
+          <div class="w-3 h-3 bg-white rounded-sm"></div>
+          <span class="text-xs font-medium">Stop {{ formatRecordingTime(recordingDuration) }}</span>
         </button>
 
-        <!-- Highlight Info Badge - Top left -->
-        <div class="absolute top-6 left-6 z-20 pointer-events-auto">
+        <!-- Highlight Info Badge - Top left - Hidden during recording -->
+        <div *ngIf="!isRecording" class="absolute top-6 left-6 z-20 pointer-events-auto">
           <div class="flex items-center gap-3 bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2">
             <span class="text-purple-400 font-bold">HIGHLIGHTS</span>
             <span class="text-white">{{ highlightVideo.team1.code }} vs {{ highlightVideo.team2.code }}</span>
@@ -184,8 +193,8 @@ interface PlayerState {
         <!-- Spacer to push controls to bottom -->
         <div class="flex-1"></div>
 
-        <!-- Bottom Controls -->
-        <div class="bg-gradient-to-t from-black via-black/90 to-transparent pt-16 pb-8 px-8 pointer-events-auto">
+        <!-- Bottom Controls - Hidden during recording for clean video -->
+        <div *ngIf="!isRecording" class="bg-gradient-to-t from-black via-black/90 to-transparent pt-16 pb-8 px-8 pointer-events-auto">
           <!-- Progress Bar -->
           <div class="max-w-4xl mx-auto mb-6">
             <div class="flex items-center gap-4 text-white text-sm mb-2">
@@ -524,7 +533,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    return `REC ${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
   loadHighlights() {
