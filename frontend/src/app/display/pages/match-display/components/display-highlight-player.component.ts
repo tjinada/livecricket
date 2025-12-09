@@ -148,31 +148,8 @@ interface PlayerState {
           </div>
         </div>
 
-        <!-- Current Highlight Label - Top Center with Importance Indicator -->
-        <!-- HIDDEN for boundary/milestone types since live-score-view shows the card -->
-        <div *ngIf="playerState.currentHighlight && !isOverlayType()" 
-             class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20"
-             [class.animate-highlight-enter]="!playerState.isTransitioning">
-          <div class="flex flex-col items-center gap-2">
-            <!-- Main highlight type badge -->
-            <div 
-              class="px-6 py-2 rounded-full text-white text-lg font-bold backdrop-blur-sm shadow-lg transition-all duration-300"
-              [ngClass]="[
-                getHighlightTypeColor(playerState.currentHighlight.type),
-                getImportanceGlow()
-              ]">
-              {{ getHighlightTypeLabel(playerState.currentHighlight.type) }}
-            </div>
-            
-            <!-- Phase 5: Importance level indicator (only for epic/crucial moments) -->
-            <div *ngIf="isHighImportance()" 
-                 class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold animate-pulse"
-                 [ngClass]="getImportanceBadgeClass()">
-              <span class="text-yellow-300">⭐</span>
-              <span>{{ getImportanceLabel() }}</span>
-            </div>
-          </div>
-        </div>
+        <!-- Current Highlight Label - REMOVED per user request -->
+        <!-- The slide name badges (Phase Summary, Match Begins, etc.) are no longer shown -->
 
         <!-- No Highlights -->
         <div *ngIf="highlightVideo.highlights.length === 0" class="absolute inset-0 bg-black flex items-center justify-center pointer-events-auto">
