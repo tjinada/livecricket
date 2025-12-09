@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 // Simple interface for lineup player data
@@ -426,7 +426,7 @@ interface LineupPlayer {
     }
   `]
 })
-export class MatchIntroViewComponent implements OnInit, OnDestroy {
+export class MatchIntroViewComponent implements OnInit, OnDestroy, OnChanges {
   @Input() introType: 'matchIntro' | 'teamLineup' | 'inningsIntro' | 'chaseSetup' | 'matchResult' = 'matchIntro';
   @Input() team1Code: string = 'T1';
   @Input() team1Flag: string | null = null;
@@ -478,6 +478,17 @@ export class MatchIntroViewComponent implements OnInit, OnDestroy {
     if (path.startsWith('http')) return path; // Already a full URL
     // Path like /lsci/db/PICTURES/... needs Cloudinary prefix
     return `https://img1.hscicdn.com/image/upload${path}`;
+  }
+  
+  ngOnChanges(changes: SimpleChanges): void {
+    // Reset animation when key inputs change (e.g., switching between team lineups)
+    if (changes['introType'] || changes['lineupTeamCode'] || changes['lineupTeamName'] ||
+        changes['battingTeamCode'] || changes['winnerCode']) {
+      this.animationStarted = false;
+      setTimeout(() => {
+        this.animationStarted = true;
+      }, 50);
+    }
   }
   
   ngOnInit(): void {
