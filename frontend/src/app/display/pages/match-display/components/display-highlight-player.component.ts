@@ -758,7 +758,8 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
       'hundred': '💯 CENTURY!',
       'overSummary': '📊 Phase Summary',
       'inningsSummary': '📈 Innings Summary',
-      'matchSummary': '🏆 Match Summary'
+      'matchResult': '🏆 MATCH RESULT',
+      'matchSummary': '📋 Match Summary'
     };
     return labels[type] || type;
   }
@@ -777,6 +778,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
       'hundred': 'bg-amber-500',
       'overSummary': 'bg-blue-600',
       'inningsSummary': 'bg-indigo-600',
+      'matchResult': 'bg-yellow-600',
       'matchSummary': 'bg-cyan-600'
     };
     return colors[type] || 'bg-gray-600';
@@ -913,7 +915,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     const nextView = this.getViewForHighlight(nextHighlight);
     
     // Major transition: innings changes (inningsIntro, chaseSetup, inningsSummary)
-    const majorTypes = ['inningsIntro', 'chaseSetup', 'inningsSummary', 'matchSummary'];
+    const majorTypes = ['inningsIntro', 'chaseSetup', 'inningsSummary', 'matchResult', 'matchSummary'];
     if (majorTypes.includes(nextHighlight.type)) {
       return 'major';
     }
@@ -937,6 +939,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
       case 'teamLineup':
       case 'inningsIntro':
       case 'chaseSetup':
+      case 'matchResult':  // Match result uses intro view
         return 'intro';
       case 'overSummary':
       case 'inningsSummary':
@@ -1013,6 +1016,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
       case 'teamLineup':
       case 'inningsIntro':
       case 'chaseSetup':
+      case 'matchResult':  // Winner announcement screen
         view = 'intro';
         break;
       case 'inningsStart':

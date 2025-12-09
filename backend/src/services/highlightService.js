@@ -35,7 +35,8 @@ const HIGHLIGHT_DURATIONS = {
   // Summary elements
   overSummary: 8000,
   inningsSummary: 10000,
-  matchSummary: 15000
+  matchResult: 6000,     // Winner announcement screen
+  matchSummary: 10000    // Reduced from 15000 since we now have matchResult
 };
 
 /**
@@ -1301,6 +1302,103 @@ async function generateMatchSummary(matchId) {
 }
 
 /**
+ * Generate match result highlight (winner announcement)
+ * Shows "X won by Y runs" or "X won by Y wickets"
+ * 
+ * @param {string} matchId - Match ID
+ * @returns {Promise<Object>} Match result highlight object
+ */
+async function generateMatchResult(matchId) {
+  const match = await Match.findById(matchId)
+    .populate('team1', 'name code flagUrl')
+    .populate('team2', 'name code flagUrl')
+    .populate('result.winner', 'name code flagUrl')
+    .populate('innings.battingTeam', 'name code flagUrl')
+    .populate('innings.bowlingTeam', 'name code flagUrl');
+
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.status !== 'completed' || !match.result?.winner) {
+    return null; // No result to show
+  }
+
+  const winner = match.result.winner;
+  const winType = match.result.winType; // 'runs' or 'wickets'
+  const winMargin = match.result.winMargin;
+  
+  // Get innings data
+  const firstInnings = match.innings.find(i => i.inningsNumber === 1);
+  const secondInnings = match.innings.find(i => i.inningsNumber === 2);
+  
+  // Determine if winner batted first or second
+  const winnerId = winner._id?.toString() || winner.toString();
+  const firstBattingTeamId = firstInnings?.battingTeam?._id?.toString() || firstInnings?.battingTeam?.toString();
+  const winnerBattedFirst = winnerId === firstBattingTeamId;
+  
+  // Build result text
+  let resultText = '';
+  let resultSubtext = '';
+  
+  if (winType === 'runs') {
+    // First batting team won - "won by Y runs"
+    resultText = `won by ${winMargin} run${winMargin !== 1 ? 's' : ''}`;
+    resultSubtext = `${firstInnings?.totalRuns || 0}/${firstInnings?.totalWickets || 0} vs ${secondInnings?.totalRuns || 0}/${secondInnings?.totalWickets || 0}`;
+  } else if (winType === 'wickets') {
+    // Second batting team won - "X won by Y wickets"
+    resultText = `won by ${winMargin} wicket${winMargin !== 1 ? 's' : ''}`;
+    
+    // Calculate balls remaining
+    const totalOvers = match.format === 'T20' ? 20 : 50;
+    const totalBallsAvailable = totalOvers * 6;
+    const ballsUsed = secondInnings?.totalBalls || 0;
+    const ballsRemaining = totalBallsAvailable - ballsUsed;
+    
+    if (ballsRemaining > 0) {
+      const oversRemaining = Math.floor(ballsRemaining / 6);
+      const ballsInOver = ballsRemaining % 6;
+      if (oversRemaining > 0 || ballsInOver > 0) {
+        resultSubtext = `with ${oversRemaining}.${ballsInOver} overs remaining`;
+      }
+    }
+  }
+
+  return {
+    type: 'matchResult',
+    duration: HIGHLIGHT_DURATIONS.matchResult,
+    timestamp: new Date(),
+    data: {
+      winnerName: winner.name,
+      winnerCode: winner.code,
+      winnerFlag: winner.flagUrl,
+      winType: winType,
+      winMargin: winMargin,
+      resultText: resultText,
+      resultSubtext: resultSubtext,
+      winnerBattedFirst: winnerBattedFirst,
+      // Both teams' scores for context
+      firstInnings: firstInnings ? {
+        teamName: firstInnings.battingTeam?.name,
+        teamCode: firstInnings.battingTeam?.code,
+        teamFlag: firstInnings.battingTeam?.flagUrl,
+        runs: firstInnings.totalRuns,
+        wickets: firstInnings.totalWickets,
+        overs: getOversDisplay(firstInnings.totalBalls)
+      } : null,
+      secondInnings: secondInnings ? {
+        teamName: secondInnings.battingTeam?.name,
+        teamCode: secondInnings.battingTeam?.code,
+        teamFlag: secondInnings.battingTeam?.flagUrl,
+        runs: secondInnings.totalRuns,
+        wickets: secondInnings.totalWickets,
+        overs: getOversDisplay(secondInnings.totalBalls)
+      } : null
+    }
+  };
+}
+
+/**
  * Generate team lineup highlights for both teams
  * Shows the Starting XI for each team after match intro
  * 
@@ -1496,8 +1594,24 @@ async function generateHighlightVideo(matchId, options = {}) {
     }
   }
 
-  // Add match summary if completed and requested
+  // Add match result and summary if completed and requested
   if (includeMatchSummary && match.status === 'completed') {
+    // Remove the 2nd innings summary since match summary will cover it
+    // This avoids redundancy: 2nd innings summary -> match result -> match summary
+    const lastHighlightIndex = highlights.length - 1;
+    if (lastHighlightIndex >= 0 && 
+        highlights[lastHighlightIndex].type === 'inningsSummary' &&
+        highlights[lastHighlightIndex].data?.inningsNumber === 2) {
+      highlights.pop(); // Remove 2nd innings summary
+    }
+    
+    // First show the winner announcement
+    const matchResult = await generateMatchResult(matchId);
+    if (matchResult) {
+      highlights.push(matchResult);
+    }
+    
+    // Then show the detailed match summary
     const matchSummary = await generateMatchSummary(matchId);
     highlights.push(matchSummary);
   }
@@ -1546,6 +1660,7 @@ function formatDuration(ms) {
 
 module.exports = {
   generateInningsHighlights,
+  generateMatchResult,
   generateMatchSummary,
   generateTeamLineups,
   generateHighlightVideo,

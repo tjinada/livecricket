@@ -486,6 +486,17 @@
             [lineupPlayers]="highlightViewState?.highlightData?.players || []"
             [lineupHeadline]="highlightViewState?.highlightData?.headline || ''"
           ></app-match-intro-view>
+          
+          <!-- Match Result (Winner Announcement) -->
+          <app-match-intro-view
+            *ngIf="highlightViewState?.highlightType === 'matchResult'"
+            [introType]="'matchResult'"
+            [winnerName]="highlightViewState?.highlightData?.winnerName || 'Winner'"
+            [winnerCode]="highlightViewState?.highlightData?.winnerCode || 'WIN'"
+            [winnerFlag]="highlightViewState?.highlightData?.winnerFlag"
+            [resultText]="highlightViewState?.highlightData?.resultText || 'won the match'"
+            [resultSubtext]="highlightViewState?.highlightData?.resultSubtext || ''"
+          ></app-match-intro-view>
         </div>
 
         <!-- Highlight player controls overlay -->

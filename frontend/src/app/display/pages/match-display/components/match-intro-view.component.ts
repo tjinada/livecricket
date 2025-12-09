@@ -227,6 +227,70 @@ interface LineupPlayer {
         
       </div>
       
+      <!-- ==================== MATCH RESULT (Winner Announcement) ==================== -->
+      <div *ngIf="introType === 'matchResult'" class="relative z-20 text-center px-8 w-full">
+        
+        <!-- Winner Card -->
+        <div class="team-entry team-1" [class.animate-team-1]="animationStarted">
+          <div class="relative inline-block">
+            <!-- Golden celebration glow -->
+            <div class="absolute -inset-8 bg-gradient-to-r from-yellow-500/20 via-amber-500/30 to-yellow-500/20 rounded-[4rem] blur-3xl animate-pulse"></div>
+            
+            <!-- Main card -->
+            <div class="relative bg-gradient-to-b from-black/50 via-black/60 to-black/70 backdrop-blur-xl rounded-[3rem] px-16 py-14 md:px-28 md:py-16 lg:px-36 lg:py-20 border-2 border-yellow-500/30 shadow-2xl overflow-hidden"
+                 style="box-shadow: 0 30px 100px -20px rgba(251,191,36,0.3), inset 0 2px 0 rgba(255,255,255,0.1);">
+              
+              <!-- Animated top border -->
+              <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-yellow-400 to-transparent shimmer-effect"></div>
+              
+              <!-- Trophy Icon -->
+              <div class="mb-6">
+                <div class="inline-flex items-center justify-center w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 shadow-xl">
+                  <span class="text-5xl md:text-6xl">🏆</span>
+                </div>
+              </div>
+              
+              <!-- Winner Flag -->
+              <div class="mb-8">
+                <div class="relative inline-block">
+                  <div class="absolute -inset-4 bg-yellow-500/20 rounded-2xl blur-xl animate-pulse"></div>
+                  <div class="relative w-56 h-44 md:w-72 md:h-56 lg:w-80 lg:h-64 rounded-2xl overflow-hidden border-3 border-yellow-400/50 shadow-2xl"
+                       style="box-shadow: 0 20px 60px -15px rgba(251,191,36,0.4);">
+                    <img *ngIf="winnerFlag" [src]="winnerFlag" class="w-full h-full object-cover" [alt]="winnerCode">
+                    <div *ngIf="!winnerFlag" class="w-full h-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center">
+                      <span class="text-6xl font-black text-white/40">{{ winnerCode }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Winner Name -->
+              <div class="mb-6">
+                <span class="text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-wider"
+                      style="text-shadow: 0 4px 30px rgba(251,191,36,0.5), 0 2px 15px rgba(0,0,0,0.8);">
+                  {{ winnerName }}
+                </span>
+              </div>
+              
+              <!-- Result Text -->
+              <div class="mb-4">
+                <span class="text-3xl md:text-4xl lg:text-5xl font-bold text-yellow-400 tracking-wide"
+                      style="text-shadow: 0 4px 20px rgba(251,191,36,0.4), 0 2px 10px rgba(0,0,0,0.5);">
+                  {{ resultText }}
+                </span>
+              </div>
+              
+              <!-- Subtext (overs remaining, etc.) -->
+              <div *ngIf="resultSubtext" class="text-xl md:text-2xl lg:text-3xl text-white/70 tracking-wide">
+                {{ resultSubtext }}
+              </div>
+              
+            </div>
+          </div>
+        </div>
+        
+      </div>
+      
       <!-- ==================== TEAM LINEUP (Starting XI) ==================== -->
       <div *ngIf="introType === 'teamLineup'" class="relative z-20 w-full max-w-7xl mx-auto px-6 py-4">
         
@@ -363,7 +427,7 @@ interface LineupPlayer {
   `]
 })
 export class MatchIntroViewComponent implements OnInit, OnDestroy {
-  @Input() introType: 'matchIntro' | 'teamLineup' | 'inningsIntro' | 'chaseSetup' = 'matchIntro';
+  @Input() introType: 'matchIntro' | 'teamLineup' | 'inningsIntro' | 'chaseSetup' | 'matchResult' = 'matchIntro';
   @Input() team1Code: string = 'T1';
   @Input() team1Flag: string | null = null;
   @Input() team1Name: string = 'Team 1';
@@ -389,6 +453,13 @@ export class MatchIntroViewComponent implements OnInit, OnDestroy {
   @Input() lineupTeamFlag: string | null = null;
   @Input() lineupPlayers: LineupPlayer[] = [];
   @Input() lineupHeadline: string = '';
+  
+  // Match Result specific inputs
+  @Input() winnerName: string = '';
+  @Input() winnerCode: string = '';
+  @Input() winnerFlag: string | null = null;
+  @Input() resultText: string = '';
+  @Input() resultSubtext: string = '';
   
   animationStarted = false;
   
