@@ -1298,4 +1298,145 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     }
     return this.getBallsRemaining();
   }
+
+  /**
+   * Get batting stats for phase summary during highlights
+   * For overSummary highlights, use the topScorer data from highlightData
+   */
+  getHighlightBattingStats(): Array<{
+    name: string;
+    image: string | null;
+    runs: number;
+    balls: number;
+    fours: number;
+    sixes: number;
+    dismissalText: string;
+    isCurrentBatsman: boolean;
+    isStriker: boolean;
+    isDNB: boolean;
+  }> {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
+      const data = this.highlightViewState.highlightData;
+      
+      // For overSummary / phase summary, show topScorer prominently
+      if (data.topScorer) {
+        const topScorer = data.topScorer;
+        return [{
+          name: topScorer.name || 'Batsman',
+          image: topScorer.image ? (topScorer.image.startsWith('http') ? topScorer.image : `https://img1.hscicdn.com/image/upload${topScorer.image}`) : null,
+          runs: topScorer.runs || 0,
+          balls: topScorer.balls || 0,
+          fours: topScorer.fours || 0,
+          sixes: topScorer.sixes || 0,
+          dismissalText: 'not out',
+          isCurrentBatsman: true,
+          isStriker: true,
+          isDNB: false
+        }];
+      }
+      
+      // Fallback: build from scoreState
+      const scoreAfter = data.scoreAfter;
+      if (scoreAfter?.strikerName) {
+        const result = [];
+        // Add striker
+        result.push({
+          name: scoreAfter.strikerName,
+          image: scoreAfter.strikerImage ? (scoreAfter.strikerImage.startsWith('http') ? scoreAfter.strikerImage : `https://img1.hscicdn.com/image/upload${scoreAfter.strikerImage}`) : null,
+          runs: scoreAfter.strikerRuns || 0,
+          balls: scoreAfter.strikerBalls || 0,
+          fours: scoreAfter.strikerFours || 0,
+          sixes: scoreAfter.strikerSixes || 0,
+          dismissalText: 'not out',
+          isCurrentBatsman: true,
+          isStriker: true,
+          isDNB: false
+        });
+        // Add non-striker
+        if (scoreAfter.nonStrikerName) {
+          result.push({
+            name: scoreAfter.nonStrikerName,
+            image: scoreAfter.nonStrikerImage ? (scoreAfter.nonStrikerImage.startsWith('http') ? scoreAfter.nonStrikerImage : `https://img1.hscicdn.com/image/upload${scoreAfter.nonStrikerImage}`) : null,
+            runs: scoreAfter.nonStrikerRuns || 0,
+            balls: scoreAfter.nonStrikerBalls || 0,
+            fours: scoreAfter.nonStrikerFours || 0,
+            sixes: scoreAfter.nonStrikerSixes || 0,
+            dismissalText: 'not out',
+            isCurrentBatsman: true,
+            isStriker: false,
+            isDNB: false
+          });
+        }
+        return result;
+      }
+    }
+    // Fallback to current match data
+    return this.getLiveMatchSummaryBattingStats();
+  }
+
+  /**
+   * Get bowling stats for phase summary during highlights
+   * For overSummary highlights, use the bestBowler data from highlightData
+   */
+  getHighlightBowlingStats(): Array<{
+    name: string;
+    image: string | null;
+    oversDisplay: string;
+    runs: number;
+    wickets: number;
+    economy: string;
+    isCurrentBowler: boolean;
+    isBestBowler: boolean;
+  }> {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
+      const data = this.highlightViewState.highlightData;
+      
+      // For overSummary / phase summary, show bestBowler prominently
+      if (data.bestBowler) {
+        const bestBowler = data.bestBowler;
+        // Parse overs string like "3.2" to calculate economy
+        const oversStr = bestBowler.overs || '0.0';
+        const parts = oversStr.split('.');
+        const fullOvers = parseInt(parts[0]) || 0;
+        const balls = parseInt(parts[1]) || 0;
+        const totalBalls = fullOvers * 6 + balls;
+        const economy = totalBalls > 0 ? ((bestBowler.runs || 0) / totalBalls * 6).toFixed(2) : '0.00';
+        
+        return [{
+          name: bestBowler.name || 'Bowler',
+          image: bestBowler.image ? (bestBowler.image.startsWith('http') ? bestBowler.image : `https://img1.hscicdn.com/image/upload${bestBowler.image}`) : null,
+          oversDisplay: oversStr,
+          runs: bestBowler.runs || 0,
+          wickets: bestBowler.wickets || 0,
+          economy: economy,
+          isCurrentBowler: true,
+          isBestBowler: true
+        }];
+      }
+      
+      // Fallback: build from scoreState
+      const scoreAfter = data.scoreAfter;
+      if (scoreAfter?.bowlerName) {
+        const oversStr = scoreAfter.bowlerOvers || '0.0';
+        const parts = oversStr.split('.');
+        const fullOvers = parseInt(parts[0]) || 0;
+        const balls = parseInt(parts[1]) || 0;
+        const totalBalls = fullOvers * 6 + balls;
+        const economy = totalBalls > 0 ? ((scoreAfter.bowlerRuns || 0) / totalBalls * 6).toFixed(2) : '0.00';
+        
+        return [{
+          name: scoreAfter.bowlerName,
+          image: scoreAfter.bowlerImage ? (scoreAfter.bowlerImage.startsWith('http') ? scoreAfter.bowlerImage : `https://img1.hscicdn.com/image/upload${scoreAfter.bowlerImage}`) : null,
+          oversDisplay: oversStr,
+          runs: scoreAfter.bowlerRuns || 0,
+          wickets: scoreAfter.bowlerWickets || 0,
+          economy: economy,
+          isCurrentBowler: true,
+          isBestBowler: true
+        }];
+      }
+    }
+    // Fallback to current match data
+    return this.getLiveMatchSummaryBowlingStats();
+  }
 }
