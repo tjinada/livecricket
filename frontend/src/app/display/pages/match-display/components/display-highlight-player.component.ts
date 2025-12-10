@@ -337,8 +337,10 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
 
   private progressSubscription: Subscription | null = null;
   private highlightTimer: any = null;
+  private gapTimer: any = null;
   private currentHighlightElapsed = 0;
   private readonly PROGRESS_INTERVAL = 50;
+  private readonly OVERLAY_GAP_MS = 2000; // 2 second gap between overlay notifications
 
   constructor(
     private highlightService: HighlightService,
@@ -355,6 +357,9 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     this.stopRecording();
     if (this.highlightTimer) {
       clearTimeout(this.highlightTimer);
+    }
+    if (this.gapTimer) {
+      clearTimeout(this.gapTimer);
     }
   }
 
@@ -585,7 +590,13 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
 
   private emitViewChange() {
     if (!this.playerState.currentHighlight) return;
-    this.viewChange.emit(this.buildViewState());
+    const state = this.buildViewState();
+    console.log('[Highlight Player] emitViewChange:', {
+      highlightType: state.highlightType,
+      overlayType: state.overlayType,
+      view: state.view
+    });
+    this.viewChange.emit(state);
   }
 
   play() {
@@ -602,6 +613,10 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     if (this.highlightTimer) {
       clearTimeout(this.highlightTimer);
       this.highlightTimer = null;
+    }
+    if (this.gapTimer) {
+      clearTimeout(this.gapTimer);
+      this.gapTimer = null;
     }
   }
 
@@ -695,6 +710,33 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Check if a highlight type is an overlay type (four, six, wicket, etc.)
+   */
+  private isOverlayHighlightType(type: string): boolean {
+    return ['four', 'six', 'wicket', 'fifty', 'hundred'].includes(type);
+  }
+
+  /**
+   * Move to the next highlight and start playing it
+   */
+  private advanceToNextHighlight() {
+    if (!this.highlightVideo) return;
+    
+    this.playerState.currentIndex++;
+    this.playerState.currentHighlight = this.highlightVideo.highlights[this.playerState.currentIndex];
+    this.currentHighlightElapsed = 0;
+    
+    console.log('[Highlight Player] advanceToNextHighlight:', {
+      index: this.playerState.currentIndex,
+      type: this.playerState.currentHighlight?.type,
+      isOverlay: this.isOverlayHighlightType(this.playerState.currentHighlight?.type || '')
+    });
+    
+    this.emitViewChange();
+    this.playCurrentHighlight();
+  }
+
   private playCurrentHighlight() {
     if (!this.highlightVideo || !this.playerState.isPlaying) return;
     
@@ -708,24 +750,44 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
       this.currentHighlightElapsed = 0;
       
       if (this.playerState.currentIndex < this.highlightVideo!.highlights.length - 1) {
-        // Trigger transition and get the type
-        this.triggerTransition();
+        const nextHighlight = this.highlightVideo!.highlights[this.playerState.currentIndex + 1];
+        const currentIsOverlay = this.isOverlayHighlightType(highlight.type);
+        const nextIsOverlay = this.isOverlayHighlightType(nextHighlight.type);
         
-        // Determine delay based on transition type
-        // For 'none' transitions, change immediately
-        // For crossfade/major, wait for half the transition duration
-        const transitionDelay = this.playerState.transitionType === 'none' ? 0 
-          : this.playerState.transitionType === 'major' ? 250 : 150;
-        
-        this.playerState.currentIndex++;
-        this.playerState.currentHighlight = this.highlightVideo!.highlights[this.playerState.currentIndex];
-        
-        // Emit after appropriate delay
-        setTimeout(() => {
-          this.emitViewChange();
-          this.playCurrentHighlight();
-        }, transitionDelay);
+        // If both current and next are overlay types, add a gap between them
+        if (currentIsOverlay && nextIsOverlay) {
+          console.log('[Highlight Player] Adding gap between overlays:', {
+            current: highlight.type,
+            next: nextHighlight.type,
+            gapDuration: this.OVERLAY_GAP_MS
+          });
+          
+          // Step 1: Hide the current overlay (show score without overlay card)
+          const currentState = this.buildViewState();
+          this.viewChange.emit({
+            ...currentState,
+            overlayType: null,  // Hide the overlay card
+            highlightType: 'gap' // Indicate we're in a gap
+          });
+          
+          // Step 2: After the gap duration, show the next overlay
+          this.gapTimer = setTimeout(() => {
+            console.log('[Highlight Player] Gap ended, showing next overlay');
+            this.advanceToNextHighlight();
+          }, this.OVERLAY_GAP_MS);
+        } else {
+          // No gap needed - proceed with normal transition
+          this.triggerTransition();
+          
+          const transitionDelay = this.playerState.transitionType === 'none' ? 0 
+            : this.playerState.transitionType === 'major' ? 250 : 150;
+          
+          setTimeout(() => {
+            this.advanceToNextHighlight();
+          }, transitionDelay);
+        }
       } else {
+        // End of highlights
         this.playerState.isPlaying = false;
         this.stopProgressTimer();
         this.playerState.progress = 100;
