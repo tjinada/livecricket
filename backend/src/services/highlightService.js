@@ -1033,7 +1033,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       
       highlights.push({
         type: 'overSummary',
-        duration: 6000, // Shorter than before
+        duration: HIGHLIGHT_DURATIONS.phaseSummary,
         sequence: ball.sequence,
         timestamp: ball.timestamp,
         data: {
@@ -1098,7 +1098,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
         
         highlights.push({
           type: 'overSummary',
-          duration: 5000, // Brief summary
+          duration: HIGHLIGHT_DURATIONS.phaseSummary,
           sequence: ball.sequence,
           timestamp: ball.timestamp,
           data: {
