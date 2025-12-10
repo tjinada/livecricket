@@ -7,13 +7,14 @@ import { ScoringService, BallData } from '../../../core/services/scoring.service
 import { PlayerService } from '../../../core/services/player.service';
 import { Player } from '../../../core/models';
 import { BackgroundSettingsComponent, BackgroundSettings } from '../../components/background-settings/background-settings.component';
+import { HighlightSettingsComponent } from '../../components/highlight-settings/highlight-settings.component';
 
 type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo';
 
 @Component({
   selector: 'app-scoring',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, BackgroundSettingsComponent],
+  imports: [CommonModule, FormsModule, RouterLink, BackgroundSettingsComponent, HighlightSettingsComponent],
   template: `
     <div class="min-h-screen bg-gray-100">
       <!-- Header -->
@@ -194,7 +195,15 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
 
           <!-- Highlight Video -->
           <div class="bg-white rounded-lg shadow p-4 mb-6">
-            <h3 class="font-semibold text-gray-800 mb-3">🎬 Match Highlights</h3>
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-semibold text-gray-800">🎬 Match Highlights</h3>
+              <button 
+                (click)="showHighlightSettings = true"
+                class="text-sm text-purple-600 hover:text-purple-800"
+              >
+                ⚙️ Timing Settings
+              </button>
+            </div>
             <p class="text-sm text-gray-500 mb-3">Play a highlight video of 4s, 6s, wickets, and milestones</p>
             <div class="space-y-2">
               <button 
@@ -785,7 +794,15 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
 
               <!-- Match Highlights -->
               <div class="bg-white rounded-lg shadow p-4">
-                <h3 class="font-semibold text-gray-800 mb-2">🎬 Match Highlights</h3>
+                <div class="flex justify-between items-center mb-2">
+                  <h3 class="font-semibold text-gray-800">🎬 Match Highlights</h3>
+                  <button 
+                    (click)="showHighlightSettings = true"
+                    class="text-sm text-purple-600 hover:text-purple-800"
+                  >
+                    ⚙️ Timing
+                  </button>
+                </div>
                 <p class="text-xs text-gray-500 mb-3">Play highlights up to current score</p>
                 <button 
                   (click)="openHighlightVideoModal()"
@@ -1273,6 +1290,26 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
           (close)="showBackgroundSettings = false"
           (saved)="saveBackgroundSettings($event)"
         ></app-background-settings>
+      }
+
+      <!-- Highlight Settings Modal -->
+      @if (showHighlightSettings) {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+              <h3 class="text-lg font-semibold">⚙️ Highlight Timing Settings</h3>
+              <button 
+                (click)="showHighlightSettings = false"
+                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <div class="p-4">
+              <app-highlight-settings></app-highlight-settings>
+            </div>
+          </div>
+        </div>
       }
 
       <!-- Player Stats Selection Modal -->
@@ -2508,6 +2545,9 @@ export class ScoringComponent implements OnInit, OnDestroy {
 
   // Background settings
   showBackgroundSettings = false;
+
+  // Highlight settings
+  showHighlightSettings = false;
 
   saveBackgroundSettings(settings: BackgroundSettings) {
     this.matchService.updateBackgrounds(this.matchId, settings).subscribe({

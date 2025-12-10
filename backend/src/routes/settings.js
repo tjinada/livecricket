@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { Settings } = require('../models');
 const { SETTING_KEYS } = require('../models/Settings');
+const { 
+  getConfig, 
+  updateConfig, 
+  resetConfig 
+} = require('../config/highlightConfig');
 
 // GET /api/settings/backgrounds - Get default backgrounds for all views
 router.get('/backgrounds', async (req, res) => {
@@ -155,6 +160,211 @@ router.delete('/backgrounds/:view', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to remove view background',
+      error: error.message
+    });
+  }
+});
+
+// ==================== HIGHLIGHT CONFIG ENDPOINTS ====================
+
+/**
+ * GET /api/settings/highlights
+ * Get current highlight configuration
+ */
+router.get('/highlights', async (req, res) => {
+  try {
+    const config = getConfig();
+    res.json({
+      success: true,
+      data: config
+    });
+  } catch (error) {
+    console.error('Error fetching highlight config:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch highlight configuration',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * PUT /api/settings/highlights
+ * Update highlight configuration
+ * Body can contain partial updates - only specified fields will be updated
+ * 
+ * Example body:
+ * {
+ *   "durations": {
+ *     "four": 3000,
+ *     "six": 4000
+ *   },
+ *   "overlayGap": {
+ *     "duration": 2500
+ *   }
+ * }
+ */
+router.put('/highlights', async (req, res) => {
+  try {
+    const updates = req.body;
+    
+    if (!updates || Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No configuration updates provided'
+      });
+    }
+    
+    const updatedConfig = updateConfig(updates);
+    
+    res.json({
+      success: true,
+      message: 'Highlight configuration updated successfully',
+      data: updatedConfig
+    });
+  } catch (error) {
+    console.error('Error updating highlight config:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update highlight configuration',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/settings/highlights/reset
+ * Reset highlight configuration to defaults
+ */
+router.post('/highlights/reset', async (req, res) => {
+  try {
+    const defaultConfig = resetConfig();
+    
+    res.json({
+      success: true,
+      message: 'Highlight configuration reset to defaults',
+      data: defaultConfig
+    });
+  } catch (error) {
+    console.error('Error resetting highlight config:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset highlight configuration',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * PUT /api/settings/highlights/durations
+ * Update only duration settings
+ * 
+ * Example body:
+ * {
+ *   "four": 3000,
+ *   "six": 4000,
+ *   "wicket": 5000
+ * }
+ */
+router.put('/highlights/durations', async (req, res) => {
+  try {
+    const durations = req.body;
+    
+    if (!durations || Object.keys(durations).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No duration updates provided'
+      });
+    }
+    
+    const updatedConfig = updateConfig({ durations });
+    
+    res.json({
+      success: true,
+      message: 'Highlight durations updated successfully',
+      data: updatedConfig.durations
+    });
+  } catch (error) {
+    console.error('Error updating highlight durations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update highlight durations',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * PUT /api/settings/highlights/overlay-gap
+ * Update overlay gap settings
+ * 
+ * Example body:
+ * {
+ *   "duration": 2500,
+ *   "applyToTypes": ["four", "six", "wicket"]
+ * }
+ */
+router.put('/highlights/overlay-gap', async (req, res) => {
+  try {
+    const overlayGap = req.body;
+    
+    if (!overlayGap || Object.keys(overlayGap).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No overlay gap updates provided'
+      });
+    }
+    
+    const updatedConfig = updateConfig({ overlayGap });
+    
+    res.json({
+      success: true,
+      message: 'Overlay gap settings updated successfully',
+      data: updatedConfig.overlayGap
+    });
+  } catch (error) {
+    console.error('Error updating overlay gap settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update overlay gap settings',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * PUT /api/settings/highlights/live-notifications
+ * Update live scoring notification settings
+ * 
+ * Example body:
+ * {
+ *   "duration": 3000,
+ *   "cooldownBetween": 2000
+ * }
+ */
+router.put('/highlights/live-notifications', async (req, res) => {
+  try {
+    const liveNotifications = req.body;
+    
+    if (!liveNotifications || Object.keys(liveNotifications).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No live notification updates provided'
+      });
+    }
+    
+    const updatedConfig = updateConfig({ liveNotifications });
+    
+    res.json({
+      success: true,
+      message: 'Live notification settings updated successfully',
+      data: updatedConfig.liveNotifications
+    });
+  } catch (error) {
+    console.error('Error updating live notification settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update live notification settings',
       error: error.message
     });
   }

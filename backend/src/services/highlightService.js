@@ -12,43 +12,40 @@
  */
 
 const { Ball, Match, Player } = require('../models');
+const highlightConfig = require('../config/highlightConfig');
+const { 
+  getDurations, 
+  getImportanceLevels, 
+  getPhaseSettings,
+  getNotableThresholds
+} = highlightConfig;
+
+// Get constants for backward compatibility
+const HIGHLIGHT_DURATIONS = highlightConfig.HIGHLIGHT_DURATIONS;
+const IMPORTANCE_LEVELS = highlightConfig.IMPORTANCE_LEVELS;
 
 /**
- * Highlight types and their BASE durations (in milliseconds)
- * These will be adjusted based on importance score
+ * Get current highlight durations from config
+ * @returns {Object} Duration settings
  */
-const HIGHLIGHT_DURATIONS = {
-  // Phase 6: Intro & Narrative elements
-  matchIntro: 5000,      // Match setup card
-  teamLineup: 6000,      // Starting XI display for each team
-  inningsIntro: 4000,    // Innings context card
-  inningsStart: 3000,    // 0/0 state with opening batsmen/bowler
-  chaseSetup: 4000,      // "Team needs X from Y overs"
-  
-  // Action highlights
-  four: 2000,
-  six: 2500,
-  wicket: 4000,
-  fifty: 5000,
-  hundred: 6000,
-  
-  // Summary elements
-  overSummary: 8000,
-  inningsSummary: 10000,
-  matchResult: 6000,     // Winner announcement screen
-  matchSummary: 10000    // Reduced from 15000 since we now have matchResult
-};
+function getHighlightDurations() {
+  return getDurations();
+}
 
 /**
- * Importance levels and their duration multipliers
+ * Get importance levels with labels for backwards compatibility
+ * @returns {Object} Importance level settings with labels
  */
-const IMPORTANCE_LEVELS = {
-  routine: { minScore: 0, maxScore: 1, multiplier: 1.0, label: 'routine' },
-  notable: { minScore: 2, maxScore: 3, multiplier: 1.25, label: 'notable' },
-  significant: { minScore: 4, maxScore: 5, multiplier: 1.5, label: 'significant' },
-  crucial: { minScore: 6, maxScore: 10, multiplier: 1.75, label: 'crucial' },
-  epic: { minScore: 11, maxScore: 999, multiplier: 2.0, label: 'epic' }
-};
+function getImportanceLevelsWithLabels() {
+  const config = getImportanceLevels();
+  const levels = config.levels || {};
+  // Add labels for backwards compatibility
+  const result = {};
+  Object.keys(levels).forEach(key => {
+    result[key] = { ...levels[key], label: key };
+  });
+  return result;
+}
 
 /**
  * Calculate importance score for a highlight based on match context
@@ -163,6 +160,10 @@ function calculateImportance(params) {
   }
 
   // ========== DETERMINE LEVEL ==========
+  const IMPORTANCE_LEVELS = getImportanceLevelsWithLabels();
+  const currentDurations = getHighlightDurations();
+  const config = highlightConfig.getConfig();
+  
   let level = IMPORTANCE_LEVELS.routine;
   for (const [key, levelData] of Object.entries(IMPORTANCE_LEVELS)) {
     if (score >= levelData.minScore && score <= levelData.maxScore) {
@@ -176,8 +177,12 @@ function calculateImportance(params) {
   }
 
   // ========== CALCULATE DURATION ==========
-  const baseDuration = HIGHLIGHT_DURATIONS[type] || 2000;
-  const adjustedDuration = Math.round(baseDuration * level.multiplier);
+  const baseDuration = currentDurations[type] || 2000;
+  // Apply multiplier only if enabled in config
+  const applyMultipliers = config.importance.applyMultipliers;
+  const adjustedDuration = applyMultipliers 
+    ? Math.round(baseDuration * level.multiplier)
+    : baseDuration;
 
   return {
     score: Math.round(score * 10) / 10, // Round to 1 decimal
@@ -196,6 +201,11 @@ function calculateImportance(params) {
  * @returns {Promise<Array>} Array of highlight objects
  */
 async function generateInningsHighlights(matchId, inningsNumber) {
+  // Get current configuration
+  const HIGHLIGHT_DURATIONS = getHighlightDurations();
+  const phaseConfig = getPhaseSettings('T20'); // Will be updated below based on match format
+  const notableThresholds = getNotableThresholds();
+  
   const match = await Match.findById(matchId)
     .populate('team1', 'name code flagUrl')
     .populate('team2', 'name code flagUrl')
@@ -429,6 +439,9 @@ async function generateInningsHighlights(matchId, inningsNumber) {
   const deathOversStart = match.format === 'T20' ? 16 : 41; // Last 5 for T20, last 10 for ODI
   
   // ========== PHASE 4: PHASE SUMMARY TRACKING ==========
+  // Get phase settings from config based on match format
+  const formatPhaseConfig = getPhaseSettings(match.format);
+  
   // Track events per phase for smarter summaries
   let phaseStats = {
     boundaries: 0,      // 4s and 6s in current phase
@@ -446,9 +459,9 @@ async function generateInningsHighlights(matchId, inningsNumber) {
     death: false        // After over 20 (T20) or 50 (ODI) - handled by innings summary
   };
   
-  // Define phase boundaries based on format
-  const powerplayEnd = 6;
-  const middleOversEnd = match.format === 'T20' ? 15 : 40;
+  // Define phase boundaries from config
+  const powerplayEnd = formatPhaseConfig.powerplayEnd;
+  const middleOversEnd = formatPhaseConfig.middleOversEnd;
   
   /**
    * Reset phase stats when entering new phase
@@ -466,18 +479,18 @@ async function generateInningsHighlights(matchId, inningsNumber) {
   
   /**
    * Check if current phase had notable events worth summarizing
+   * Uses thresholds from config
    * @returns {boolean}
    */
   const phaseWasNotable = () => {
-    // Notable if: 2+ boundaries OR 1+ wickets OR high run rate (>8 per over in phase)
     const oversInPhase = Math.floor(runningBalls / 6) - phaseStats.startingOvers;
     const runsInPhase = runningScore - phaseStats.startingScore;
     const runRateInPhase = oversInPhase > 0 ? runsInPhase / oversInPhase : 0;
     
-    return phaseStats.boundaries >= 2 || 
-           phaseStats.wickets >= 1 || 
-           runRateInPhase >= 8 ||
-           runsInPhase >= 40; // Or just a lot of runs
+    return phaseStats.boundaries >= notableThresholds.minBoundaries || 
+           phaseStats.wickets >= notableThresholds.minWickets || 
+           runRateInPhase >= notableThresholds.minRunRate ||
+           runsInPhase >= notableThresholds.minPhaseRuns;
   };
   
   /**

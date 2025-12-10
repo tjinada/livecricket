@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { HighlightSettingsComponent } from '../../components/highlight-settings/highlight-settings.component';
 
 interface ViewBackground {
   type: 'image' | 'video' | 'none';
@@ -20,7 +21,7 @@ interface DefaultBackgrounds {
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HighlightSettingsComponent],
   template: `
     <div>
       <div class="flex justify-between items-center mb-6">

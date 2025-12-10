@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HighlightService, HighlightVideo, HighlightData } from '../../../services/highlight.service';
+import { SettingsService } from '../../../../core/services/settings.service';
 import { interval, Subscription } from 'rxjs';
 
 /**
@@ -340,10 +341,15 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
   private gapTimer: any = null;
   private currentHighlightElapsed = 0;
   private readonly PROGRESS_INTERVAL = 50;
-  private readonly OVERLAY_GAP_MS = 2000; // 2 second gap between overlay notifications
+
+  // Overlay highlight types that need gap between consecutive ones
+  private readonly OVERLAY_TYPES = ['four', 'six', 'wicket', 'fifty', 'hundred'];
+  // Default gap duration in ms (can be overridden by settings)
+  private readonly DEFAULT_OVERLAY_GAP = 2000;
 
   constructor(
     private highlightService: HighlightService,
+    private settingsService: SettingsService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -590,13 +596,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
 
   private emitViewChange() {
     if (!this.playerState.currentHighlight) return;
-    const state = this.buildViewState();
-    console.log('[Highlight Player] emitViewChange:', {
-      highlightType: state.highlightType,
-      overlayType: state.overlayType,
-      view: state.view
-    });
-    this.viewChange.emit(state);
+    this.viewChange.emit(this.buildViewState());
   }
 
   play() {
@@ -714,7 +714,7 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
    * Check if a highlight type is an overlay type (four, six, wicket, etc.)
    */
   private isOverlayHighlightType(type: string): boolean {
-    return ['four', 'six', 'wicket', 'fifty', 'hundred'].includes(type);
+    return this.OVERLAY_TYPES.includes(type);
   }
 
   /**
@@ -726,13 +726,6 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
     this.playerState.currentIndex++;
     this.playerState.currentHighlight = this.highlightVideo.highlights[this.playerState.currentIndex];
     this.currentHighlightElapsed = 0;
-    
-    console.log('[Highlight Player] advanceToNextHighlight:', {
-      index: this.playerState.currentIndex,
-      type: this.playerState.currentHighlight?.type,
-      isOverlay: this.isOverlayHighlightType(this.playerState.currentHighlight?.type || '')
-    });
-    
     this.emitViewChange();
     this.playCurrentHighlight();
   }
@@ -756,11 +749,8 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
         
         // If both current and next are overlay types, add a gap between them
         if (currentIsOverlay && nextIsOverlay) {
-          console.log('[Highlight Player] Adding gap between overlays:', {
-            current: highlight.type,
-            next: nextHighlight.type,
-            gapDuration: this.OVERLAY_GAP_MS
-          });
+          // Get gap duration from settings or use default
+          const gapDuration = this.settingsService.getOverlayGap();
           
           // Step 1: Hide the current overlay (show score without overlay card)
           const currentState = this.buildViewState();
@@ -772,9 +762,8 @@ export class DisplayHighlightPlayerComponent implements OnInit, OnDestroy {
           
           // Step 2: After the gap duration, show the next overlay
           this.gapTimer = setTimeout(() => {
-            console.log('[Highlight Player] Gap ended, showing next overlay');
             this.advanceToNextHighlight();
-          }, this.OVERLAY_GAP_MS);
+          }, gapDuration);
         } else {
           // No gap needed - proceed with normal transition
           this.triggerTransition();
