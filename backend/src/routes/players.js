@@ -140,14 +140,15 @@ router.get('/:id', async (req, res, next) => {
 // POST /api/players - Create player (protected)
 router.post('/', auth, async (req, res, next) => {
   try {
-    const { name, country, role, battingStyle, bowlingStyle } = req.body;
+    const { name, country, role, battingStyle, bowlingStyle, gender } = req.body;
     
     const player = new Player({
       name,
       country,
       role,
       battingStyle,
-      bowlingStyle
+      bowlingStyle,
+      gender: gender || 'M'
     });
     
     await player.save();
@@ -167,11 +168,11 @@ router.post('/', auth, async (req, res, next) => {
 // PUT /api/players/:id - Update player (protected)
 router.put('/:id', auth, async (req, res, next) => {
   try {
-    const { name, country, role, battingStyle, bowlingStyle, isActive } = req.body;
+    const { name, country, role, battingStyle, bowlingStyle, gender, isActive } = req.body;
     
     const player = await Player.findByIdAndUpdate(
       req.params.id,
-      { name, country, role, battingStyle, bowlingStyle, isActive },
+      { name, country, role, battingStyle, bowlingStyle, gender, isActive },
       { new: true, runValidators: true }
     ).populate('country', 'name code flagUrl');
     

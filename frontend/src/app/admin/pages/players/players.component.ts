@@ -295,6 +295,32 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
                 </select>
               </div>
 
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <div class="flex gap-4">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      [(ngModel)]="form.gender" 
+                      name="gender" 
+                      value="M"
+                      class="text-blue-600 focus:ring-blue-500"
+                    >
+                    <span class="text-gray-700">Male</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      [(ngModel)]="form.gender" 
+                      name="gender" 
+                      value="F"
+                      class="text-pink-600 focus:ring-pink-500"
+                    >
+                    <span class="text-gray-700">Female</span>
+                  </label>
+                </div>
+              </div>
+
               @if (editingPlayer) {
                 <div class="mb-6">
                   <label class="flex items-center gap-2">
@@ -561,6 +587,7 @@ export class PlayersComponent implements OnInit {
     role: '' as PlayerRole | '',
     battingStyle: '' as BattingStyle | '',
     bowlingStyle: '' as BowlingStyle | '',
+    gender: 'M' as 'M' | 'F',
     isActive: true
   };
   saving = false;
@@ -713,6 +740,7 @@ export class PlayersComponent implements OnInit {
         role: player.role,
         battingStyle: player.battingStyle,
         bowlingStyle: player.bowlingStyle,
+        gender: player.gender || 'M',
         isActive: player.isActive
       };
     } else {
@@ -722,6 +750,7 @@ export class PlayersComponent implements OnInit {
         role: '',
         battingStyle: '',
         bowlingStyle: '',
+        gender: 'M',
         isActive: true
       };
     }
@@ -756,6 +785,7 @@ export class PlayersComponent implements OnInit {
       role: this.form.role as PlayerRole,
       battingStyle: this.form.battingStyle as BattingStyle,
       bowlingStyle: this.form.bowlingStyle as BowlingStyle,
+      gender: this.form.gender,
       isActive: this.form.isActive
     };
 
