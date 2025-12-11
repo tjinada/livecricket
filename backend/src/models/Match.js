@@ -297,7 +297,7 @@ const matchSchema = new mongoose.Schema({
   },
   displayView: {
     type: String,
-    enum: ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats'],
+    enum: ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats', 'highlight-video', 'starting-xi-team1', 'starting-xi-team2', 'toss-screen'],
     default: 'live-score'
   },
   // Selected player for player-stats view

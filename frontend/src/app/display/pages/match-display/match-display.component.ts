@@ -168,7 +168,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.success) {
           this.match = response.data;
-          this.displayView = this.match.displayView || 'live-score';
+          const newView = this.match.displayView || 'live-score';
+          console.log('[Display] reloadMatch - displayView changing from', this.displayView, 'to', newView);
+          this.displayView = newView;
           this.buildPlayerNameCache();
           this.updateBackground();
         }
@@ -1451,6 +1453,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   /**
    * Get Starting XI players for Team 1
+   * Shows players marked as isPlayingXI with battingOrder assigned
    */
   getTeam1StartingXI(): Array<{
     name: string;
@@ -1458,9 +1461,16 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     role: string;
     battingOrder: number;
   }> {
-    if (!this.match?.squads?.team1) return [];
-    return this.match.squads.team1
-      .filter((p: any) => p.isPlayingXI)
+    if (!this.match?.squads?.team1) {
+      console.log('[StartingXI] Team1 squad not found');
+      return [];
+    }
+    
+    console.log('[StartingXI] Team1 raw squad:', this.match.squads.team1);
+    
+    // Get players who are in playing XI (have battingOrder assigned)
+    const playingXI = this.match.squads.team1
+      .filter((p: any) => p.isPlayingXI && p.battingOrder)
       .map((p: any) => ({
         name: p.player?.name || 'Unknown',
         image: p.player?.headshotPath || null,
@@ -1468,10 +1478,14 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
         battingOrder: p.battingOrder || 99
       }))
       .sort((a: any, b: any) => a.battingOrder - b.battingOrder);
+    
+    console.log('[StartingXI] Team1 playing XI:', playingXI);
+    return playingXI;
   }
 
   /**
    * Get Starting XI players for Team 2
+   * Shows players marked as isPlayingXI with battingOrder assigned
    */
   getTeam2StartingXI(): Array<{
     name: string;
@@ -1480,8 +1494,10 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     battingOrder: number;
   }> {
     if (!this.match?.squads?.team2) return [];
-    return this.match.squads.team2
-      .filter((p: any) => p.isPlayingXI)
+    
+    // Get players who are in playing XI (have battingOrder assigned)
+    const playingXI = this.match.squads.team2
+      .filter((p: any) => p.isPlayingXI && p.battingOrder)
       .map((p: any) => ({
         name: p.player?.name || 'Unknown',
         image: p.player?.headshotPath || null,
@@ -1489,6 +1505,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
         battingOrder: p.battingOrder || 99
       }))
       .sort((a: any, b: any) => a.battingOrder - b.battingOrder);
+    
+    return playingXI;
   }
 
   /**

@@ -46,8 +46,14 @@ interface SquadPlayer {
           </div>
         </div>
         
-        <!-- Players Grid - Two Rows -->
-        <div class="space-y-5 info-card" [class.animate-info-card]="animationStarted">
+        <!-- No Players Message -->
+        <div *ngIf="players.length === 0" class="text-center py-12 info-card" [class.animate-info-card]="animationStarted">
+          <p class="text-2xl text-white/60">Playing XI not yet announced</p>
+          <p class="text-sm text-white/40 mt-2">Squad selection pending</p>
+        </div>
+        
+        <!-- Players Grid - Two Rows (only when players exist) -->
+        <div *ngIf="players.length > 0" class="space-y-5 info-card" [class.animate-info-card]="animationStarted">
           
           <!-- Top Row (5 players) -->
           <div class="flex justify-center gap-4 md:gap-6 lg:gap-8">
@@ -55,7 +61,7 @@ interface SquadPlayer {
                  class="flex flex-col items-center player-card"
                  [style.animation-delay.ms]="i * 80">
               <!-- Player Card -->
-              <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-4 md:p-5 border border-white/10 hover:bg-white/10 transition-all shadow-xl">
+              <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-4 md:p-5 border border-white/10 hover:bg-white/10 transition-all shadow-xl relative">
                 <!-- Batting Order Badge -->
                 <div class="absolute -top-2 -left-2 w-7 h-7 md:w-8 md:h-8 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
                   {{ player.battingOrder }}
@@ -183,18 +189,27 @@ export class StartingXiViewComponent implements OnInit, OnChanges {
   }
   
   ngOnInit(): void {
+    console.log('[StartingXI] ngOnInit - teamCode:', this.teamCode, 'players:', this.players.length);
+    // Start animations after a brief delay
     setTimeout(() => {
       this.animationStarted = true;
     }, 100);
   }
   
   ngOnChanges(changes: SimpleChanges): void {
-    // Reset animation when team changes
-    if (changes['teamCode'] || changes['players']) {
-      this.animationStarted = false;
-      setTimeout(() => {
-        this.animationStarted = true;
-      }, 50);
+    // Only log on actual changes, don't reset animation state constantly
+    if (changes['teamCode']?.currentValue !== changes['teamCode']?.previousValue ||
+        changes['players']?.currentValue?.length !== changes['players']?.previousValue?.length) {
+      console.log('[StartingXI] ngOnChanges - teamCode:', this.teamCode, 'players count:', this.players?.length);
+      
+      // Only reset animation if teamCode actually changed
+      if (changes['teamCode']?.currentValue !== changes['teamCode']?.previousValue && 
+          changes['teamCode']?.previousValue !== undefined) {
+        this.animationStarted = false;
+        setTimeout(() => {
+          this.animationStarted = true;
+        }, 50);
+      }
     }
   }
   

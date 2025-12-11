@@ -86,7 +86,15 @@ export class BackgroundService {
    * @param currentInnings Current innings data
    */
   updateBackground(displayView: string, match: any, currentInnings: any): BackgroundState {
-    const viewKey = displayView;
+    // Map views that should share backgrounds with other views
+    // starting-xi and toss views use the same background as live-score
+    const backgroundAliases: Record<string, string> = {
+      'starting-xi-team1': 'live-score',
+      'starting-xi-team2': 'live-score',
+      'toss-screen': 'live-score'
+    };
+    
+    const viewKey = backgroundAliases[displayView] || displayView;
     const matchViews = match?.backgrounds?.views;
     const matchBackground = matchViews ? matchViews[viewKey] : null;
     
