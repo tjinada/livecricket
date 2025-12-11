@@ -311,6 +311,45 @@
         [team2Name]="match.team2?.name"
       ></app-player-stats-view>
 
+      <!-- ==================== STARTING XI TEAM 1 VIEW ==================== -->
+      <app-starting-xi-view
+        *ngIf="displayView === 'starting-xi-team1'"
+        class="flex-1 flex flex-col min-h-0"
+        [teamName]="match.team1?.name"
+        [teamCode]="match.team1?.code"
+        [teamFlag]="match.team1?.flagUrl"
+        [players]="getTeam1StartingXI()"
+        [format]="match.format"
+      ></app-starting-xi-view>
+
+      <!-- ==================== STARTING XI TEAM 2 VIEW ==================== -->
+      <app-starting-xi-view
+        *ngIf="displayView === 'starting-xi-team2'"
+        class="flex-1 flex flex-col min-h-0"
+        [teamName]="match.team2?.name"
+        [teamCode]="match.team2?.code"
+        [teamFlag]="match.team2?.flagUrl"
+        [players]="getTeam2StartingXI()"
+        [format]="match.format"
+      ></app-starting-xi-view>
+
+      <!-- ==================== TOSS SCREEN VIEW ==================== -->
+      <app-toss-screen-view
+        *ngIf="displayView === 'toss-screen'"
+        class="flex-1 flex flex-col min-h-0"
+        [team1Name]="match.team1?.name"
+        [team1Code]="match.team1?.code"
+        [team1Flag]="match.team1?.flagUrl"
+        [team2Name]="match.team2?.name"
+        [team2Code]="match.team2?.code"
+        [team2Flag]="match.team2?.flagUrl"
+        [tossWinnerCode]="getTossWinnerCode()"
+        [tossWinnerFlag]="getTossWinnerFlag()"
+        [tossDecision]="getTossDecision()"
+        [format]="match.format"
+        [venue]="match.venue"
+      ></app-toss-screen-view>
+
       <!-- ==================== HIGHLIGHT VIDEO VIEW ==================== -->
       <!-- Display-based highlight mode: shows actual display views with player controls -->
       <ng-container *ngIf="displayView === 'highlight-video' && useDisplayBasedHighlights">

@@ -451,7 +451,7 @@ router.put('/:id/display-view', auth, async (req, res, next) => {
   try {
     const { view, selectedPlayer, innings } = req.body;
     
-    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats', 'highlight-video'];
+    const validViews = ['live-score', 'live-match-summary', 'run-rate-graph', 'current-partnership', 'final-match-summary', 'player-stats', 'highlight-video', 'starting-xi-team1', 'starting-xi-team2', 'toss-screen'];
     if (!validViews.includes(view)) {
       return res.status(400).json({
         success: false,

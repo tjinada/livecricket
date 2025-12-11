@@ -29,6 +29,8 @@ import {
   HighlightViewState
 } from './components';
 import { MatchIntroViewComponent } from './components/match-intro-view.component';
+import { StartingXiViewComponent } from './components/starting-xi-view.component';
+import { TossScreenViewComponent } from './components/toss-screen-view.component';
 
 @Component({
   selector: 'app-match-display',
@@ -45,7 +47,9 @@ import { MatchIntroViewComponent } from './components/match-intro-view.component
     PlayerStatsViewComponent,
     HighlightVideoPlayerComponent,
     DisplayHighlightPlayerComponent,
-    MatchIntroViewComponent
+    MatchIntroViewComponent,
+    StartingXiViewComponent,
+    TossScreenViewComponent
   ],
   templateUrl: './match-display.component.html'
 })
@@ -357,7 +361,10 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       'current-partnership': 'Current Partnership',
       'final-match-summary': 'Final Match Summary',
       'player-stats': 'Player Stats',
-      'highlight-video': 'Highlight Video'
+      'highlight-video': 'Highlight Video',
+      'starting-xi-team1': 'Starting XI - Team 1',
+      'starting-xi-team2': 'Starting XI - Team 2',
+      'toss-screen': 'Toss Result'
     };
     return names[this.displayView] || 'Live Score';
   }
@@ -1438,5 +1445,72 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     }
     // Fallback to current match data
     return this.getLiveMatchSummaryBowlingStats();
+  }
+
+  // ==================== STARTING XI HELPERS ====================
+
+  /**
+   * Get Starting XI players for Team 1
+   */
+  getTeam1StartingXI(): Array<{
+    name: string;
+    image: string | null;
+    role: string;
+    battingOrder: number;
+  }> {
+    if (!this.match?.squads?.team1) return [];
+    return this.match.squads.team1
+      .filter((p: any) => p.isPlayingXI)
+      .map((p: any) => ({
+        name: p.player?.name || 'Unknown',
+        image: p.player?.headshotPath || null,
+        role: p.player?.role || 'player',
+        battingOrder: p.battingOrder || 99
+      }))
+      .sort((a: any, b: any) => a.battingOrder - b.battingOrder);
+  }
+
+  /**
+   * Get Starting XI players for Team 2
+   */
+  getTeam2StartingXI(): Array<{
+    name: string;
+    image: string | null;
+    role: string;
+    battingOrder: number;
+  }> {
+    if (!this.match?.squads?.team2) return [];
+    return this.match.squads.team2
+      .filter((p: any) => p.isPlayingXI)
+      .map((p: any) => ({
+        name: p.player?.name || 'Unknown',
+        image: p.player?.headshotPath || null,
+        role: p.player?.role || 'player',
+        battingOrder: p.battingOrder || 99
+      }))
+      .sort((a: any, b: any) => a.battingOrder - b.battingOrder);
+  }
+
+  /**
+   * Get toss winner code
+   */
+  getTossWinnerCode(): string {
+    if (!this.match?.toss?.winner) return '';
+    return this.match.toss.winner.code || '';
+  }
+
+  /**
+   * Get toss winner flag
+   */
+  getTossWinnerFlag(): string | null {
+    if (!this.match?.toss?.winner) return null;
+    return this.match.toss.winner.flagUrl || null;
+  }
+
+  /**
+   * Get toss decision
+   */
+  getTossDecision(): 'bat' | 'bowl' {
+    return this.match?.toss?.decision || 'bat';
   }
 }

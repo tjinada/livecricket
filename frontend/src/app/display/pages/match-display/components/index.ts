@@ -10,3 +10,5 @@ export * from './player-stats-view.component';
 export * from './highlight-video-player.component';
 export * from './display-highlight-player.component';
 export * from './match-intro-view.component';
+export * from './starting-xi-view.component';
+export * from './toss-screen-view.component';
