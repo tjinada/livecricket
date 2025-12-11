@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Player, CreatePlayerDto, UpdatePlayerDto, ApiResponse, PlayerRole } from '../models';
+import { Player, CreatePlayerDto, UpdatePlayerDto, ApiResponse, PlayerRole, PlayerGender } from '../models';
 
 export interface BulkImportResult {
   created: number;
   updated: number;
   skipped: number;
+  menImported: number;
+  womenImported: number;
   errors: Array<{ name: string; reason: string }>;
 }
 
@@ -14,6 +16,7 @@ export interface PlayerFilters {
   country?: string;
   role?: PlayerRole;
   isActive?: boolean;
+  gender?: PlayerGender;
 }
 
 @Injectable({
@@ -36,6 +39,9 @@ export class PlayerService {
       }
       if (filters.isActive !== undefined) {
         params = params.set('isActive', filters.isActive.toString());
+      }
+      if (filters.gender) {
+        params = params.set('gender', filters.gender);
       }
     }
 

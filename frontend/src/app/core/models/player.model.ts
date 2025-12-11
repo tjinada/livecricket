@@ -2,6 +2,7 @@ import { Country } from './country.model';
 
 export type PlayerRole = 'batsman' | 'bowler' | 'all-rounder' | 'wicket-keeper';
 export type BattingStyle = 'right-hand' | 'left-hand';
+export type PlayerGender = 'M' | 'F';
 export type BowlingStyle = 
   | 'right-arm-fast' 
   | 'right-arm-medium' 
@@ -21,6 +22,7 @@ export interface Player {
   battingStyle: BattingStyle;
   bowlingStyle: BowlingStyle;
   isActive: boolean;
+  gender: PlayerGender;
   headshotPath?: string | null;
   imageUrl?: string | null;  // Full quality original image
   espnId?: number | null;

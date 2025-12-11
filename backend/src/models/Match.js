@@ -211,6 +211,20 @@ const viewBackgroundsSchema = new mongoose.Schema({
 
 // Main Match Schema
 const matchSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Title cannot exceed 200 characters'],
+    default: null
+  },
+  gender: {
+    type: String,
+    enum: {
+      values: ['men', 'women'],
+      message: '{VALUE} is not a valid gender'
+    },
+    default: 'men'
+  },
   format: {
     type: String,
     enum: {
@@ -309,6 +323,7 @@ const matchSchema = new mongoose.Schema({
 matchSchema.index({ status: 1 });
 matchSchema.index({ date: -1 });
 matchSchema.index({ team1: 1, team2: 1 });
+matchSchema.index({ gender: 1 });
 
 // Virtual for target (second innings)
 matchSchema.virtual('target').get(function() {

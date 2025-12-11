@@ -125,7 +125,7 @@ router.get('/:id', async (req, res, next) => {
 // POST /api/matches - Create match (protected)
 router.post('/', auth, async (req, res, next) => {
   try {
-    const { format, team1, team2, venue, date } = req.body;
+    const { format, team1, team2, venue, date, gender, title } = req.body;
     
     // Validate teams are different
     if (team1 === team2) {
@@ -140,7 +140,9 @@ router.post('/', auth, async (req, res, next) => {
       team1,
       team2,
       venue,
-      date
+      date,
+      gender: gender || 'men',
+      title: title || null  // Will be generated on frontend if not provided
     });
     
     await match.save();
@@ -178,7 +180,7 @@ router.put('/:id', auth, async (req, res, next) => {
       });
     }
     
-    const { format, team1, team2, venue, date } = req.body;
+    const { format, team1, team2, venue, date, title } = req.body;
     
     // Validate teams are different
     if (team1 && team2 && team1 === team2) {
@@ -190,7 +192,7 @@ router.put('/:id', auth, async (req, res, next) => {
     
     const updatedMatch = await Match.findByIdAndUpdate(
       req.params.id,
-      { format, team1, team2, venue, date },
+      { format, team1, team2, venue, date, title },
       { new: true, runValidators: true }
     )
       .populate('team1', 'name code flagUrl')
@@ -199,6 +201,38 @@ router.put('/:id', auth, async (req, res, next) => {
     res.json({
       success: true,
       data: updatedMatch
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/matches/:id/title - Update match title (protected, works for any match status)
+router.put('/:id/title', auth, async (req, res, next) => {
+  try {
+    const { title } = req.body;
+    
+    const match = await Match.findByIdAndUpdate(
+      req.params.id,
+      { title },
+      { new: true, runValidators: true }
+    )
+      .populate('team1', 'name code flagUrl')
+      .populate('team2', 'name code flagUrl');
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+    
+    // Broadcast title change to display clients
+    broadcastToMatch(req.params.id, 'title-change', { title: match.title });
+    
+    res.json({
+      success: true,
+      data: match
     });
   } catch (error) {
     next(error);

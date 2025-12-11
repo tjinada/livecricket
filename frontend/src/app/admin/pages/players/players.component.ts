@@ -71,6 +71,18 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
             </select>
           </div>
           <div>
+            <label class="block text-xs text-gray-500 mb-1">Gender</label>
+            <select 
+              [(ngModel)]="filters.gender"
+              (ngModelChange)="applyFilters()"
+              class="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">All</option>
+              <option value="M">Men</option>
+              <option value="F">Women</option>
+            </select>
+          </div>
+          <div>
             <label class="block text-xs text-gray-500 mb-1">Search</label>
             <input 
               type="text"
@@ -442,8 +454,18 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
                 <div class="mb-4">
                   @if (bulkImportValidation.valid) {
                     <div class="p-3 bg-green-50 text-green-700 rounded-lg text-sm">
-                      ✓ Valid JSON: Found {{ bulkImportValidation.totalPlayers }} players 
-                      ({{ bulkImportValidation.malePlayers }} male players will be imported)
+                      ✓ Valid JSON: Found {{ bulkImportValidation.totalPlayers }} players
+                      <div class="mt-1 flex gap-4">
+                        <span class="inline-flex items-center gap-1">
+                          <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          {{ bulkImportValidation.malePlayers }} Men
+                        </span>
+                        <span class="inline-flex items-center gap-1">
+                          <span class="w-2 h-2 bg-pink-500 rounded-full"></span>
+                          {{ bulkImportValidation.femalePlayers }} Women
+                        </span>
+                      </div>
+                      <div class="mt-1 text-green-600">Both will be imported!</div>
                     </div>
                   } @else {
                     <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
@@ -457,7 +479,7 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
               @if (bulkImportResult) {
                 <div class="mb-4 p-4 bg-gray-50 rounded-lg">
                   <h4 class="font-medium text-gray-800 mb-2">Import Results:</h4>
-                  <div class="grid grid-cols-3 gap-4 text-center">
+                  <div class="grid grid-cols-3 gap-4 text-center mb-3">
                     <div class="p-2 bg-green-100 rounded">
                       <div class="text-2xl font-bold text-green-700">{{ bulkImportResult.created }}</div>
                       <div class="text-xs text-green-600">Created</div>
@@ -470,6 +492,10 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
                       <div class="text-2xl font-bold text-yellow-700">{{ bulkImportResult.skipped }}</div>
                       <div class="text-xs text-yellow-600">Skipped</div>
                     </div>
+                  </div>
+                  <div class="flex justify-center gap-6 text-sm">
+                    <span class="text-blue-600">👨 {{ bulkImportResult.menImported }} Men</span>
+                    <span class="text-pink-600">👩 {{ bulkImportResult.womenImported }} Women</span>
                   </div>
                   @if (bulkImportResult.errors.length > 0) {
                     <div class="mt-3 text-sm text-red-600">
@@ -524,7 +550,7 @@ export class PlayersComponent implements OnInit {
   countries: Country[] = [];
   loading = true;
 
-  filters = { country: '', role: '' };
+  filters = { country: '', role: '', gender: '' };
   searchTerm = '';
 
   showModal = false;
@@ -555,6 +581,7 @@ export class PlayersComponent implements OnInit {
     valid: false,
     totalPlayers: 0,
     malePlayers: 0,
+    femalePlayers: 0,
     error: ''
   };
 
@@ -611,6 +638,11 @@ export class PlayersComponent implements OnInit {
 
       // Role filter
       if (this.filters.role && player.role !== this.filters.role) {
+        return false;
+      }
+
+      // Gender filter
+      if (this.filters.gender && player.gender !== this.filters.gender) {
         return false;
       }
 
@@ -793,6 +825,7 @@ export class PlayersComponent implements OnInit {
       valid: false,
       totalPlayers: 0,
       malePlayers: 0,
+      femalePlayers: 0,
       error: ''
     };
   }
@@ -821,6 +854,7 @@ export class PlayersComponent implements OnInit {
       valid: false,
       totalPlayers: 0,
       malePlayers: 0,
+      femalePlayers: 0,
       error: ''
     };
 
@@ -856,12 +890,14 @@ export class PlayersComponent implements OnInit {
       }
 
       const malePlayers = playersArray.filter((p: any) => p.gender === 'M');
+      const femalePlayers = playersArray.filter((p: any) => p.gender === 'F');
       
       this.bulkImportValidation = {
-        valid: true,
+        valid: malePlayers.length > 0 || femalePlayers.length > 0,
         totalPlayers: playersArray.length,
         malePlayers: malePlayers.length,
-        error: ''
+        femalePlayers: femalePlayers.length,
+        error: malePlayers.length === 0 && femalePlayers.length === 0 ? 'No players with valid gender (M/F) found' : ''
       };
     } catch (e) {
       this.bulkImportValidation.error = 'Invalid JSON format';

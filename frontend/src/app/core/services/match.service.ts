@@ -3,8 +3,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiResponse } from '../models';
 
+export type MatchGender = 'men' | 'women';
+
 export interface Match {
   _id: string;
+  title?: string | null;
+  gender: MatchGender;
   format: 'T20' | 'ODI';
   team1: any;
   team2: any;
@@ -53,6 +57,8 @@ export interface CreateMatchDto {
   team2: string;
   venue: string;
   date: string;
+  gender?: MatchGender;
+  title?: string | null;
 }
 
 export interface MatchFilters {
@@ -146,5 +152,9 @@ export class MatchService {
 
   substitutePlayer(id: string, data: { team: 'team1' | 'team2', playerOut: string, playerIn: string }): Observable<ApiResponse<Match>> {
     return this.http.put<ApiResponse<Match>>(`${this.apiUrl}/${id}/substitute`, data);
+  }
+
+  updateTitle(id: string, title: string): Observable<ApiResponse<Match>> {
+    return this.http.put<ApiResponse<Match>>(`${this.apiUrl}/${id}/title`, { title });
   }
 }

@@ -5,7 +5,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { Router } from '@angular/router';
 import { MatchService, Match } from '../../../core/services/match.service';
 import { CountryService, PlayerService } from '../../../core/services';
-import { Country, Player } from '../../../core/models';
+import { Country, Player, PlayerGender } from '../../../core/models';
 
 type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
 
@@ -129,8 +129,11 @@ interface SquadPlayer {
                   <div>
                     <div class="flex items-center gap-3 mb-2">
                       <h3 class="text-lg font-semibold text-gray-800">
-                        {{ match.team1?.name }} vs {{ match.team2?.name }}
+                        {{ getMatchDisplayTitle(match) }}
                       </h3>
+                      @if (match.gender === 'women') {
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-pink-100 text-pink-700">Women</span>
+                      }
                       <span 
                         class="px-2 py-1 text-xs rounded-full"
                         [class.bg-yellow-100]="match.status === 'upcoming'"
@@ -243,12 +246,42 @@ interface SquadPlayer {
 
           <div class="bg-white rounded-lg shadow p-6">
             <form (ngSubmit)="createMatch()">
+              <!-- Gender Selection -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <div class="flex gap-4">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      [(ngModel)]="matchForm.gender" 
+                      name="gender" 
+                      value="men"
+                      (ngModelChange)="updateTitlePreview()"
+                      class="text-blue-600 focus:ring-blue-500"
+                    >
+                    <span class="text-gray-700">Men</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      [(ngModel)]="matchForm.gender" 
+                      name="gender" 
+                      value="women"
+                      (ngModelChange)="updateTitlePreview()"
+                      class="text-pink-600 focus:ring-pink-500"
+                    >
+                    <span class="text-gray-700">Women</span>
+                  </label>
+                </div>
+              </div>
+
               <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Format</label>
                 <select 
                   [(ngModel)]="matchForm.format"
                   name="format"
                   required
+                  (ngModelChange)="updateTitlePreview()"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 >
                   <option value="T20">T20 (20 overs)</option>
@@ -303,7 +336,7 @@ interface SquadPlayer {
                 >
               </div>
 
-              <div class="mb-6">
+              <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
                 <input 
                   type="date"
@@ -312,6 +345,19 @@ interface SquadPlayer {
                   required
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 >
+              </div>
+
+              <!-- Match Title (auto-generated, editable) -->
+              <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Match Title</label>
+                <input 
+                  type="text"
+                  [(ngModel)]="matchForm.title"
+                  name="title"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="Auto-generated if left empty"
+                >
+                <p class="text-xs text-gray-500 mt-1">Preview: {{ getTitlePreview() }}</p>
               </div>
 
               @if (error) {
@@ -848,10 +894,12 @@ export class MatchesComponent implements OnInit {
   // Create Match Form
   matchForm = {
     format: 'T20' as 'T20' | 'ODI',
+    gender: 'men' as 'men' | 'women',
     team1: '',
     team2: '',
     venue: '',
-    date: ''
+    date: '',
+    title: ''
   };
 
   // Squad Selection
@@ -928,10 +976,12 @@ export class MatchesComponent implements OnInit {
   openCreateMatch() {
     this.matchForm = {
       format: 'T20',
+      gender: 'men',
       team1: '',
       team2: '',
       venue: '',
-      date: ''
+      date: '',
+      title: ''
     };
     this.error = '';
     this.currentStep = 'create';
@@ -951,12 +1001,17 @@ export class MatchesComponent implements OnInit {
     this.saving = true;
     this.error = '';
 
+    // Generate title if not provided
+    const title = this.matchForm.title.trim() || this.getTitlePreview();
+
     this.matchService.create({
       format: this.matchForm.format,
+      gender: this.matchForm.gender,
       team1: this.matchForm.team1,
       team2: this.matchForm.team2,
       venue: this.matchForm.venue,
-      date: new Date(this.matchForm.date).toISOString()
+      date: new Date(this.matchForm.date).toISOString(),
+      title
     }).subscribe({
       next: (response) => {
         if (response.success) {
@@ -988,7 +1043,10 @@ export class MatchesComponent implements OnInit {
     const team1Id = match.team1._id || match.team1;
     const team2Id = match.team2._id || match.team2;
 
-    this.playerService.getAll({ country: team1Id }).subscribe({
+    // Determine gender filter based on match gender
+    const genderFilter = match.gender === 'women' ? 'F' : 'M';
+
+    this.playerService.getAll({ country: team1Id, gender: genderFilter }).subscribe({
       next: (response) => {
         if (response.success) {
           this.team1Players = response.data;
@@ -1014,7 +1072,7 @@ export class MatchesComponent implements OnInit {
       }
     });
 
-    this.playerService.getAll({ country: team2Id }).subscribe({
+    this.playerService.getAll({ country: team2Id, gender: genderFilter }).subscribe({
       next: (response) => {
         if (response.success) {
           this.team2Players = response.data;
@@ -1351,5 +1409,36 @@ export class MatchesComponent implements OnInit {
 
   goToScoring(match: Match) {
     this.router.navigate(['/admin/scoring', match._id]);
+  }
+
+  // Title generation helpers
+  getMatchDisplayTitle(match: Match): string {
+    if (match.title) {
+      return match.title;
+    }
+    // Fallback to generated title
+    const team1Name = match.team1?.name || 'Team 1';
+    const team2Name = match.team2?.name || 'Team 2';
+    if (match.gender === 'women') {
+      return `Women's ${match.format}: ${team1Name} vs ${team2Name}`;
+    }
+    return `${team1Name} vs ${team2Name}`;
+  }
+
+  getTitlePreview(): string {
+    const team1 = this.countries.find(c => c._id === this.matchForm.team1);
+    const team2 = this.countries.find(c => c._id === this.matchForm.team2);
+    const team1Name = team1?.name || 'Team 1';
+    const team2Name = team2?.name || 'Team 2';
+    
+    if (this.matchForm.gender === 'women') {
+      return `Women's ${this.matchForm.format}: ${team1Name} vs ${team2Name}`;
+    }
+    return `${team1Name} vs ${team2Name}`;
+  }
+
+  updateTitlePreview() {
+    // This method is called when gender or format changes
+    // Title preview is computed in getTitlePreview()
   }
 }

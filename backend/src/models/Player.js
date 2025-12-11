@@ -57,6 +57,14 @@ const playerSchema = new mongoose.Schema({
   espnId: {
     type: Number,
     default: null
+  },
+  gender: {
+    type: String,
+    enum: {
+      values: ['M', 'F'],
+      message: '{VALUE} is not a valid gender'
+    },
+    default: 'M'
   }
 }, {
   timestamps: true
@@ -67,5 +75,7 @@ playerSchema.index({ country: 1 });
 playerSchema.index({ country: 1, name: 1 });
 playerSchema.index({ role: 1 });
 playerSchema.index({ isActive: 1 });
+playerSchema.index({ gender: 1 });
+playerSchema.index({ country: 1, gender: 1 });
 
 module.exports = mongoose.model('Player', playerSchema);

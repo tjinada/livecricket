@@ -79,7 +79,7 @@ const router = express.Router();
 // GET /api/players - List players with optional filters
 router.get('/', async (req, res, next) => {
   try {
-    const { country, role, active } = req.query;
+    const { country, role, active, gender } = req.query;
     
     const filter = {};
     
@@ -93,6 +93,10 @@ router.get('/', async (req, res, next) => {
     
     if (active !== undefined) {
       filter.isActive = active === 'true';
+    }
+    
+    if (gender) {
+      filter.gender = gender;
     }
     
     const players = await Player.find(filter)
@@ -293,13 +297,15 @@ router.post('/bulk-import', auth, async (req, res, next) => {
       created: 0,
       updated: 0,
       skipped: 0,
+      menImported: 0,
+      womenImported: 0,
       errors: []
     };
     
-    // Filter for male players only and process
-    const malePlayers = espnPlayers.filter(p => p.gender === 'M');
+    // Process all players with valid gender (M or F)
+    const validPlayers = espnPlayers.filter(p => p.gender === 'M' || p.gender === 'F');
     
-    for (const espnPlayer of malePlayers) {
+    for (const espnPlayer of validPlayers) {
       try {
         const playerName = espnPlayer.longName || espnPlayer.name;
         
@@ -317,13 +323,15 @@ router.post('/bulk-import', auth, async (req, res, next) => {
           bowlingStyle: mapBowlingStyle(espnPlayer.longBowlingStyles),
           headshotPath: espnPlayer.headshotImageUrl || espnPlayer.imageUrl || espnPlayer.image?.url || null,
           espnId: espnPlayer.id, // Store ESPN ID for reference
+          gender: espnPlayer.gender, // Store gender (M or F)
           isActive: true
         };
         
-        // Try to find existing player by name and country
+        // Try to find existing player by name, country, and gender
         const existingPlayer = await Player.findOne({
           name: playerName,
-          country: countryId
+          country: countryId,
+          gender: espnPlayer.gender
         });
         
         if (existingPlayer) {
@@ -335,6 +343,13 @@ router.post('/bulk-import', auth, async (req, res, next) => {
           const newPlayer = new Player(playerData);
           await newPlayer.save();
           results.created++;
+        }
+        
+        // Track gender counts
+        if (espnPlayer.gender === 'M') {
+          results.menImported++;
+        } else {
+          results.womenImported++;
         }
       } catch (playerError) {
         results.skipped++;
