@@ -79,6 +79,10 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // Custom Message properties
   customMessage: string = '';
   
+  // Cached Starting XI data (to avoid recalculating on every change detection)
+  team1StartingXI: Array<{ name: string; image: string | null; role: string; battingOrder: number }> = [];
+  team2StartingXI: Array<{ name: string; image: string | null; role: string; battingOrder: number }> = [];
+  
   // Highlight Video properties
   highlightInningsNumber: number | null = null;
   useDisplayBasedHighlights = true; // Use actual display views for highlights
@@ -107,15 +111,12 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== LIFECYCLE ====================
 
   ngOnInit() {
-    console.log('MatchDisplayComponent ngOnInit called');
     this.matchId = this.route.snapshot.paramMap.get('matchId') || '';
-    console.log('Match ID extracted:', this.matchId);
     if (this.matchId) {
       this.loadMatch();
       this.loadDefaultBackgrounds();
       this.setupSSE();
     } else {
-      console.error('No match ID found in route!');
       this.error = 'No match ID provided';
       this.loading = false;
     }
@@ -134,20 +135,18 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   // ==================== DATA LOADING ====================
 
   loadMatch() {
-    console.log('Loading match:', this.matchId);
     this.http.get<{ success: boolean; data: any }>(`/api/matches/${this.matchId}`).subscribe({
       next: (response) => {
-        console.log('Match response:', response);
         if (response.success) {
           this.match = response.data;
           this.displayView = this.match.displayView || 'live-score';
           this.buildPlayerNameCache();
+          this.updateStartingXICache();
           this.updateBackground();
         } else {
           this.error = 'Match not found';
         }
         this.loading = false;
-        console.log('Loading complete, loading:', this.loading, 'error:', this.error, 'match:', !!this.match);
       },
       error: (err) => {
         console.error('Error loading match:', err);
@@ -168,14 +167,35 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       next: (response) => {
         if (response.success) {
           this.match = response.data;
-          const newView = this.match.displayView || 'live-score';
-          console.log('[Display] reloadMatch - displayView changing from', this.displayView, 'to', newView);
-          this.displayView = newView;
+          this.displayView = this.match.displayView || 'live-score';
           this.buildPlayerNameCache();
+          this.updateStartingXICache();
           this.updateBackground();
         }
       }
     });
+  }
+  
+  /**
+   * Update cached Starting XI data
+   * Called when match data is loaded/reloaded
+   */
+  private updateStartingXICache(): void {
+    this.team1StartingXI = this.buildStartingXI(this.match?.squads?.team1);
+    this.team2StartingXI = this.buildStartingXI(this.match?.squads?.team2);
+  }
+  
+  private buildStartingXI(squad: any[]): Array<{ name: string; image: string | null; role: string; battingOrder: number }> {
+    if (!squad) return [];
+    return squad
+      .filter((p: any) => p.isPlayingXI && p.battingOrder)
+      .map((p: any) => ({
+        name: p.player?.name || 'Unknown',
+        image: p.player?.headshotPath || null,
+        role: p.player?.role || 'player',
+        battingOrder: p.battingOrder || 99
+      }))
+      .sort((a, b) => a.battingOrder - b.battingOrder);
   }
 
   updateBackground() {
@@ -267,14 +287,19 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
           }
           this.updateBackground();
         }
-        this.reloadMatch();
+        // Only reload if view requires fresh match data (e.g., player-stats needs selectedPlayer)
+        if (event.data?.view === 'player-stats') {
+          this.reloadMatch();
+        }
         break;
       case 'match-state':
-        if (event.data?.displayView) {
+        if (event.data?.displayView && event.data.displayView !== this.displayView) {
           this.displayView = event.data.displayView;
           this.updateBackground();
+          this.reloadMatch();
         }
-        this.reloadMatch();
+        // Don't reload for static views that don't need live updates
+        // (starting-xi and toss-screen data doesn't change during the match)
         break;
       case 'score-update':
       case 'over-complete':
@@ -1462,11 +1487,8 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     battingOrder: number;
   }> {
     if (!this.match?.squads?.team1) {
-      console.log('[StartingXI] Team1 squad not found');
       return [];
     }
-    
-    console.log('[StartingXI] Team1 raw squad:', this.match.squads.team1);
     
     // Get players who are in playing XI (have battingOrder assigned)
     const playingXI = this.match.squads.team1
@@ -1479,7 +1501,6 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       }))
       .sort((a: any, b: any) => a.battingOrder - b.battingOrder);
     
-    console.log('[StartingXI] Team1 playing XI:', playingXI);
     return playingXI;
   }
 
