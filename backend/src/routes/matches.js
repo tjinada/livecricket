@@ -554,28 +554,23 @@ router.delete('/:id', auth, async (req, res, next) => {
       });
     }
     
-    // Only allow deletion of upcoming matches
-    if (match.status !== 'upcoming') {
-      return res.status(400).json({
-        success: false,
-        message: 'Can only delete upcoming matches'
-      });
-    }
+    // Delete all associated ball records
+    const ballDeleteResult = await Ball.deleteMany({ match: req.params.id });
     
-    // Check if any balls have been recorded
-    const ballCount = await Ball.countDocuments({ match: req.params.id });
-    if (ballCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete match with recorded balls'
-      });
-    }
-    
+    // Delete the match
     await Match.findByIdAndDelete(req.params.id);
+    
+    // Clean up SSE clients for this match
+    if (sseClients.has(req.params.id)) {
+      sseClients.delete(req.params.id);
+    }
+    if (matchVersions.has(req.params.id)) {
+      matchVersions.delete(req.params.id);
+    }
     
     res.json({
       success: true,
-      message: 'Match deleted successfully'
+      message: `Match deleted successfully${ballDeleteResult.deletedCount > 0 ? ` (${ballDeleteResult.deletedCount} ball records removed)` : ''}`
     });
   } catch (error) {
     next(error);

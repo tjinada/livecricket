@@ -210,6 +210,12 @@ interface SquadPlayer {
                       >
                         Score Match
                       </button>
+                      <button 
+                        (click)="confirmDelete(match)"
+                        class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+                      >
+                        Delete
+                      </button>
                     }
                     @if (match.status === 'completed') {
                       <button 
@@ -217,6 +223,12 @@ interface SquadPlayer {
                         class="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
                       >
                         Manage Display
+                      </button>
+                      <button 
+                        (click)="confirmDelete(match)"
+                        class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+                      >
+                        Delete
                       </button>
                     }
                     <a 
@@ -848,10 +860,15 @@ interface SquadPlayer {
           <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div class="p-6">
               <h3 class="text-lg font-semibold text-gray-800 mb-2">Delete Match</h3>
-              <p class="text-gray-600 mb-6">
+              <p class="text-gray-600 mb-4">
                 Are you sure you want to delete 
                 <strong>{{ deletingMatch?.team1?.name }} vs {{ deletingMatch?.team2?.name }}</strong>?
               </p>
+              @if (deletingMatch?.status !== 'upcoming') {
+                <div class="mb-4 p-3 bg-yellow-50 text-yellow-800 rounded-lg text-sm">
+                  ⚠️ This {{ deletingMatch?.status }} match has scoring data that will be permanently deleted.
+                </div>
+              }
 
               @if (deleteError) {
                 <div class="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">

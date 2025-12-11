@@ -194,37 +194,7 @@ router.put('/:id', auth, async (req, res, next) => {
 // DELETE /api/players/:id - Delete player (protected)
 router.delete('/:id', auth, async (req, res, next) => {
   try {
-    // Check if player is in any match squad
-    const matchCount = await Match.countDocuments({
-      $or: [
-        { 'squads.team1.player': req.params.id },
-        { 'squads.team2.player': req.params.id }
-      ]
-    });
-    
-    if (matchCount > 0) {
-      // Soft delete - just mark as inactive
-      const player = await Player.findByIdAndUpdate(
-        req.params.id,
-        { isActive: false },
-        { new: true }
-      );
-      
-      if (!player) {
-        return res.status(404).json({
-          success: false,
-          message: 'Player not found'
-        });
-      }
-      
-      return res.json({
-        success: true,
-        message: 'Player deactivated (has match history)',
-        data: player
-      });
-    }
-    
-    // Hard delete if no match history
+    // Hard delete the player
     const player = await Player.findByIdAndDelete(req.params.id);
     
     if (!player) {
@@ -381,24 +351,6 @@ router.delete('/bulk-delete/:countryId', auth, async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'Country not found'
-      });
-    }
-    
-    // Check if any players are in match squads
-    const playersInMatches = await Player.find({ country: countryId });
-    const playerIds = playersInMatches.map(p => p._id);
-    
-    const matchCount = await Match.countDocuments({
-      $or: [
-        { 'squads.team1.player': { $in: playerIds } },
-        { 'squads.team2.player': { $in: playerIds } }
-      ]
-    });
-    
-    if (matchCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete players. Some players are in ${matchCount} match squad(s).`
       });
     }
     
