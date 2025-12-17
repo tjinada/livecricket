@@ -260,6 +260,21 @@ router.put('/:id/squad', auth, async (req, res, next) => {
     
     const { team1, team2 } = req.body;
     
+    // Validate squad size (max 15 per team)
+    if (team1 && team1.length > 15) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team 1 squad cannot exceed 15 players'
+      });
+    }
+    
+    if (team2 && team2.length > 15) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team 2 squad cannot exceed 15 players'
+      });
+    }
+    
     // Validate playing XI count
     const team1PlayingXI = team1?.filter(p => p.isPlayingXI) || [];
     const team2PlayingXI = team2?.filter(p => p.isPlayingXI) || [];
@@ -755,7 +770,7 @@ router.put('/:id/substitute', auth, async (req, res, next) => {
     
     const squad = match.squads[team];
     
-    // Find the player to replace
+    // Find the player to replace (from Playing XI)
     const playerOutIndex = squad.findIndex(p => 
       p.player.toString() === playerOut
     );
@@ -767,26 +782,43 @@ router.put('/:id/substitute', auth, async (req, res, next) => {
       });
     }
     
-    // Check if playerIn is already in the squad
-    const playerInExists = squad.some(p => p.player.toString() === playerIn);
-    if (playerInExists) {
+    // Check if playerOut is in Playing XI
+    if (!squad[playerOutIndex].isPlayingXI) {
       return res.status(400).json({
         success: false,
-        message: 'Replacement player is already in the squad'
+        message: 'Player to replace must be in Playing XI'
       });
     }
     
-    // Get the outgoing player's details
-    const outgoingPlayer = squad[playerOutIndex];
-    const battingOrder = outgoingPlayer.battingOrder;
-    const wasPlayingXI = outgoingPlayer.isPlayingXI;
+    // Find the replacement player (should be a reserve in the squad)
+    const playerInIndex = squad.findIndex(p => p.player.toString() === playerIn);
     
-    // Replace the player in the squad
-    squad[playerOutIndex] = {
-      player: playerIn,
-      isPlayingXI: wasPlayingXI,
-      battingOrder: battingOrder
-    };
+    if (playerInIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Replacement player not found in squad reserves'
+      });
+    }
+    
+    // Check if playerIn is a reserve (not in Playing XI)
+    if (squad[playerInIndex].isPlayingXI) {
+      return res.status(400).json({
+        success: false,
+        message: 'Replacement player must be a reserve (not already in Playing XI)'
+      });
+    }
+    
+    // Swap their positions: playerOut becomes reserve, playerIn becomes Playing XI
+    const outgoingBattingOrder = squad[playerOutIndex].battingOrder;
+    const incomingBattingOrder = squad[playerInIndex].battingOrder;
+    
+    // PlayerOut moves to reserves with the reserve's batting order
+    squad[playerOutIndex].isPlayingXI = false;
+    squad[playerOutIndex].battingOrder = incomingBattingOrder;
+    
+    // PlayerIn moves to Playing XI with the Playing XI batting order
+    squad[playerInIndex].isPlayingXI = true;
+    squad[playerInIndex].battingOrder = outgoingBattingOrder;
     
     // Update current innings if player is on field
     if (match.status === 'live' && match.innings && match.innings.length > 0) {

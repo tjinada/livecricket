@@ -13,8 +13,11 @@ interface SquadPlayer {
   player: string;
   playerData?: Player;
   isPlayingXI: boolean;
-  battingOrder: number;
+  battingOrder?: number;
 }
+
+const MAX_SQUAD_SIZE = 15;
+const PLAYING_XI_SIZE = 11;
 
 @Component({
   selector: 'app-matches',
@@ -399,7 +402,7 @@ interface SquadPlayer {
         </div>
       }
 
-      <!-- Squad Selection - Two Panel Layout -->
+      <!-- Squad Selection - Three Panel Layout (Available, Playing XI, Reserves) -->
       @if (currentStep === 'squad' && selectedMatch) {
         <div>
           <div class="flex items-center gap-4 mb-6">
@@ -409,57 +412,65 @@ interface SquadPlayer {
             <h2 class="text-2xl font-bold text-gray-800">
               Select Squads: {{ selectedMatch.team1?.name }} vs {{ selectedMatch.team2?.name }}
             </h2>
+            <span class="text-sm text-gray-500 ml-auto">
+              Select 11 Playing XI + up to 4 Reserves per team
+            </span>
           </div>
 
           <div class="grid grid-cols-2 gap-6">
             <!-- Team 1 -->
             <div class="bg-white rounded-lg shadow">
-              <div class="px-4 py-3 border-b bg-gray-50 rounded-t-lg">
+              <div class="px-4 py-3 border-b bg-gray-50 rounded-t-lg flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-800">{{ selectedMatch.team1?.name }}</h3>
+                <span class="text-sm text-gray-500">Squad: {{ getSquadCount('team1') }}/15</span>
               </div>
               
-              <div class="grid grid-cols-2 divide-x" style="height: calc(100vh - 280px);">
+              <div class="grid grid-cols-3 divide-x" style="height: calc(100vh - 280px);">
                 <!-- Available Players -->
                 <div class="flex flex-col">
-                  <div class="px-3 py-2 border-b bg-gray-50">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-sm font-medium text-gray-600">Available</span>
+                  <div class="px-2 py-2 border-b bg-gray-50">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-xs font-medium text-gray-600">Available</span>
                       <select 
                         [(ngModel)]="team1RoleFilter"
-                        class="text-xs px-2 py-1 border rounded bg-white"
+                        class="text-xs px-1 py-0.5 border rounded bg-white w-20"
                       >
-                        <option value="">All Roles</option>
-                        <option value="batsman">Batsman</option>
-                        <option value="bowler">Bowler</option>
-                        <option value="all-rounder">All Rounder</option>
-                        <option value="wicket-keeper">Wicket Keeper</option>
+                        <option value="">All</option>
+                        <option value="batsman">Bat</option>
+                        <option value="bowler">Bowl</option>
+                        <option value="all-rounder">AR</option>
+                        <option value="wicket-keeper">WK</option>
                       </select>
                     </div>
                   </div>
                   <div class="flex-1 overflow-y-auto">
                     @for (player of getAvailablePlayers('team1'); track player._id) {
                       <div 
-                        class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                        class="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
                         (click)="addToSquad('team1', player)"
                       >
                         <div class="flex-1 min-w-0">
-                          <div class="text-sm font-medium text-gray-900 truncate">{{ player.name }}</div>
-                          <div class="text-xs text-gray-500">{{ formatRole(player.role) }}</div>
+                          <div class="text-xs font-medium text-gray-900 truncate">{{ player.name }}</div>
+                          <div class="text-xs text-gray-400">{{ formatRole(player.role) }}</div>
                         </div>
                         <button 
-                          class="w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-600 hover:bg-green-200 flex-shrink-0"
-                          [disabled]="getPlayingXICount('team1') >= 11"
+                          class="w-5 h-5 flex items-center justify-center rounded-full text-xs flex-shrink-0"
+                          [class.bg-green-100]="getSquadCount('team1') < 15"
+                          [class.text-green-600]="getSquadCount('team1') < 15"
+                          [class.bg-gray-100]="getSquadCount('team1') >= 15"
+                          [class.text-gray-400]="getSquadCount('team1') >= 15"
+                          [disabled]="getSquadCount('team1') >= 15"
                         >
                           +
                         </button>
                       </div>
                     }
                     @if (getAvailablePlayers('team1').length === 0) {
-                      <div class="p-4 text-center text-gray-400 text-sm">
+                      <div class="p-3 text-center text-gray-400 text-xs">
                         @if (team1Players.length === 0) {
-                          No players found
+                          No players
                         } @else {
-                          All players selected
+                          All selected
                         }
                       </div>
                     }
@@ -468,11 +479,11 @@ interface SquadPlayer {
 
                 <!-- Playing XI -->
                 <div class="flex flex-col">
-                  <div class="px-3 py-2 border-b bg-green-50">
+                  <div class="px-2 py-2 border-b bg-green-50">
                     <div class="flex items-center justify-between">
-                      <span class="text-sm font-medium text-green-700">Playing XI</span>
+                      <span class="text-xs font-medium text-green-700">Playing XI</span>
                       <span 
-                        class="text-xs font-bold px-2 py-0.5 rounded-full"
+                        class="text-xs font-bold px-1.5 py-0.5 rounded-full"
                         [class.bg-green-200]="getPlayingXICount('team1') === 11"
                         [class.text-green-800]="getPlayingXICount('team1') === 11"
                         [class.bg-yellow-200]="getPlayingXICount('team1') !== 11"
@@ -485,30 +496,38 @@ interface SquadPlayer {
                   <div 
                     class="flex-1 overflow-y-auto"
                     cdkDropList
-                    [cdkDropListData]="squadForm.team1"
+                    #team1PlayingXIList="cdkDropList"
+                    [cdkDropListData]="getPlayingXI('team1')"
+                    [cdkDropListConnectedTo]="[team1ReservesList]"
                     (cdkDropListDropped)="dropPlayer('team1', $event)"
                   >
                     @for (squadPlayer of getPlayingXI('team1'); track squadPlayer.player; let i = $index) {
                       <div 
-                        class="flex items-center gap-1 px-2 py-1.5 border-b border-gray-100 bg-green-50/50 cursor-grab active:cursor-grabbing"
+                        class="flex items-center gap-1 px-1 py-1 border-b border-gray-100 bg-green-50/50 cursor-grab active:cursor-grabbing"
                         cdkDrag
                         [cdkDragData]="squadPlayer"
                       >
                         <div class="cdk-drag-placeholder" *cdkDragPlaceholder>
-                          <div class="h-10 bg-green-200 border-2 border-dashed border-green-400 rounded"></div>
+                          <div class="h-8 bg-green-200 border-2 border-dashed border-green-400 rounded"></div>
                         </div>
-                        <span class="w-5 h-5 flex items-center justify-center text-xs font-bold text-green-700 bg-green-200 rounded">
+                        <span class="w-4 h-4 flex items-center justify-center text-xs font-bold text-green-700 bg-green-200 rounded flex-shrink-0">
                           {{ squadPlayer.battingOrder }}
                         </span>
                         <div class="flex-1 min-w-0">
-                          <div class="text-sm font-medium text-gray-900 truncate">{{ squadPlayer.playerData?.name }}</div>
-                          <div class="text-xs text-gray-500">{{ formatRole(squadPlayer.playerData?.role || '') }}</div>
+                          <div class="text-xs font-medium text-gray-900 truncate">{{ squadPlayer.playerData?.name }}</div>
                         </div>
-                        <div class="flex items-center gap-0.5">
-                          <span class="text-gray-300 mr-1">⋮⋮</span>
+                        <div class="flex items-center gap-0.5 flex-shrink-0">
                           <button 
-                            class="w-5 h-5 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-100 rounded"
-                            (click)="removeFromSquad('team1', squadPlayer.player)"
+                            class="w-4 h-4 flex items-center justify-center text-orange-400 hover:text-orange-600 text-xs"
+                            (click)="moveToReserves('team1', squadPlayer.player); $event.stopPropagation()"
+                            title="Move to reserves"
+                          >
+                            ↓
+                          </button>
+                          <button 
+                            class="w-4 h-4 flex items-center justify-center text-red-400 hover:text-red-600 text-xs"
+                            (click)="removeFromSquad('team1', squadPlayer.player); $event.stopPropagation()"
+                            title="Remove"
                           >
                             ×
                           </button>
@@ -516,8 +535,70 @@ interface SquadPlayer {
                       </div>
                     }
                     @if (getPlayingXICount('team1') === 0) {
-                      <div class="p-4 text-center text-gray-400 text-sm">
-                        Click + to add players
+                      <div class="p-3 text-center text-gray-400 text-xs">
+                        Add players →
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Reserves -->
+                <div class="flex flex-col">
+                  <div class="px-2 py-2 border-b bg-orange-50">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-medium text-orange-700">Reserves</span>
+                      <span class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-orange-200 text-orange-800">
+                        {{ getReservesCount('team1') }}/4
+                      </span>
+                    </div>
+                  </div>
+                  <div 
+                    class="flex-1 overflow-y-auto"
+                    cdkDropList
+                    #team1ReservesList="cdkDropList"
+                    [cdkDropListData]="getReserves('team1')"
+                    [cdkDropListConnectedTo]="[team1PlayingXIList]"
+                    (cdkDropListDropped)="dropReserveToPlayingXI('team1', $event)"
+                  >
+                    @for (squadPlayer of getReserves('team1'); track squadPlayer.player) {
+                      <div 
+                        class="flex items-center gap-1 px-1 py-1 border-b border-gray-100 bg-orange-50/50 cursor-grab active:cursor-grabbing"
+                        cdkDrag
+                        [cdkDragData]="squadPlayer"
+                        [cdkDragDisabled]="getPlayingXICount('team1') >= 11"
+                      >
+                        <div class="cdk-drag-placeholder" *cdkDragPlaceholder>
+                          <div class="h-8 bg-orange-200 border-2 border-dashed border-orange-400 rounded"></div>
+                        </div>
+                        <span class="w-4 h-4 flex items-center justify-center text-xs font-bold text-orange-600 bg-orange-200 rounded flex-shrink-0">
+                          {{ squadPlayer.battingOrder }}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-xs font-medium text-gray-900 truncate">{{ squadPlayer.playerData?.name }}</div>
+                        </div>
+                        <div class="flex items-center gap-0.5 flex-shrink-0">
+                          <button 
+                            class="w-4 h-4 flex items-center justify-center text-green-400 hover:text-green-600 text-xs"
+                            (click)="promoteToPlayingXI('team1', squadPlayer.player); $event.stopPropagation()"
+                            title="Move to Playing XI"
+                            [disabled]="getPlayingXICount('team1') >= 11"
+                            [class.opacity-50]="getPlayingXICount('team1') >= 11"
+                          >
+                            ↑
+                          </button>
+                          <button 
+                            class="w-4 h-4 flex items-center justify-center text-red-400 hover:text-red-600 text-xs"
+                            (click)="removeFromSquad('team1', squadPlayer.player); $event.stopPropagation()"
+                            title="Remove"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    }
+                    @if (getReservesCount('team1') === 0) {
+                      <div class="p-3 text-center text-gray-400 text-xs">
+                        Optional backups
                       </div>
                     }
                   </div>
@@ -527,52 +608,57 @@ interface SquadPlayer {
 
             <!-- Team 2 -->
             <div class="bg-white rounded-lg shadow">
-              <div class="px-4 py-3 border-b bg-gray-50 rounded-t-lg">
+              <div class="px-4 py-3 border-b bg-gray-50 rounded-t-lg flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-800">{{ selectedMatch.team2?.name }}</h3>
+                <span class="text-sm text-gray-500">Squad: {{ getSquadCount('team2') }}/15</span>
               </div>
               
-              <div class="grid grid-cols-2 divide-x" style="height: calc(100vh - 280px);">
+              <div class="grid grid-cols-3 divide-x" style="height: calc(100vh - 280px);">
                 <!-- Available Players -->
                 <div class="flex flex-col">
-                  <div class="px-3 py-2 border-b bg-gray-50">
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="text-sm font-medium text-gray-600">Available</span>
+                  <div class="px-2 py-2 border-b bg-gray-50">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-xs font-medium text-gray-600">Available</span>
                       <select 
                         [(ngModel)]="team2RoleFilter"
-                        class="text-xs px-2 py-1 border rounded bg-white"
+                        class="text-xs px-1 py-0.5 border rounded bg-white w-20"
                       >
-                        <option value="">All Roles</option>
-                        <option value="batsman">Batsman</option>
-                        <option value="bowler">Bowler</option>
-                        <option value="all-rounder">All Rounder</option>
-                        <option value="wicket-keeper">Wicket Keeper</option>
+                        <option value="">All</option>
+                        <option value="batsman">Bat</option>
+                        <option value="bowler">Bowl</option>
+                        <option value="all-rounder">AR</option>
+                        <option value="wicket-keeper">WK</option>
                       </select>
                     </div>
                   </div>
                   <div class="flex-1 overflow-y-auto">
                     @for (player of getAvailablePlayers('team2'); track player._id) {
                       <div 
-                        class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                        class="flex items-center gap-1 px-2 py-1.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
                         (click)="addToSquad('team2', player)"
                       >
                         <div class="flex-1 min-w-0">
-                          <div class="text-sm font-medium text-gray-900 truncate">{{ player.name }}</div>
-                          <div class="text-xs text-gray-500">{{ formatRole(player.role) }}</div>
+                          <div class="text-xs font-medium text-gray-900 truncate">{{ player.name }}</div>
+                          <div class="text-xs text-gray-400">{{ formatRole(player.role) }}</div>
                         </div>
                         <button 
-                          class="w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-600 hover:bg-green-200 flex-shrink-0"
-                          [disabled]="getPlayingXICount('team2') >= 11"
+                          class="w-5 h-5 flex items-center justify-center rounded-full text-xs flex-shrink-0"
+                          [class.bg-green-100]="getSquadCount('team2') < 15"
+                          [class.text-green-600]="getSquadCount('team2') < 15"
+                          [class.bg-gray-100]="getSquadCount('team2') >= 15"
+                          [class.text-gray-400]="getSquadCount('team2') >= 15"
+                          [disabled]="getSquadCount('team2') >= 15"
                         >
                           +
                         </button>
                       </div>
                     }
                     @if (getAvailablePlayers('team2').length === 0) {
-                      <div class="p-4 text-center text-gray-400 text-sm">
+                      <div class="p-3 text-center text-gray-400 text-xs">
                         @if (team2Players.length === 0) {
-                          No players found
+                          No players
                         } @else {
-                          All players selected
+                          All selected
                         }
                       </div>
                     }
@@ -581,11 +667,11 @@ interface SquadPlayer {
 
                 <!-- Playing XI -->
                 <div class="flex flex-col">
-                  <div class="px-3 py-2 border-b bg-green-50">
+                  <div class="px-2 py-2 border-b bg-green-50">
                     <div class="flex items-center justify-between">
-                      <span class="text-sm font-medium text-green-700">Playing XI</span>
+                      <span class="text-xs font-medium text-green-700">Playing XI</span>
                       <span 
-                        class="text-xs font-bold px-2 py-0.5 rounded-full"
+                        class="text-xs font-bold px-1.5 py-0.5 rounded-full"
                         [class.bg-green-200]="getPlayingXICount('team2') === 11"
                         [class.text-green-800]="getPlayingXICount('team2') === 11"
                         [class.bg-yellow-200]="getPlayingXICount('team2') !== 11"
@@ -598,30 +684,38 @@ interface SquadPlayer {
                   <div 
                     class="flex-1 overflow-y-auto"
                     cdkDropList
-                    [cdkDropListData]="squadForm.team2"
+                    #team2PlayingXIList="cdkDropList"
+                    [cdkDropListData]="getPlayingXI('team2')"
+                    [cdkDropListConnectedTo]="[team2ReservesList]"
                     (cdkDropListDropped)="dropPlayer('team2', $event)"
                   >
                     @for (squadPlayer of getPlayingXI('team2'); track squadPlayer.player; let i = $index) {
                       <div 
-                        class="flex items-center gap-1 px-2 py-1.5 border-b border-gray-100 bg-green-50/50 cursor-grab active:cursor-grabbing"
+                        class="flex items-center gap-1 px-1 py-1 border-b border-gray-100 bg-green-50/50 cursor-grab active:cursor-grabbing"
                         cdkDrag
                         [cdkDragData]="squadPlayer"
                       >
                         <div class="cdk-drag-placeholder" *cdkDragPlaceholder>
-                          <div class="h-10 bg-green-200 border-2 border-dashed border-green-400 rounded"></div>
+                          <div class="h-8 bg-green-200 border-2 border-dashed border-green-400 rounded"></div>
                         </div>
-                        <span class="w-5 h-5 flex items-center justify-center text-xs font-bold text-green-700 bg-green-200 rounded">
+                        <span class="w-4 h-4 flex items-center justify-center text-xs font-bold text-green-700 bg-green-200 rounded flex-shrink-0">
                           {{ squadPlayer.battingOrder }}
                         </span>
                         <div class="flex-1 min-w-0">
-                          <div class="text-sm font-medium text-gray-900 truncate">{{ squadPlayer.playerData?.name }}</div>
-                          <div class="text-xs text-gray-500">{{ formatRole(squadPlayer.playerData?.role || '') }}</div>
+                          <div class="text-xs font-medium text-gray-900 truncate">{{ squadPlayer.playerData?.name }}</div>
                         </div>
-                        <div class="flex items-center gap-0.5">
-                          <span class="text-gray-300 mr-1">⋮⋮</span>
+                        <div class="flex items-center gap-0.5 flex-shrink-0">
                           <button 
-                            class="w-5 h-5 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-100 rounded"
-                            (click)="removeFromSquad('team2', squadPlayer.player)"
+                            class="w-4 h-4 flex items-center justify-center text-orange-400 hover:text-orange-600 text-xs"
+                            (click)="moveToReserves('team2', squadPlayer.player); $event.stopPropagation()"
+                            title="Move to reserves"
+                          >
+                            ↓
+                          </button>
+                          <button 
+                            class="w-4 h-4 flex items-center justify-center text-red-400 hover:text-red-600 text-xs"
+                            (click)="removeFromSquad('team2', squadPlayer.player); $event.stopPropagation()"
+                            title="Remove"
                           >
                             ×
                           </button>
@@ -629,8 +723,70 @@ interface SquadPlayer {
                       </div>
                     }
                     @if (getPlayingXICount('team2') === 0) {
-                      <div class="p-4 text-center text-gray-400 text-sm">
-                        Click + to add players
+                      <div class="p-3 text-center text-gray-400 text-xs">
+                        Add players →
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Reserves -->
+                <div class="flex flex-col">
+                  <div class="px-2 py-2 border-b bg-orange-50">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-medium text-orange-700">Reserves</span>
+                      <span class="text-xs font-bold px-1.5 py-0.5 rounded-full bg-orange-200 text-orange-800">
+                        {{ getReservesCount('team2') }}/4
+                      </span>
+                    </div>
+                  </div>
+                  <div 
+                    class="flex-1 overflow-y-auto"
+                    cdkDropList
+                    #team2ReservesList="cdkDropList"
+                    [cdkDropListData]="getReserves('team2')"
+                    [cdkDropListConnectedTo]="[team2PlayingXIList]"
+                    (cdkDropListDropped)="dropReserveToPlayingXI('team2', $event)"
+                  >
+                    @for (squadPlayer of getReserves('team2'); track squadPlayer.player) {
+                      <div 
+                        class="flex items-center gap-1 px-1 py-1 border-b border-gray-100 bg-orange-50/50 cursor-grab active:cursor-grabbing"
+                        cdkDrag
+                        [cdkDragData]="squadPlayer"
+                        [cdkDragDisabled]="getPlayingXICount('team2') >= 11"
+                      >
+                        <div class="cdk-drag-placeholder" *cdkDragPlaceholder>
+                          <div class="h-8 bg-orange-200 border-2 border-dashed border-orange-400 rounded"></div>
+                        </div>
+                        <span class="w-4 h-4 flex items-center justify-center text-xs font-bold text-orange-600 bg-orange-200 rounded flex-shrink-0">
+                          {{ squadPlayer.battingOrder }}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-xs font-medium text-gray-900 truncate">{{ squadPlayer.playerData?.name }}</div>
+                        </div>
+                        <div class="flex items-center gap-0.5 flex-shrink-0">
+                          <button 
+                            class="w-4 h-4 flex items-center justify-center text-green-400 hover:text-green-600 text-xs"
+                            (click)="promoteToPlayingXI('team2', squadPlayer.player); $event.stopPropagation()"
+                            title="Move to Playing XI"
+                            [disabled]="getPlayingXICount('team2') >= 11"
+                            [class.opacity-50]="getPlayingXICount('team2') >= 11"
+                          >
+                            ↑
+                          </button>
+                          <button 
+                            class="w-4 h-4 flex items-center justify-center text-red-400 hover:text-red-600 text-xs"
+                            (click)="removeFromSquad('team2', squadPlayer.player); $event.stopPropagation()"
+                            title="Remove"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    }
+                    @if (getReservesCount('team2') === 0) {
+                      <div class="p-3 text-center text-gray-400 text-xs">
+                        Optional backups
                       </div>
                     }
                   </div>
@@ -1067,23 +1223,23 @@ export class MatchesComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.team1Players = response.data;
-          // Populate existing squad with player data
+          // Populate existing squad with player data (both Playing XI and Reserves)
           if (match.squads?.team1) {
             this.squadForm.team1 = match.squads.team1
-              .filter(p => p.isPlayingXI)
               .map(p => {
                 const playerId = p.player._id || p.player;
                 const playerData = this.team1Players.find(pl => pl._id === playerId);
                 return {
                   player: playerId,
                   playerData: playerData || p.player,
-                  isPlayingXI: true,
+                  isPlayingXI: p.isPlayingXI,
                   battingOrder: p.battingOrder || 0
                 };
               })
-              .sort((a, b) => a.battingOrder - b.battingOrder);
+              .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99));
             // Reassign batting orders to be sequential
-            this.squadForm.team1.forEach((p, i) => p.battingOrder = i + 1);
+            this.reorderPlayingXI('team1');
+            this.reorderReserves('team1');
           }
         }
       }
@@ -1093,23 +1249,23 @@ export class MatchesComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.team2Players = response.data;
-          // Populate existing squad with player data
+          // Populate existing squad with player data (both Playing XI and Reserves)
           if (match.squads?.team2) {
             this.squadForm.team2 = match.squads.team2
-              .filter(p => p.isPlayingXI)
               .map(p => {
                 const playerId = p.player._id || p.player;
                 const playerData = this.team2Players.find(pl => pl._id === playerId);
                 return {
                   player: playerId,
                   playerData: playerData || p.player,
-                  isPlayingXI: true,
+                  isPlayingXI: p.isPlayingXI,
                   battingOrder: p.battingOrder || 0
                 };
               })
-              .sort((a, b) => a.battingOrder - b.battingOrder);
+              .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99));
             // Reassign batting orders to be sequential
-            this.squadForm.team2.forEach((p, i) => p.battingOrder = i + 1);
+            this.reorderPlayingXI('team2');
+            this.reorderReserves('team2');
           }
         }
       }
@@ -1131,38 +1287,116 @@ export class MatchesComponent implements OnInit {
   }
 
   getPlayingXI(team: 'team1' | 'team2'): SquadPlayer[] {
-    return this.squadForm[team].filter(p => p.isPlayingXI).sort((a, b) => a.battingOrder - b.battingOrder);
+    return this.squadForm[team].filter(p => p.isPlayingXI).sort((a, b) => (a.battingOrder ?? 0) - (b.battingOrder ?? 0));
   }
 
   getPlayingXICount(team: 'team1' | 'team2'): number {
     return this.squadForm[team].filter(p => p.isPlayingXI).length;
   }
 
+  getReserves(team: 'team1' | 'team2'): SquadPlayer[] {
+    return this.squadForm[team]
+      .filter(p => !p.isPlayingXI)
+      .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99));
+  }
+
+  getReservesCount(team: 'team1' | 'team2'): number {
+    return this.squadForm[team].filter(p => !p.isPlayingXI).length;
+  }
+
+  getSquadCount(team: 'team1' | 'team2'): number {
+    return this.squadForm[team].length;
+  }
+
   addToSquad(team: 'team1' | 'team2', player: Player) {
-    if (this.getPlayingXICount(team) >= 11) return;
+    // Check if we've hit the max squad size (15)
+    if (this.getSquadCount(team) >= MAX_SQUAD_SIZE) return;
     
-    const nextOrder = this.getPlayingXICount(team) + 1;
-    this.squadForm[team].push({
-      player: player._id,
-      playerData: player,
-      isPlayingXI: true,
-      battingOrder: nextOrder
-    });
+    // If Playing XI not full, add to Playing XI with batting order
+    if (this.getPlayingXICount(team) < PLAYING_XI_SIZE) {
+      const nextOrder = this.getPlayingXICount(team) + 1;
+      this.squadForm[team].push({
+        player: player._id,
+        playerData: player,
+        isPlayingXI: true,
+        battingOrder: nextOrder
+      });
+    } else {
+      // Playing XI is full, add to reserves
+      const nextReserveOrder = PLAYING_XI_SIZE + this.getReservesCount(team) + 1;
+      this.squadForm[team].push({
+        player: player._id,
+        playerData: player,
+        isPlayingXI: false,
+        battingOrder: nextReserveOrder
+      });
+    }
   }
 
   removeFromSquad(team: 'team1' | 'team2', playerId: string) {
     const index = this.squadForm[team].findIndex(p => p.player === playerId);
     if (index >= 0) {
+      const wasPlayingXI = this.squadForm[team][index].isPlayingXI;
       this.squadForm[team].splice(index, 1);
-      // Reorder remaining players
-      this.squadForm[team]
-        .filter(p => p.isPlayingXI)
-        .sort((a, b) => a.battingOrder - b.battingOrder)
-        .forEach((p, i) => p.battingOrder = i + 1);
+      
+      // Reorder based on whether player was in Playing XI or Reserves
+      if (wasPlayingXI) {
+        this.reorderPlayingXI(team);
+      }
+      this.reorderReserves(team);
     }
   }
 
+  moveToReserves(team: 'team1' | 'team2', playerId: string) {
+    const player = this.squadForm[team].find(p => p.player === playerId);
+    if (player && player.isPlayingXI) {
+      player.isPlayingXI = false;
+      this.reorderPlayingXI(team);
+      this.reorderReserves(team);
+    }
+  }
+
+  promoteToPlayingXI(team: 'team1' | 'team2', playerId: string) {
+    if (this.getPlayingXICount(team) >= PLAYING_XI_SIZE) return;
+    
+    const player = this.squadForm[team].find(p => p.player === playerId);
+    if (player && !player.isPlayingXI) {
+      player.isPlayingXI = true;
+      player.battingOrder = this.getPlayingXICount(team); // Will be set correctly by reorder
+      this.reorderPlayingXI(team);
+      this.reorderReserves(team);
+    }
+  }
+
+  private reorderPlayingXI(team: 'team1' | 'team2') {
+    this.squadForm[team]
+      .filter(p => p.isPlayingXI)
+      .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99))
+      .forEach((p, i) => p.battingOrder = i + 1);
+  }
+
+  private reorderReserves(team: 'team1' | 'team2') {
+    this.squadForm[team]
+      .filter(p => !p.isPlayingXI)
+      .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99))
+      .forEach((p, i) => p.battingOrder = PLAYING_XI_SIZE + i + 1);
+  }
+
   dropPlayer(team: 'team1' | 'team2', event: CdkDragDrop<SquadPlayer[]>) {
+    // Handle drops from reserves list to Playing XI
+    if (event.previousContainer !== event.container) {
+      // Dragging from reserves to Playing XI
+      if (this.getPlayingXICount(team) >= PLAYING_XI_SIZE) return;
+      
+      const draggedPlayer = event.item.data as SquadPlayer;
+      if (draggedPlayer && !draggedPlayer.isPlayingXI) {
+        draggedPlayer.isPlayingXI = true;
+        this.reorderPlayingXI(team);
+        this.reorderReserves(team);
+      }
+      return;
+    }
+    
     if (event.previousIndex === event.currentIndex) return;
     
     // Get the playing XI sorted by batting order
@@ -1175,6 +1409,27 @@ export class MatchesComponent implements OnInit {
     playingXI.forEach((player, index) => {
       player.battingOrder = index + 1;
     });
+  }
+
+  dropReserveToPlayingXI(team: 'team1' | 'team2', event: CdkDragDrop<SquadPlayer[]>) {
+    // Handle drops from Playing XI to reserves
+    if (event.previousContainer !== event.container) {
+      const draggedPlayer = event.item.data as SquadPlayer;
+      if (draggedPlayer && draggedPlayer.isPlayingXI) {
+        // Move from Playing XI to Reserves
+        draggedPlayer.isPlayingXI = false;
+        this.reorderPlayingXI(team);
+        this.reorderReserves(team);
+      }
+      return;
+    }
+    
+    // Reordering within reserves
+    if (event.previousIndex === event.currentIndex) return;
+    
+    const reserves = this.getReserves(team);
+    moveItemInArray(reserves, event.previousIndex, event.currentIndex);
+    this.reorderReserves(team);
   }
 
   formatRole(role: string): string {
@@ -1191,18 +1446,18 @@ export class MatchesComponent implements OnInit {
     this.saving = true;
     this.error = '';
 
-    // Convert to backend format
+    // Convert to backend format - use type assertion to match SquadPlayer from service
     const team1Data = this.squadForm.team1.map(p => ({
       player: p.player,
       isPlayingXI: p.isPlayingXI,
       battingOrder: p.battingOrder
-    }));
+    } as { player: string; isPlayingXI: boolean; battingOrder?: number }));
 
     const team2Data = this.squadForm.team2.map(p => ({
       player: p.player,
       isPlayingXI: p.isPlayingXI,
       battingOrder: p.battingOrder
-    }));
+    } as { player: string; isPlayingXI: boolean; battingOrder?: number }));
 
     this.matchService.setSquad(this.selectedMatch!._id, {
       team1: team1Data,

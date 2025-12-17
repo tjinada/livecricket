@@ -479,13 +479,16 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 </div>
               </div>
 
-              <!-- Playing XI -->
+              <!-- Playing XI & Reserves -->
               <div class="bg-white rounded-lg shadow p-4">
                 <div class="flex justify-between items-center mb-3">
                   <h3 class="font-semibold text-gray-800">Playing XI</h3>
                   <button 
                     (click)="openSubstituteModal()"
                     class="text-sm text-blue-600 hover:text-blue-800"
+                    [class.opacity-50]="!hasReserves()"
+                    [disabled]="!hasReserves()"
+                    [title]="hasReserves() ? 'Substitute player from reserves' : 'No reserves available'"
                   >
                     🔄 Substitute
                   </button>
@@ -533,6 +536,20 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                         </div>
                       }
                     </div>
+                    <!-- Team 1 Reserves -->
+                    @if (getTeam1Reserves().length > 0) {
+                      <div class="mt-3 pt-2 border-t border-dashed border-orange-200">
+                        <h5 class="text-xs font-medium text-orange-600 mb-1">Reserves</h5>
+                        <div class="space-y-1">
+                          @for (player of getTeam1Reserves(); track getPlayerId(player)) {
+                            <div class="flex items-center gap-2 text-sm py-1 px-2 rounded bg-orange-50/50">
+                              <span class="text-orange-400 text-xs w-4">{{ player.battingOrder }}</span>
+                              <span class="flex-1 truncate text-orange-700">{{ getSquadPlayerName(player) }}</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
                   </div>
                   <!-- Team 2 -->
                   <div>
@@ -576,6 +593,20 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                         </div>
                       }
                     </div>
+                    <!-- Team 2 Reserves -->
+                    @if (getTeam2Reserves().length > 0) {
+                      <div class="mt-3 pt-2 border-t border-dashed border-orange-200">
+                        <h5 class="text-xs font-medium text-orange-600 mb-1">Reserves</h5>
+                        <div class="space-y-1">
+                          @for (player of getTeam2Reserves(); track getPlayerId(player)) {
+                            <div class="flex items-center gap-2 text-sm py-1 px-2 rounded bg-orange-50/50">
+                              <span class="text-orange-400 text-xs w-4">{{ player.battingOrder }}</span>
+                              <span class="flex-1 truncate text-orange-700">{{ getSquadPlayerName(player) }}</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
                   </div>
                 </div>
               </div>
@@ -1211,7 +1242,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <h3 class="text-lg font-semibold">Substitute Player</h3>
             </div>
             <div class="p-4 space-y-4">
-              <p class="text-sm text-gray-500">Replace a player in the playing XI with another player from the country.</p>
+              <p class="text-sm text-gray-500">Replace a player in the Playing XI with a reserve player.</p>
               
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Team</label>
@@ -1221,14 +1252,18 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   class="w-full px-3 py-2 border rounded-lg"
                 >
                   <option value="">Select Team</option>
-                  <option value="team1">{{ match?.team1?.name }}</option>
-                  <option value="team2">{{ match?.team2?.name }}</option>
+                  @if (getTeam1Reserves().length > 0) {
+                    <option value="team1">{{ match?.team1?.name }} ({{ getTeam1Reserves().length }} reserves)</option>
+                  }
+                  @if (getTeam2Reserves().length > 0) {
+                    <option value="team2">{{ match?.team2?.name }} ({{ getTeam2Reserves().length }} reserves)</option>
+                  }
                 </select>
               </div>
 
               @if (substituteForm.team) {
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Player Out</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Player Out (from Playing XI)</label>
                   <select 
                     [(ngModel)]="substituteForm.playerOut"
                     (change)="onPlayerOutChange()"
@@ -1237,35 +1272,26 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                     <option value="">Select Player to Replace</option>
                     @for (player of getPlayingXIForTeam(substituteForm.team); track getPlayerId(player)) {
                       <option [value]="getPlayerId(player)">
-                        {{ getSquadPlayerName(player) }}
+                        #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
                       </option>
                     }
                   </select>
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Player In</label>
-                  @if (loadingSubstitutes) {
-                    <div class="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-500">
-                      Loading available players...
-                    </div>
-                  } @else {
-                    <select 
-                      [(ngModel)]="substituteForm.playerIn"
-                      class="w-full px-3 py-2 border rounded-lg"
-                      [disabled]="!substituteForm.playerOut"
-                    >
-                      <option value="">Select Replacement Player</option>
-                      @for (player of availableSubstitutes; track player._id) {
-                        <option [value]="player._id">
-                          {{ player.name }}
-                        </option>
-                      }
-                    </select>
-                    @if (availableSubstitutes.length === 0 && substituteForm.team) {
-                      <p class="text-xs text-orange-600 mt-1">No other players available from this country</p>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Player In (from Reserves)</label>
+                  <select 
+                    [(ngModel)]="substituteForm.playerIn"
+                    class="w-full px-3 py-2 border rounded-lg"
+                    [disabled]="!substituteForm.playerOut"
+                  >
+                    <option value="">Select Reserve Player</option>
+                    @for (player of getReservesForTeam(substituteForm.team); track getPlayerId(player)) {
+                      <option [value]="getPlayerId(player)">
+                        #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
+                      </option>
                     }
-                  }
+                  </select>
                 </div>
               }
             </div>
@@ -2763,5 +2789,25 @@ export class ScoringComponent implements OnInit, OnDestroy {
         this.processing = false;
       }
     });
+  }
+
+  // Reserves helper methods
+  getTeam1Reserves(): any[] {
+    const squad = this.match?.squads?.team1?.filter((p: any) => !p.isPlayingXI) || [];
+    return squad.sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+  }
+
+  getTeam2Reserves(): any[] {
+    const squad = this.match?.squads?.team2?.filter((p: any) => !p.isPlayingXI) || [];
+    return squad.sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+  }
+
+  getReservesForTeam(team: 'team1' | 'team2' | ''): any[] {
+    if (!team) return [];
+    return team === 'team1' ? this.getTeam1Reserves() : this.getTeam2Reserves();
+  }
+
+  hasReserves(): boolean {
+    return this.getTeam1Reserves().length > 0 || this.getTeam2Reserves().length > 0;
   }
 }

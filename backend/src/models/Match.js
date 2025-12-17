@@ -22,7 +22,7 @@ const squadPlayerSchema = new mongoose.Schema({
   battingOrder: {
     type: Number,
     min: 1,
-    max: 11,
+    max: 15,
     default: null
   }
 }, { _id: false });
