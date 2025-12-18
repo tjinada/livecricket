@@ -396,6 +396,147 @@ router.post('/:matchId/end-match', auth, async (req, res, next) => {
 });
 
 /**
+ * PUT /api/scoring/:matchId/adjust-score
+ * Manually adjust the innings score
+ */
+router.put('/:matchId/adjust-score', auth, async (req, res, next) => {
+  try {
+    const { matchId } = req.params;
+    const { runs, wickets, balls, extras } = req.body;
+
+    const result = await scoringEngine.adjustScore(matchId, {
+      runs,
+      wickets,
+      balls,
+      extras
+    });
+
+    // Broadcast update to SSE clients
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'score-update', {
+        innings: result.innings,
+        adjustment: true
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/scoring/:matchId/batsman/:playerId/adjust
+ * Manually adjust a batsman's stats
+ */
+router.put('/:matchId/batsman/:playerId/adjust', auth, async (req, res, next) => {
+  try {
+    const { matchId, playerId } = req.params;
+    const { runs, balls, fours, sixes } = req.body;
+
+    const result = await scoringEngine.adjustBatsmanStats(matchId, playerId, {
+      runs,
+      balls,
+      fours,
+      sixes
+    });
+
+    // Broadcast update to SSE clients
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'score-update', {
+        innings: result.innings,
+        adjustment: true
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/scoring/:matchId/bowler/:playerId/adjust
+ * Manually adjust a bowler's stats
+ */
+router.put('/:matchId/bowler/:playerId/adjust', auth, async (req, res, next) => {
+  try {
+    const { matchId, playerId } = req.params;
+    const { overs, balls, runs, wickets, maidens, wides, noBalls } = req.body;
+
+    const result = await scoringEngine.adjustBowlerStats(matchId, playerId, {
+      overs,
+      balls,
+      runs,
+      wickets,
+      maidens,
+      wides,
+      noBalls
+    });
+
+    // Broadcast update to SSE clients
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'score-update', {
+        innings: result.innings,
+        adjustment: true
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/scoring/:matchId/batsmen/change
+ * Change current batsman (striker or non-striker)
+ */
+router.put('/:matchId/batsmen/change', auth, async (req, res, next) => {
+  try {
+    const { matchId } = req.params;
+    const { position, newBatsman } = req.body;
+
+    if (!position || !newBatsman) {
+      return res.status(400).json({
+        success: false,
+        message: 'Position and newBatsman are required'
+      });
+    }
+
+    if (!['striker', 'nonStriker'].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Position must be striker or nonStriker'
+      });
+    }
+
+    const result = await scoringEngine.changeBatsman(matchId, position, newBatsman);
+
+    // Broadcast update to SSE clients
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'batsmen-change', result);
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * GET /api/scoring/:matchId/stats
  * Get current match statistics
  */

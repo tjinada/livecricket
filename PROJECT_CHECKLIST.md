@@ -241,6 +241,36 @@
 
 ---
 
+## Manual Adjustment Features ✅ NEW
+
+- [x] **Manual Score Adjustment**
+  - [x] Backend API: PUT /api/scoring/:matchId/adjust-score
+  - [x] Adjust runs (+/-)
+  - [x] Adjust wickets (+/-)
+  - [x] Adjust balls/overs (+/-)
+  - [x] Adjust extras (wides, no-balls, byes, leg-byes)
+  - [x] Admin UI modal with clear +/- adjustment interface
+
+- [x] **Change Batsman (Correct Mistake)**
+  - [x] Backend API: PUT /api/scoring/:matchId/batsmen/change
+  - [x] Select position (striker or non-striker)
+  - [x] Select new batsman from available players
+  - [x] Validates player is in playing XI and not already out
+  - [x] Admin UI modal with position selection
+
+- [x] **Adjust Individual Batsman Stats**
+  - [x] Backend API: PUT /api/scoring/:matchId/batsman/:playerId/adjust
+  - [x] Edit runs, balls, fours, sixes directly
+  - [x] Updates innings total automatically
+  - [x] Edit button (✏️) on batsman display cards
+
+- [x] **Adjust Individual Bowler Stats**
+  - [x] Backend API: PUT /api/scoring/:matchId/bowler/:playerId/adjust
+  - [x] Edit overs, balls, runs, wickets, maidens, wides, no-balls
+  - [x] Edit button (✏️) on bowler display card
+
+---
+
 ## Known Issues / Future Improvements
 
 1. **Display Views**: Only Score Summary is fully implemented

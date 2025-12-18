@@ -61,4 +61,58 @@ export class ScoringService {
   getStats(matchId: string): Observable<ApiResponse<any>> {
     return this.http.get<ApiResponse<any>>(`${this.apiUrl}/${matchId}/stats`);
   }
+
+  /**
+   * Manually adjust the innings score
+   */
+  adjustScore(matchId: string, adjustments: {
+    runs?: number;
+    wickets?: number;
+    balls?: number;
+    extras?: {
+      wides?: number;
+      noBalls?: number;
+      byes?: number;
+      legByes?: number;
+    };
+  }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/adjust-score`, adjustments);
+  }
+
+  /**
+   * Manually adjust a batsman's stats
+   */
+  adjustBatsmanStats(matchId: string, playerId: string, adjustments: {
+    runs?: number;
+    balls?: number;
+    fours?: number;
+    sixes?: number;
+  }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/batsman/${playerId}/adjust`, adjustments);
+  }
+
+  /**
+   * Manually adjust a bowler's stats
+   */
+  adjustBowlerStats(matchId: string, playerId: string, adjustments: {
+    overs?: number;
+    balls?: number;
+    runs?: number;
+    wickets?: number;
+    maidens?: number;
+    wides?: number;
+    noBalls?: number;
+  }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/bowler/${playerId}/adjust`, adjustments);
+  }
+
+  /**
+   * Change current batsman (striker or non-striker)
+   */
+  changeBatsman(matchId: string, position: 'striker' | 'nonStriker', newBatsmanId: string): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/batsmen/change`, {
+      position,
+      newBatsman: newBatsmanId
+    });
+  }
 }

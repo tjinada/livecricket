@@ -9,7 +9,7 @@ import { Player } from '../../../core/models';
 import { BackgroundSettingsComponent, BackgroundSettings } from '../../components/background-settings/background-settings.component';
 import { HighlightSettingsComponent } from '../../components/highlight-settings/highlight-settings.component';
 
-type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo';
+type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo' | 'adjustScore' | 'changeBatsman' | 'adjustBatsman' | 'adjustBowler';
 
 @Component({
   selector: 'app-scoring',
@@ -379,13 +379,22 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                           <p class="text-xs text-gray-500">Striker</p>
                         </div>
                       </div>
-                      <div class="text-right">
-                        <p class="text-xl font-bold text-gray-800">
-                          {{ strikerStats.runs || 0 }}<span class="text-sm text-gray-500">({{ strikerStats.balls || 0 }})</span>
-                        </p>
-                        <p class="text-xs text-gray-500">
-                          4s: {{ strikerStats.fours || 0 }} | 6s: {{ strikerStats.sixes || 0 }} | SR: {{ getStrikeRate(strikerStats) }}
-                        </p>
+                      <div class="flex items-center gap-3">
+                        <div class="text-right">
+                          <p class="text-xl font-bold text-gray-800">
+                            {{ strikerStats.runs || 0 }}<span class="text-sm text-gray-500">({{ strikerStats.balls || 0 }})</span>
+                          </p>
+                          <p class="text-xs text-gray-500">
+                            4s: {{ strikerStats.fours || 0 }} | 6s: {{ strikerStats.sixes || 0 }} | SR: {{ getStrikeRate(strikerStats) }}
+                          </p>
+                        </div>
+                        <button 
+                          (click)="openAdjustBatsmanModal(currentInnings?.currentBatsmen?.striker?._id || currentInnings?.currentBatsmen?.striker)"
+                          class="p-1 text-gray-400 hover:text-gray-600"
+                          title="Adjust stats"
+                        >
+                          ✏️
+                        </button>
                       </div>
                     </div>
                   }
@@ -398,13 +407,22 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                           <p class="text-xs text-gray-500">Non-Striker</p>
                         </div>
                       </div>
-                      <div class="text-right">
-                        <p class="text-xl font-bold text-gray-800">
-                          {{ nonStrikerStats.runs || 0 }}<span class="text-sm text-gray-500">({{ nonStrikerStats.balls || 0 }})</span>
-                        </p>
-                        <p class="text-xs text-gray-500">
-                          4s: {{ nonStrikerStats.fours || 0 }} | 6s: {{ nonStrikerStats.sixes || 0 }} | SR: {{ getStrikeRate(nonStrikerStats) }}
-                        </p>
+                      <div class="flex items-center gap-3">
+                        <div class="text-right">
+                          <p class="text-xl font-bold text-gray-800">
+                            {{ nonStrikerStats.runs || 0 }}<span class="text-sm text-gray-500">({{ nonStrikerStats.balls || 0 }})</span>
+                          </p>
+                          <p class="text-xs text-gray-500">
+                            4s: {{ nonStrikerStats.fours || 0 }} | 6s: {{ nonStrikerStats.sixes || 0 }} | SR: {{ getStrikeRate(nonStrikerStats) }}
+                          </p>
+                        </div>
+                        <button 
+                          (click)="openAdjustBatsmanModal(currentInnings?.currentBatsmen?.nonStriker?._id || currentInnings?.currentBatsmen?.nonStriker)"
+                          class="p-1 text-gray-400 hover:text-gray-600"
+                          title="Adjust stats"
+                        >
+                          ✏️
+                        </button>
                       </div>
                     </div>
                   }
@@ -428,13 +446,22 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                     <div>
                       <p class="font-medium text-gray-800">{{ getPlayerName(currentInnings?.currentBowler) }}</p>
                     </div>
-                    <div class="text-right">
-                      <p class="text-lg font-bold text-gray-800">
-                        {{ currentBowlerStats.wickets || 0 }}-{{ currentBowlerStats.runs || 0 }}
-                      </p>
-                      <p class="text-xs text-gray-500">
-                        {{ getBowlerOvers(currentBowlerStats) }} ov | M: {{ currentBowlerStats.maidens || 0 }} | Econ: {{ getEconomy(currentBowlerStats) }}
-                      </p>
+                    <div class="flex items-center gap-3">
+                      <div class="text-right">
+                        <p class="text-lg font-bold text-gray-800">
+                          {{ currentBowlerStats.wickets || 0 }}-{{ currentBowlerStats.runs || 0 }}
+                        </p>
+                        <p class="text-xs text-gray-500">
+                          {{ getBowlerOvers(currentBowlerStats) }} ov | M: {{ currentBowlerStats.maidens || 0 }} | Econ: {{ getEconomy(currentBowlerStats) }}
+                        </p>
+                      </div>
+                      <button 
+                        (click)="openAdjustBowlerModal(currentInnings?.currentBowler?._id || currentInnings?.currentBowler)"
+                        class="p-1 text-gray-400 hover:text-gray-600"
+                        title="Adjust stats"
+                      >
+                        ✏️
+                      </button>
                     </div>
                   </div>
                 } @else {
@@ -715,6 +742,27 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                     class="w-full h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium disabled:opacity-50"
                   >
                     ↩ Undo Last Ball
+                  </button>
+                  <button 
+                    (click)="openAdjustScoreModal()"
+                    [disabled]="processing"
+                    class="w-full h-10 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    ✏️ Adjust Score
+                  </button>
+                  <button 
+                    (click)="openChangeBatsmanModal()"
+                    [disabled]="processing"
+                    class="w-full h-10 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    🏏 Change Batsman
+                  </button>
+                  <button 
+                    (click)="openModal('changeBowler')"
+                    [disabled]="processing"
+                    class="w-full h-10 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    🎯 Change Bowler
                   </button>
                   <button 
                     (click)="openSubstituteModal()"
@@ -1509,6 +1557,365 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 class="px-4 py-2 text-gray-600 hover:text-gray-800"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Adjust Score Modal -->
+      @if (activeModal === 'adjustScore') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">✏️ Adjust Score</h3>
+            </div>
+            <div class="p-4 space-y-4">
+              <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p class="text-amber-800 text-sm">
+                  Edit the values below to set the correct score.
+                </p>
+              </div>
+
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Total Runs</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="scoreAdjustForm.runs"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Wickets</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="scoreAdjustForm.wickets"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                    max="10"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Balls</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="scoreAdjustForm.balls"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <p class="text-sm font-medium text-gray-700 mb-2">Extras</p>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Wides</label>
+                    <input 
+                      type="number" 
+                      [(ngModel)]="scoreAdjustForm.extras.wides"
+                      class="w-full px-2 py-1 border rounded text-center text-sm"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">No Balls</label>
+                    <input 
+                      type="number" 
+                      [(ngModel)]="scoreAdjustForm.extras.noBalls"
+                      class="w-full px-2 py-1 border rounded text-center text-sm"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Byes</label>
+                    <input 
+                      type="number" 
+                      [(ngModel)]="scoreAdjustForm.extras.byes"
+                      class="w-full px-2 py-1 border rounded text-center text-sm"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Leg Byes</label>
+                    <input 
+                      type="number" 
+                      [(ngModel)]="scoreAdjustForm.extras.legByes"
+                      class="w-full px-2 py-1 border rounded text-center text-sm"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              @if (error) {
+                <p class="text-red-600 text-sm">{{ error }}</p>
+              }
+            </div>
+            <div class="p-4 border-t flex justify-end gap-3">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button 
+                (click)="confirmAdjustScore()"
+                [disabled]="processing"
+                class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                {{ processing ? 'Saving...' : 'Save Score' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Change Batsman Modal -->
+      @if (activeModal === 'changeBatsman') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">🏏 Change Batsman</h3>
+            </div>
+            <div class="p-4 space-y-4">
+              <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                <p class="text-indigo-800 text-sm">
+                  Replace a current batsman with another player from the batting team.
+                </p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Which position to change?</label>
+                <div class="grid grid-cols-2 gap-3">
+                  <button 
+                    (click)="changeBatsmanForm.position = 'striker'"
+                    class="p-3 rounded-lg border text-left"
+                    [class.border-indigo-500]="changeBatsmanForm.position === 'striker'"
+                    [class.bg-indigo-50]="changeBatsmanForm.position === 'striker'"
+                  >
+                    <p class="font-medium text-gray-800">Striker</p>
+                    <p class="text-sm text-gray-500">{{ getPlayerName(currentInnings?.currentBatsmen?.striker) }}</p>
+                    <p class="text-xs text-gray-400">{{ strikerStats?.runs || 0 }}({{ strikerStats?.balls || 0 }})</p>
+                  </button>
+                  <button 
+                    (click)="changeBatsmanForm.position = 'nonStriker'"
+                    class="p-3 rounded-lg border text-left"
+                    [class.border-indigo-500]="changeBatsmanForm.position === 'nonStriker'"
+                    [class.bg-indigo-50]="changeBatsmanForm.position === 'nonStriker'"
+                  >
+                    <p class="font-medium text-gray-800">Non-Striker</p>
+                    <p class="text-sm text-gray-500">{{ getPlayerName(currentInnings?.currentBatsmen?.nonStriker) }}</p>
+                    <p class="text-xs text-gray-400">{{ nonStrikerStats?.runs || 0 }}({{ nonStrikerStats?.balls || 0 }})</p>
+                  </button>
+                </div>
+              </div>
+
+              @if (changeBatsmanForm.position) {
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Select New Batsman</label>
+                  <select 
+                    [(ngModel)]="changeBatsmanForm.newBatsman"
+                    class="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">Select Player</option>
+                    @for (player of getAvailableBatsmenForChange(); track getPlayerId(player)) {
+                      <option [value]="getPlayerId(player)">
+                        #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
+                      </option>
+                    }
+                  </select>
+                  <p class="text-xs text-gray-500 mt-1">Shows players not currently batting and not out</p>
+                </div>
+              }
+
+              @if (error) {
+                <p class="text-red-600 text-sm">{{ error }}</p>
+              }
+            </div>
+            <div class="p-4 border-t flex justify-end gap-3">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button 
+                (click)="confirmChangeBatsman()"
+                [disabled]="processing || !changeBatsmanForm.position || !changeBatsmanForm.newBatsman"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {{ processing ? 'Changing...' : 'Change Batsman' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Adjust Batsman Stats Modal -->
+      @if (activeModal === 'adjustBatsman') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">Adjust {{ adjustBatsmanForm.playerName }}'s Stats</h3>
+            </div>
+            <div class="p-4 space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Runs</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBatsmanForm.runs"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Balls</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBatsmanForm.balls"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Fours</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBatsmanForm.fours"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Sixes</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBatsmanForm.sixes"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              @if (error) {
+                <p class="text-red-600 text-sm">{{ error }}</p>
+              }
+            </div>
+            <div class="p-4 border-t flex justify-end gap-3">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button 
+                (click)="confirmAdjustBatsman()"
+                [disabled]="processing"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {{ processing ? 'Saving...' : 'Save Changes' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Adjust Bowler Stats Modal -->
+      @if (activeModal === 'adjustBowler') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">Adjust {{ adjustBowlerForm.playerName }}'s Stats</h3>
+            </div>
+            <div class="p-4 space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Overs</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBowlerForm.overs"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Balls (0-5)</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBowlerForm.balls"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                    max="5"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Runs</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBowlerForm.runs"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Wickets</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBowlerForm.wickets"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Maidens</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBowlerForm.maidens"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Wides</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBowlerForm.wides"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">No Balls</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="adjustBowlerForm.noBalls"
+                    class="w-full px-3 py-2 border rounded-lg text-center"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              @if (error) {
+                <p class="text-red-600 text-sm">{{ error }}</p>
+              }
+            </div>
+            <div class="p-4 border-t flex justify-end gap-3">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button 
+                (click)="confirmAdjustBowler()"
+                [disabled]="processing"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {{ processing ? 'Saving...' : 'Save Changes' }}
               </button>
             </div>
           </div>
@@ -2809,5 +3216,287 @@ export class ScoringComponent implements OnInit, OnDestroy {
 
   hasReserves(): boolean {
     return this.getTeam1Reserves().length > 0 || this.getTeam2Reserves().length > 0;
+  }
+
+  // ===========================================
+  // MANUAL ADJUSTMENTS - Score & Batsman Change
+  // ===========================================
+
+  // Score adjustment form - stores absolute values
+  scoreAdjustForm = {
+    runs: 0,
+    wickets: 0,
+    balls: 0,
+    extras: {
+      wides: 0,
+      noBalls: 0,
+      byes: 0,
+      legByes: 0
+    }
+  };
+
+  // Change batsman form
+  changeBatsmanForm = {
+    position: '' as 'striker' | 'nonStriker' | '',
+    newBatsman: ''
+  };
+
+  // Batsman stats adjustment form
+  adjustBatsmanForm = {
+    playerId: '',
+    playerName: '',
+    runs: 0,
+    balls: 0,
+    fours: 0,
+    sixes: 0
+  };
+
+  // Bowler stats adjustment form
+  adjustBowlerForm = {
+    playerId: '',
+    playerName: '',
+    overs: 0,
+    balls: 0,
+    runs: 0,
+    wickets: 0,
+    maidens: 0,
+    wides: 0,
+    noBalls: 0
+  };
+
+  // Open score adjustment modal - pre-populate with current values
+  openAdjustScoreModal(): void {
+    this.scoreAdjustForm = {
+      runs: this.currentInnings?.totalRuns || 0,
+      wickets: this.currentInnings?.totalWickets || 0,
+      balls: this.currentInnings?.totalBalls || 0,
+      extras: {
+        wides: this.currentInnings?.extras?.wides || 0,
+        noBalls: this.currentInnings?.extras?.noBalls || 0,
+        byes: this.currentInnings?.extras?.byes || 0,
+        legByes: this.currentInnings?.extras?.legByes || 0
+      }
+    };
+    this.activeModal = 'adjustScore';
+  }
+
+  // Confirm score adjustment - sends absolute values
+  confirmAdjustScore(): void {
+    this.processing = true;
+    this.error = '';
+
+    // Send the new absolute values
+    const newValues: any = {
+      runs: this.scoreAdjustForm.runs,
+      wickets: this.scoreAdjustForm.wickets,
+      balls: this.scoreAdjustForm.balls,
+      extras: {
+        wides: this.scoreAdjustForm.extras.wides,
+        noBalls: this.scoreAdjustForm.extras.noBalls,
+        byes: this.scoreAdjustForm.extras.byes,
+        legByes: this.scoreAdjustForm.extras.legByes
+      }
+    };
+
+    this.scoringService.adjustScore(this.matchId, newValues).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.closeModal();
+        } else {
+          this.error = response.message || 'Failed to adjust score';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to adjust score';
+        this.processing = false;
+      }
+    });
+  }
+
+  // Open change batsman modal
+  openChangeBatsmanModal(): void {
+    this.changeBatsmanForm = {
+      position: '',
+      newBatsman: ''
+    };
+    this.activeModal = 'changeBatsman';
+  }
+
+  // Get available batsmen for change (not currently batting, not out)
+  getAvailableBatsmenForChange(): any[] {
+    if (!this.currentInnings) return [];
+    
+    const currentStrikerId = this.currentInnings.currentBatsmen?.striker?._id || 
+                              this.currentInnings.currentBatsmen?.striker;
+    const currentNonStrikerId = this.currentInnings.currentBatsmen?.nonStriker?._id || 
+                                 this.currentInnings.currentBatsmen?.nonStriker;
+    
+    return this.battingTeamPlayers.filter((p: any) => {
+      const playerId = this.getPlayerId(p);
+      // Exclude current batsmen
+      if (playerId === currentStrikerId?.toString() || playerId === currentNonStrikerId?.toString()) {
+        return false;
+      }
+      // Check if already out
+      const battingStat = this.currentInnings?.battingStats?.find((bs: any) => {
+        const bsId = bs.player?._id || bs.player;
+        return bsId === playerId || bsId?.toString() === playerId;
+      });
+      if (battingStat?.isOut) {
+        return false;
+      }
+      return true;
+    }).sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+  }
+
+  // Confirm change batsman
+  confirmChangeBatsman(): void {
+    if (!this.changeBatsmanForm.position || !this.changeBatsmanForm.newBatsman) {
+      this.error = 'Please select position and new batsman';
+      return;
+    }
+
+    this.processing = true;
+    this.error = '';
+
+    this.scoringService.changeBatsman(
+      this.matchId, 
+      this.changeBatsmanForm.position as 'striker' | 'nonStriker', 
+      this.changeBatsmanForm.newBatsman
+    ).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.closeModal();
+        } else {
+          this.error = response.message || 'Failed to change batsman';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to change batsman';
+        this.processing = false;
+      }
+    });
+  }
+
+  // Open batsman stats adjustment modal
+  openAdjustBatsmanModal(playerId: string): void {
+    const battingStat = this.currentInnings?.battingStats?.find((bs: any) => {
+      const bsId = bs.player?._id || bs.player;
+      return bsId === playerId || bsId?.toString() === playerId;
+    });
+    
+    if (!battingStat) {
+      this.error = 'Batsman not found';
+      return;
+    }
+
+    this.adjustBatsmanForm = {
+      playerId: playerId,
+      playerName: this.getPlayerName(battingStat.player),
+      runs: battingStat.runs || 0,
+      balls: battingStat.balls || 0,
+      fours: battingStat.fours || 0,
+      sixes: battingStat.sixes || 0
+    };
+    this.activeModal = 'adjustBatsman';
+  }
+
+  // Confirm batsman stats adjustment
+  confirmAdjustBatsman(): void {
+    this.processing = true;
+    this.error = '';
+
+    this.scoringService.adjustBatsmanStats(this.matchId, this.adjustBatsmanForm.playerId, {
+      runs: this.adjustBatsmanForm.runs,
+      balls: this.adjustBatsmanForm.balls,
+      fours: this.adjustBatsmanForm.fours,
+      sixes: this.adjustBatsmanForm.sixes
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.closeModal();
+        } else {
+          this.error = response.message || 'Failed to adjust batsman stats';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to adjust batsman stats';
+        this.processing = false;
+      }
+    });
+  }
+
+  // Open bowler stats adjustment modal
+  openAdjustBowlerModal(playerId: string): void {
+    const bowlingStat = this.currentInnings?.bowlingStats?.find((bs: any) => {
+      const bsId = bs.player?._id || bs.player;
+      return bsId === playerId || bsId?.toString() === playerId;
+    });
+    
+    if (!bowlingStat) {
+      this.error = 'Bowler not found';
+      return;
+    }
+
+    this.adjustBowlerForm = {
+      playerId: playerId,
+      playerName: this.getPlayerName(bowlingStat.player),
+      overs: bowlingStat.overs || 0,
+      balls: bowlingStat.balls || 0,
+      runs: bowlingStat.runs || 0,
+      wickets: bowlingStat.wickets || 0,
+      maidens: bowlingStat.maidens || 0,
+      wides: bowlingStat.wides || 0,
+      noBalls: bowlingStat.noBalls || 0
+    };
+    this.activeModal = 'adjustBowler';
+  }
+
+  // Confirm bowler stats adjustment
+  confirmAdjustBowler(): void {
+    this.processing = true;
+    this.error = '';
+
+    this.scoringService.adjustBowlerStats(this.matchId, this.adjustBowlerForm.playerId, {
+      overs: this.adjustBowlerForm.overs,
+      balls: this.adjustBowlerForm.balls,
+      runs: this.adjustBowlerForm.runs,
+      wickets: this.adjustBowlerForm.wickets,
+      maidens: this.adjustBowlerForm.maidens,
+      wides: this.adjustBowlerForm.wides,
+      noBalls: this.adjustBowlerForm.noBalls
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.closeModal();
+        } else {
+          this.error = response.message || 'Failed to adjust bowler stats';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to adjust bowler stats';
+        this.processing = false;
+      }
+    });
+  }
+
+  // Get current batsmen who have stats (for adjustment)
+  getCurrentBatsmenWithStats(): any[] {
+    if (!this.currentInnings?.battingStats) return [];
+    return this.currentInnings.battingStats.filter((bs: any) => 
+      bs.balls > 0 || bs.runs > 0
+    );
+  }
+
+  // Get current bowlers who have stats (for adjustment)
+  getCurrentBowlersWithStats(): any[] {
+    if (!this.currentInnings?.bowlingStats) return [];
+    return this.currentInnings.bowlingStats.filter((bs: any) => 
+      (bs.overs || 0) > 0 || (bs.balls || 0) > 0
+    );
   }
 }

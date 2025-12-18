@@ -1005,6 +1005,276 @@ async function endMatch(matchId, resultOverride = null) {
   };
 }
 
+/**
+ * Manually set the innings score to specific values
+ * Allows admin to correct mistakes by directly setting runs, wickets, balls, and extras
+ */
+async function adjustScore(matchId, newValues) {
+  const match = await Match.findById(matchId);
+  
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.status !== 'live') {
+    throw new Error('Match is not live');
+  }
+
+  const innings = match.innings[match.currentInnings];
+  
+  if (!innings) {
+    throw new Error('No innings found');
+  }
+
+  const { runs, wickets, balls, extras } = newValues;
+
+  // Set total runs to the new value
+  if (typeof runs === 'number' && runs >= 0) {
+    innings.totalRuns = runs;
+  }
+
+  // Set total wickets to the new value
+  if (typeof wickets === 'number' && wickets >= 0) {
+    innings.totalWickets = Math.min(10, wickets);
+  }
+
+  // Set total balls (legal deliveries) to the new value
+  if (typeof balls === 'number' && balls >= 0) {
+    const maxBalls = getMaxBalls(match.format);
+    innings.totalBalls = Math.min(maxBalls, balls);
+  }
+
+  // Set extras to new values
+  if (extras) {
+    if (typeof extras.wides === 'number' && extras.wides >= 0) {
+      innings.extras.wides = extras.wides;
+    }
+    if (typeof extras.noBalls === 'number' && extras.noBalls >= 0) {
+      innings.extras.noBalls = extras.noBalls;
+    }
+    if (typeof extras.byes === 'number' && extras.byes >= 0) {
+      innings.extras.byes = extras.byes;
+    }
+    if (typeof extras.legByes === 'number' && extras.legByes >= 0) {
+      innings.extras.legByes = extras.legByes;
+    }
+  }
+
+  await match.save();
+
+  return {
+    innings: innings.toObject()
+  };
+}
+
+/**
+ * Manually adjust a batsman's stats
+ */
+async function adjustBatsmanStats(matchId, playerId, adjustments) {
+  const match = await Match.findById(matchId);
+  
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.status !== 'live') {
+    throw new Error('Match is not live');
+  }
+
+  const innings = match.innings[match.currentInnings];
+  
+  if (!innings) {
+    throw new Error('No innings found');
+  }
+
+  const batsmanStats = innings.battingStats.find(
+    s => s.player.toString() === playerId.toString()
+  );
+
+  if (!batsmanStats) {
+    throw new Error('Batsman not found in current innings');
+  }
+
+  const { runs, balls, fours, sixes } = adjustments;
+
+  // Track old runs to update innings total
+  const oldRuns = batsmanStats.runs;
+
+  if (typeof runs === 'number') {
+    batsmanStats.runs = Math.max(0, runs);
+    // Update innings total runs
+    innings.totalRuns = Math.max(0, innings.totalRuns + (runs - oldRuns));
+  }
+  if (typeof balls === 'number') {
+    batsmanStats.balls = Math.max(0, balls);
+  }
+  if (typeof fours === 'number') {
+    batsmanStats.fours = Math.max(0, fours);
+  }
+  if (typeof sixes === 'number') {
+    batsmanStats.sixes = Math.max(0, sixes);
+  }
+
+  await match.save();
+
+  return {
+    batsmanStats: batsmanStats,
+    innings: innings.toObject()
+  };
+}
+
+/**
+ * Manually adjust a bowler's stats
+ */
+async function adjustBowlerStats(matchId, playerId, adjustments) {
+  const match = await Match.findById(matchId);
+  
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.status !== 'live') {
+    throw new Error('Match is not live');
+  }
+
+  const innings = match.innings[match.currentInnings];
+  
+  if (!innings) {
+    throw new Error('No innings found');
+  }
+
+  const bowlerStats = innings.bowlingStats.find(
+    s => s.player.toString() === playerId.toString()
+  );
+
+  if (!bowlerStats) {
+    throw new Error('Bowler not found in current innings');
+  }
+
+  const { overs, balls, runs, wickets, maidens, wides, noBalls } = adjustments;
+
+  if (typeof overs === 'number') {
+    bowlerStats.overs = Math.max(0, overs);
+  }
+  if (typeof balls === 'number') {
+    bowlerStats.balls = Math.max(0, Math.min(5, balls));
+  }
+  if (typeof runs === 'number') {
+    bowlerStats.runs = Math.max(0, runs);
+  }
+  if (typeof wickets === 'number') {
+    bowlerStats.wickets = Math.max(0, wickets);
+  }
+  if (typeof maidens === 'number') {
+    bowlerStats.maidens = Math.max(0, maidens);
+  }
+  if (typeof wides === 'number') {
+    bowlerStats.wides = Math.max(0, wides);
+  }
+  if (typeof noBalls === 'number') {
+    bowlerStats.noBalls = Math.max(0, noBalls);
+  }
+
+  await match.save();
+
+  return {
+    bowlerStats: bowlerStats,
+    innings: innings.toObject()
+  };
+}
+
+/**
+ * Change current batsman (striker or non-striker) to a different player
+ * Used to correct mistakes when wrong batsman was selected
+ */
+async function changeBatsman(matchId, position, newBatsmanId) {
+  const match = await Match.findById(matchId);
+  
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.status !== 'live') {
+    throw new Error('Match is not live');
+  }
+
+  const innings = match.innings[match.currentInnings];
+  
+  if (!innings || innings.status !== 'in-progress') {
+    throw new Error('No innings in progress');
+  }
+
+  if (!['striker', 'nonStriker'].includes(position)) {
+    throw new Error('Position must be striker or nonStriker');
+  }
+
+  // Verify new batsman is in the batting team's playing XI
+  const battingTeamSquad = match.team1.toString() === innings.battingTeam.toString()
+    ? match.squads.team1
+    : match.squads.team2;
+
+  const isInPlayingXI = battingTeamSquad.some(
+    p => p.player.toString() === newBatsmanId.toString() && p.isPlayingXI
+  );
+
+  if (!isInPlayingXI) {
+    throw new Error('Player is not in batting team playing XI');
+  }
+
+  // Check if the new batsman is already batting (as the other position)
+  const otherPosition = position === 'striker' ? 'nonStriker' : 'striker';
+  const otherBatsmanId = innings.currentBatsmen[otherPosition]?.toString();
+  
+  if (otherBatsmanId === newBatsmanId.toString()) {
+    throw new Error('This player is already batting at the other end');
+  }
+
+  // Check if the new batsman is already out
+  const newBatsmanStats = innings.battingStats.find(
+    s => s.player.toString() === newBatsmanId.toString()
+  );
+  
+  if (newBatsmanStats?.isOut) {
+    throw new Error('This player is already out');
+  }
+
+  // Get old batsman ID for reference
+  const oldBatsmanId = innings.currentBatsmen[position];
+
+  // Set new batsman
+  innings.currentBatsmen[position] = newBatsmanId;
+
+  // Add new batsman to batting stats if not already there
+  if (!newBatsmanStats) {
+    innings.battingStats.push({
+      player: newBatsmanId,
+      runs: 0,
+      balls: 0,
+      fours: 0,
+      sixes: 0,
+      isOut: false,
+      position: innings.battingStats.length + 1
+    });
+  }
+
+  // Update partnership
+  innings.partnership = {
+    runs: 0,
+    balls: 0,
+    batsman1: innings.currentBatsmen.striker,
+    batsman2: innings.currentBatsmen.nonStriker
+  };
+
+  await match.save();
+
+  return {
+    oldBatsman: oldBatsmanId,
+    newBatsman: newBatsmanId,
+    position,
+    currentBatsmen: innings.currentBatsmen
+  };
+}
+
 module.exports = {
   recordBall,
   undoLastBall,
@@ -1014,6 +1284,10 @@ module.exports = {
   endInnings,
   startSecondInnings,
   endMatch,
+  adjustScore,
+  adjustBatsmanStats,
+  adjustBowlerStats,
+  changeBatsman,
   getOversDisplay,
   getBallDisplay,
   calculateCurrentRunRate,
