@@ -275,11 +275,10 @@ import { CommonModule } from '@angular/common';
 
       <!-- ==================== CUSTOM MESSAGE ==================== -->
       <div *ngIf="type === 'custom-message'" 
-           class="fixed inset-0 z-50 flex items-center justify-center"
+           class="fixed top-24 left-1/2 -translate-x-1/2 z-50"
            (click)="onDismiss()">
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-        <div class="relative bg-gradient-to-b from-gray-800/95 to-gray-900/95 backdrop-blur-md rounded-3xl px-12 py-10 border border-gray-600/50 shadow-2xl max-w-4xl">
-          <div class="text-4xl font-bold text-white leading-tight text-center">{{ customMessage }}</div>
+        <div class="bg-gradient-to-b from-gray-800/95 to-gray-900/95 backdrop-blur-md rounded-2xl px-12 py-8 border border-gray-600/50 shadow-2xl">
+          <div class="text-5xl font-bold text-white leading-tight text-center">{{ customMessage }}</div>
         </div>
       </div>
       
