@@ -325,9 +325,19 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 <div class="flex justify-between items-start">
                   <div>
                     <p class="text-green-200 text-sm mb-1">{{ getBattingTeamName() }}</p>
-                    <p class="text-5xl font-bold">
-                      {{ currentInnings?.totalRuns || 0 }}/{{ currentInnings?.totalWickets || 0 }}
-                    </p>
+                    <div class="flex items-center gap-3">
+                      <p class="text-5xl font-bold">
+                        {{ currentInnings?.totalRuns || 0 }}/{{ currentInnings?.totalWickets || 0 }}
+                      </p>
+                      <button 
+                        (click)="openAdjustScoreModal()"
+                        [disabled]="processing"
+                        class="px-3 py-1.5 bg-white/30 hover:bg-white/40 rounded-lg disabled:opacity-50 transition-colors text-white text-sm font-medium"
+                        title="Adjust Score"
+                      >
+                        Edit
+                      </button>
+                    </div>
                     <p class="text-xl text-green-200 mt-1">
                       ({{ getOversDisplay() }} overs)
                     </p>
@@ -361,13 +371,23 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <div class="bg-white rounded-lg shadow">
                 <div class="p-4 border-b flex justify-between items-center">
                   <h3 class="font-semibold text-gray-800">Batsmen</h3>
-                  <button 
-                    (click)="swapBatsmen()"
-                    [disabled]="processing"
-                    class="text-sm text-green-600 hover:text-green-800 disabled:opacity-50"
-                  >
-                    ⇄ Swap Strike
-                  </button>
+                  <div class="flex items-center gap-3">
+                    <button 
+                      (click)="openChangeBatsmanModal()"
+                      [disabled]="processing"
+                      class="text-sm text-green-600 hover:text-green-800 disabled:opacity-50"
+                    >
+                      Change Batsmen
+                    </button>
+                    <span class="text-gray-300">|</span>
+                    <button 
+                      (click)="swapBatsmen()"
+                      [disabled]="processing"
+                      class="text-sm text-green-600 hover:text-green-800 disabled:opacity-50"
+                    >
+                      Swap Strike
+                    </button>
+                  </div>
                 </div>
                 <div class="divide-y">
                   @if (strikerStats) {
@@ -742,27 +762,6 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                     class="w-full h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium disabled:opacity-50"
                   >
                     ↩ Undo Last Ball
-                  </button>
-                  <button 
-                    (click)="openAdjustScoreModal()"
-                    [disabled]="processing"
-                    class="w-full h-10 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg font-medium disabled:opacity-50"
-                  >
-                    ✏️ Adjust Score
-                  </button>
-                  <button 
-                    (click)="openChangeBatsmanModal()"
-                    [disabled]="processing"
-                    class="w-full h-10 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg font-medium disabled:opacity-50"
-                  >
-                    🏏 Change Batsman
-                  </button>
-                  <button 
-                    (click)="openModal('changeBowler')"
-                    [disabled]="processing"
-                    class="w-full h-10 bg-teal-100 hover:bg-teal-200 text-teal-700 rounded-lg font-medium disabled:opacity-50"
-                  >
-                    🎯 Change Bowler
                   </button>
                   <button 
                     (click)="openSubstituteModal()"
