@@ -2755,14 +2755,38 @@ export class ScoringComponent implements OnInit, OnDestroy {
 
   getAvailableBatsmen(): any[] {
     if (!this.currentInnings?.battingStats) return this.battingTeamPlayers;
-    const battedPlayerIds = this.currentInnings.battingStats.map((b: any) => {
-      const id = b.player?._id || b.player;
-      return id?.toString();
-    });
+    
+    // Get current batsmen IDs
+    const currentStrikerId = this.currentInnings.currentBatsmen?.striker?._id || 
+                             this.currentInnings.currentBatsmen?.striker;
+    const currentNonStrikerId = this.currentInnings.currentBatsmen?.nonStriker?._id || 
+                                this.currentInnings.currentBatsmen?.nonStriker;
+    
+    // Get IDs of players who are actually OUT (have dismissal type)
+    const outPlayerIds = this.currentInnings.battingStats
+      .filter((b: any) => b.dismissal?.type || b.isOut)
+      .map((b: any) => {
+        const id = b.player?._id || b.player;
+        return id?.toString();
+      });
+    
     const available = this.battingTeamPlayers.filter((p: any) => {
       const playerId = this.getPlayerId(p);
-      return !battedPlayerIds.includes(playerId?.toString());
+      
+      // Exclude current batsmen
+      if (playerId === currentStrikerId?.toString() || 
+          playerId === currentNonStrikerId?.toString()) {
+        return false;
+      }
+      
+      // Exclude players who are OUT
+      if (outPlayerIds.includes(playerId?.toString())) {
+        return false;
+      }
+      
+      return true;
     });
+    
     // Sort by batting order
     return available.sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99));
   }
