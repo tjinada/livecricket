@@ -9,6 +9,7 @@ const auth = require('../middleware/auth');
 const uploadsDir = path.join(__dirname, '../../public/uploads');
 const backgroundsDir = path.join(uploadsDir, 'backgrounds');
 const flagsDir = path.join(uploadsDir, 'flags');
+const playersDir = path.join(uploadsDir, 'players');
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -18,6 +19,9 @@ if (!fs.existsSync(backgroundsDir)) {
 }
 if (!fs.existsSync(flagsDir)) {
   fs.mkdirSync(flagsDir, { recursive: true });
+}
+if (!fs.existsSync(playersDir)) {
+  fs.mkdirSync(playersDir, { recursive: true });
 }
 
 // Configure multer storage for backgrounds
@@ -30,6 +34,19 @@ const backgroundStorage = multer.diskStorage({
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
     cb(null, `bg-${uniqueSuffix}${ext}`);
+  }
+});
+
+// Configure multer storage for player images
+const playerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, playersDir);
+  },
+  filename: (req, file, cb) => {
+    // Use player ID from URL parameter
+    const playerId = req.params.playerId || 'player-' + Date.now();
+    const ext = path.extname(file.originalname);
+    cb(null, `${playerId}${ext}`);
   }
 });
 
@@ -84,6 +101,26 @@ const uploadFlag = multer({
   fileFilter: flagFileFilter,
   limits: {
     fileSize: 20 * 1024 * 1024, // 20MB max for flags
+  }
+});
+
+// File filter for player images only
+const playerImageFilter = (req, file, cb) => {
+  const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  
+  if (allowedImageTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Player images must be JPEG, PNG, or WebP'), false);
+  }
+};
+
+// Configure multer for player images
+const uploadPlayerImage = multer({
+  storage: playerStorage,
+  fileFilter: playerImageFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max for player images
   }
 });
 
@@ -286,6 +323,75 @@ router.delete('/background/:filename', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete file'
+    });
+  }
+});
+
+// Upload player image
+router.post('/player/:playerId', auth, uploadPlayerImage.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    const file = req.file;
+    const fileUrl = `/uploads/players/${file.filename}`;
+
+    res.json({
+      success: true,
+      data: {
+        filename: file.filename,
+        originalName: file.originalname,
+        url: fileUrl,
+        type: 'image',
+        size: file.size,
+        mimetype: file.mimetype
+      }
+    });
+  } catch (error) {
+    console.error('Player image upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to upload player image'
+    });
+  }
+});
+
+// Delete a player image
+router.delete('/player/:filename', auth, async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const filePath = path.join(playersDir, filename);
+    
+    // Security check: ensure the file is in the players directory
+    if (!filePath.startsWith(playersDir)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid filename'
+      });
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found'
+      });
+    }
+
+    fs.unlinkSync(filePath);
+
+    res.json({
+      success: true,
+      message: 'Player image deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete player image error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete player image'
     });
   }
 });

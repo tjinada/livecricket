@@ -45,4 +45,5 @@ export interface UpdatePlayerDto {
   battingStyle?: BattingStyle;
   bowlingStyle?: BowlingStyle;
   isActive?: boolean;
+  imageUrl?: string | null;
 }

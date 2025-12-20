@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PlayerService, CountryService, BulkImportResult } from '../../../core/services';
+import { PlayerService, CountryService, BulkImportResult, UploadService, UploadProgress } from '../../../core/services';
 import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../../core/models';
 
 @Component({
@@ -322,6 +322,81 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
               </div>
 
               @if (editingPlayer) {
+                <!-- Player Image Upload -->
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Player Image</label>
+                  <div class="flex items-start gap-4">
+                    <!-- Current Image Preview -->
+                    <div class="flex-shrink-0">
+                      @if (form.imageUrl || form.previewUrl) {
+                        <img 
+                          [src]="form.previewUrl || form.imageUrl" 
+                          [alt]="form.name"
+                          class="w-20 h-20 rounded-lg object-cover bg-gray-100 border"
+                          (error)="onPreviewImageError($event)"
+                        >
+                      } @else {
+                        <div class="w-20 h-20 rounded-lg bg-gray-200 flex items-center justify-center text-gray-400">
+                          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                          </svg>
+                        </div>
+                      }
+                    </div>
+                    <!-- Upload Controls -->
+                    <div class="flex-1">
+                      <input 
+                        type="file" 
+                        #fileInput
+                        (change)="onImageSelected($event)"
+                        accept="image/jpeg,image/png,image/webp"
+                        class="hidden"
+                      >
+                      <div class="flex flex-wrap gap-2">
+                        <button 
+                          type="button"
+                          (click)="fileInput.click()"
+                          [disabled]="uploadingImage"
+                          class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {{ form.imageUrl || form.previewUrl ? 'Change Image' : 'Upload Image' }}
+                        </button>
+                        @if (form.imageUrl && !form.previewUrl) {
+                          <button 
+                            type="button"
+                            (click)="removeImage()"
+                            [disabled]="uploadingImage"
+                            class="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+                          >
+                            Remove
+                          </button>
+                        }
+                        @if (form.previewUrl) {
+                          <button 
+                            type="button"
+                            (click)="cancelImageSelection()"
+                            class="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                          >
+                            Cancel
+                          </button>
+                        }
+                      </div>
+                      @if (uploadingImage) {
+                        <div class="mt-2">
+                          <div class="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              class="h-full bg-blue-600 transition-all duration-300"
+                              [style.width.%]="uploadProgress"
+                            ></div>
+                          </div>
+                          <p class="text-xs text-gray-500 mt-1">Uploading... {{ uploadProgress }}%</p>
+                        </div>
+                      }
+                      <p class="text-xs text-gray-500 mt-1">JPEG, PNG, or WebP. Max 5MB.</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="mb-6">
                   <label class="flex items-center gap-2">
                     <input 
@@ -351,10 +426,10 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
                 </button>
                 <button 
                   type="submit"
-                  [disabled]="saving"
+                  [disabled]="saving || uploadingImage"
                   class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
-                  {{ saving ? 'Saving...' : 'Save' }}
+                  {{ uploadingImage ? 'Uploading...' : (saving ? 'Saving...' : 'Save') }}
                 </button>
               </div>
             </form>
@@ -581,17 +656,35 @@ export class PlayersComponent implements OnInit {
 
   showModal = false;
   editingPlayer: Player | null = null;
-  form = {
+  form: {
+    name: string;
+    country: string;
+    role: PlayerRole | '';
+    battingStyle: BattingStyle | '';
+    bowlingStyle: BowlingStyle | '';
+    gender: 'M' | 'F';
+    isActive: boolean;
+    imageUrl: string | null;
+    previewUrl: string | null;
+    selectedFile: File | null;
+  } = {
     name: '',
     country: '',
-    role: '' as PlayerRole | '',
-    battingStyle: '' as BattingStyle | '',
-    bowlingStyle: '' as BowlingStyle | '',
-    gender: 'M' as 'M' | 'F',
-    isActive: true
+    role: '',
+    battingStyle: '',
+    bowlingStyle: '',
+    gender: 'M',
+    isActive: true,
+    imageUrl: null,
+    previewUrl: null,
+    selectedFile: null
   };
   saving = false;
   error = '';
+
+  // Image upload state
+  uploadingImage = false;
+  uploadProgress = 0;
 
   showDeleteModal = false;
   deletingPlayer: Player | null = null;
@@ -619,7 +712,8 @@ export class PlayersComponent implements OnInit {
 
   constructor(
     private playerService: PlayerService,
-    private countryService: CountryService
+    private countryService: CountryService,
+    private uploadService: UploadService
   ) {}
 
   ngOnInit() {
@@ -741,7 +835,10 @@ export class PlayersComponent implements OnInit {
         battingStyle: player.battingStyle,
         bowlingStyle: player.bowlingStyle,
         gender: player.gender || 'M',
-        isActive: player.isActive
+        isActive: player.isActive,
+        imageUrl: player.imageUrl || null,
+        previewUrl: null,
+        selectedFile: null
       };
     } else {
       this.form = {
@@ -751,7 +848,10 @@ export class PlayersComponent implements OnInit {
         battingStyle: '',
         bowlingStyle: '',
         gender: 'M',
-        isActive: true
+        isActive: true,
+        imageUrl: null,
+        previewUrl: null,
+        selectedFile: null
       };
     }
     
@@ -760,9 +860,15 @@ export class PlayersComponent implements OnInit {
   }
 
   closeModal() {
+    // Clean up preview URL if exists
+    if (this.form.previewUrl) {
+      URL.revokeObjectURL(this.form.previewUrl);
+    }
     this.showModal = false;
     this.editingPlayer = null;
     this.error = '';
+    this.uploadingImage = false;
+    this.uploadProgress = 0;
   }
 
   editPlayer(player: Player) {
@@ -779,7 +885,17 @@ export class PlayersComponent implements OnInit {
     this.saving = true;
     this.error = '';
 
-    const data = {
+    // If editing and there's a new image selected, upload it first
+    if (this.editingPlayer && this.form.selectedFile) {
+      this.uploadImageAndSave();
+      return;
+    }
+
+    this.savePlayerData();
+  }
+
+  private savePlayerData() {
+    const data: any = {
       name: this.form.name.trim(),
       country: this.form.country,
       role: this.form.role as PlayerRole,
@@ -788,6 +904,11 @@ export class PlayersComponent implements OnInit {
       gender: this.form.gender,
       isActive: this.form.isActive
     };
+
+    // Include imageUrl in update (can be null to clear, or URL string)
+    if (this.editingPlayer) {
+      data.imageUrl = this.form.imageUrl;
+    }
 
     const request = this.editingPlayer
       ? this.playerService.update(this.editingPlayer._id, data)
@@ -972,6 +1093,90 @@ export class PlayersComponent implements OnInit {
     // Hide broken image and show fallback
     const img = event.target as HTMLImageElement;
     img.style.display = 'none';
+  }
+
+  onPreviewImageError(event: Event) {
+    // Reset preview if it fails to load
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+  }
+
+  onImageSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    
+    if (!file) return;
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      this.error = 'Invalid file type. Please upload JPEG, PNG, or WebP.';
+      return;
+    }
+    
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      this.error = 'File too large. Maximum size is 5MB.';
+      return;
+    }
+    
+    // Create preview URL
+    this.form.selectedFile = file;
+    this.form.previewUrl = URL.createObjectURL(file);
+    this.error = '';
+    
+    // Clear the file input so the same file can be selected again if needed
+    input.value = '';
+  }
+
+  cancelImageSelection() {
+    if (this.form.previewUrl) {
+      URL.revokeObjectURL(this.form.previewUrl);
+    }
+    this.form.previewUrl = null;
+    this.form.selectedFile = null;
+  }
+
+  removeImage() {
+    this.form.imageUrl = null;
+    this.form.previewUrl = null;
+    this.form.selectedFile = null;
+  }
+
+  private uploadImageAndSave(): void {
+    if (!this.editingPlayer || !this.form.selectedFile) {
+      this.savePlayerData();
+      return;
+    }
+    
+    this.uploadingImage = true;
+    this.uploadProgress = 0;
+    
+    this.uploadService.uploadPlayerImage(this.editingPlayer._id, this.form.selectedFile).subscribe({
+      next: (progress: UploadProgress) => {
+        this.uploadProgress = progress.progress;
+        
+        if (progress.state === 'done' && progress.file) {
+          this.form.imageUrl = progress.file.url;
+          this.uploadingImage = false;
+          // Clean up preview URL
+          if (this.form.previewUrl) {
+            URL.revokeObjectURL(this.form.previewUrl);
+            this.form.previewUrl = null;
+          }
+          this.form.selectedFile = null;
+          // Now save the player with the new image URL
+          this.savePlayerData();
+        } else if (progress.state === 'error') {
+          this.error = progress.error || 'Failed to upload image';
+          this.uploadingImage = false;
+        }
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to upload image';
+        this.uploadingImage = false;
+      }
+    });
   }
 
   // Bulk Delete Methods

@@ -168,11 +168,18 @@ router.post('/', auth, async (req, res, next) => {
 // PUT /api/players/:id - Update player (protected)
 router.put('/:id', auth, async (req, res, next) => {
   try {
-    const { name, country, role, battingStyle, bowlingStyle, gender, isActive } = req.body;
+    const { name, country, role, battingStyle, bowlingStyle, gender, isActive, imageUrl } = req.body;
+    
+    const updateData = { name, country, role, battingStyle, bowlingStyle, gender, isActive };
+    
+    // Only update imageUrl if it's explicitly provided (can be null to clear, or a URL string)
+    if (imageUrl !== undefined) {
+      updateData.imageUrl = imageUrl;
+    }
     
     const player = await Player.findByIdAndUpdate(
       req.params.id,
-      { name, country, role, battingStyle, bowlingStyle, gender, isActive },
+      updateData,
       { new: true, runValidators: true }
     ).populate('country', 'name code flagUrl');
     

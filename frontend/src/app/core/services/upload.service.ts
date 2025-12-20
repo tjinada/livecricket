@@ -77,4 +77,43 @@ export class UploadService {
   deleteBackground(filename: string): Observable<ApiResponse<void>> {
     return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/background/${filename}`);
   }
+
+  uploadPlayerImage(playerId: string, file: File): Observable<UploadProgress> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.http.post<ApiResponse<UploadedFile>>(
+      `${this.apiUrl}/player/${playerId}`,
+      formData,
+      {
+        reportProgress: true,
+        observe: 'events'
+      }
+    ).pipe(
+      map((event: HttpEvent<ApiResponse<UploadedFile>>): UploadProgress => {
+        switch (event.type) {
+          case HttpEventType.UploadProgress:
+            const progressEvent = event as HttpProgressEvent;
+            const progress = progressEvent.total
+              ? Math.round((100 * progressEvent.loaded) / progressEvent.total)
+              : 0;
+            return { state: 'uploading', progress };
+
+          case HttpEventType.Response:
+            const response = event as HttpResponse<ApiResponse<UploadedFile>>;
+            if (response.body?.success && response.body.data) {
+              return { state: 'done', progress: 100, file: response.body.data };
+            }
+            return { state: 'error', progress: 0, error: response.body?.message || 'Upload failed' };
+
+          default:
+            return { state: 'pending', progress: 0 };
+        }
+      })
+    );
+  }
+
+  deletePlayerImage(filename: string): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.apiUrl}/player/${filename}`);
+  }
 }

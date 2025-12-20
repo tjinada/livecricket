@@ -32,23 +32,27 @@ const extractRelativePath = (fullUrl) => {
 
 /**
  * Add image URL to a player object for API responses
+ * Prefers locally uploaded imageUrl over ESPN headshotPath
  * @param {Object} player - Player document (or plain object)
  * @returns {Object} Player with imageUrl field
  */
 const addImageUrl = (player) => {
   if (!player) return player;
   
-  const headshotPath = player.headshotPath;
-  const imageUrl = buildImageUrl(headshotPath);
-  
   // Handle both Mongoose documents and plain objects
-  if (typeof player.toObject === 'function') {
-    const obj = player.toObject();
-    obj.imageUrl = imageUrl;
-    return obj;
+  const playerObj = typeof player.toObject === 'function' ? player.toObject() : { ...player };
+  
+  // Prefer locally uploaded imageUrl, fall back to ESPN headshotPath
+  if (playerObj.imageUrl) {
+    // Already has a local image URL, keep it
+    return playerObj;
   }
   
-  return { ...player, imageUrl };
+  // Build URL from ESPN headshotPath if available
+  const headshotPath = playerObj.headshotPath;
+  playerObj.imageUrl = buildImageUrl(headshotPath);
+  
+  return playerObj;
 };
 
 module.exports = {

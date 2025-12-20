@@ -54,6 +54,10 @@ const playerSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  imageUrl: {
+    type: String,
+    default: null
+  },
   espnId: {
     type: Number,
     default: null
