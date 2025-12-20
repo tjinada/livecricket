@@ -122,15 +122,15 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               (change)="changeDisplayView()"
               class="w-full px-3 py-2 border rounded-lg"
             >
-              <option value="live-score">Live Score</option>
-              <option value="live-match-summary">Live Match Summary</option>
-              <option value="run-rate-graph">Run Rate Graph</option>
-              <option value="current-partnership">Current Partnership</option>
-              <option value="final-match-summary">Final Match Summary</option>
-              <option value="player-stats">Player Stats</option>
+              <option value="toss-screen">Toss Result</option>
               <option value="starting-xi-team1">Starting XI - {{ match.team1?.name }}</option>
               <option value="starting-xi-team2">Starting XI - {{ match.team2?.name }}</option>
-              <option value="toss-screen">Toss Result</option>
+              <option value="live-score">Live Score</option>
+              <option value="player-stats">Player Stats</option>
+              <option value="current-partnership">Current Partnership</option>
+              <option value="run-rate-graph">Run Rate Graph</option>
+              <option value="live-match-summary">Live Match Summary</option>
+              <option value="final-match-summary">Final Match Summary</option>
             </select>
 
           </div>
@@ -803,15 +803,15 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                   (change)="changeDisplayView()"
                   class="w-full px-3 py-2 border rounded-lg"
                 >
-                  <option value="live-score">Live Score</option>
-                  <option value="live-match-summary">Live Match Summary</option>
-                  <option value="run-rate-graph">Run Rate Graph</option>
-                  <option value="current-partnership">Current Partnership</option>
-                  <option value="final-match-summary">Final Match Summary</option>
-                  <option value="player-stats">Player Stats</option>
+                  <option value="toss-screen">Toss Result</option>
                   <option value="starting-xi-team1">Starting XI - {{ match.team1?.name }}</option>
                   <option value="starting-xi-team2">Starting XI - {{ match.team2?.name }}</option>
-                  <option value="toss-screen">Toss Result</option>
+                  <option value="live-score">Live Score</option>
+                  <option value="player-stats">Player Stats</option>
+                  <option value="current-partnership">Current Partnership</option>
+                  <option value="run-rate-graph">Run Rate Graph</option>
+                  <option value="live-match-summary">Live Match Summary</option>
+                  <option value="final-match-summary">Final Match Summary</option>
                 </select>
               </div>
 
