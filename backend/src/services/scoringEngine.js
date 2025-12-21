@@ -1275,6 +1275,113 @@ async function changeBatsman(matchId, position, newBatsmanId) {
   };
 }
 
+/**
+ * Toggle batsman's dismissal status (out <-> not out)
+ * If currently out, clears dismissal and decrements wicket count
+ * If not out, allows setting a dismissal type
+ */
+async function toggleBatsmanDismissal(matchId, playerId, dismissalData = null) {
+  const match = await Match.findById(matchId);
+  
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  const innings = match.innings[match.currentInnings];
+  
+  if (!innings) {
+    throw new Error('No innings found');
+  }
+
+  const batsmanStats = innings.battingStats.find(
+    s => s.player.toString() === playerId.toString()
+  );
+
+  if (!batsmanStats) {
+    throw new Error('Batsman not found in current innings');
+  }
+
+  const wasOut = batsmanStats.isOut;
+
+  if (wasOut) {
+    // Player was out, make them not out
+    const oldDismissal = batsmanStats.dismissal;
+    
+    batsmanStats.isOut = false;
+    batsmanStats.isNotOut = false;
+    batsmanStats.dismissal = { type: null, bowler: null, fielder: null };
+    
+    // Decrement total wickets
+    innings.totalWickets = Math.max(0, innings.totalWickets - 1);
+    
+    // Remove from fall of wickets
+    const fowIndex = innings.fallOfWickets.findIndex(
+      f => f.player.toString() === playerId.toString()
+    );
+    if (fowIndex !== -1) {
+      innings.fallOfWickets.splice(fowIndex, 1);
+      // Re-number remaining wickets
+      innings.fallOfWickets.forEach((fow, idx) => {
+        fow.wicketNumber = idx + 1;
+      });
+    }
+
+    // If a bowler got credit for this wicket, remove it
+    if (oldDismissal?.bowler && oldDismissal.type !== 'run-out') {
+      const bowlerStats = innings.bowlingStats.find(
+        s => s.player.toString() === oldDismissal.bowler.toString()
+      );
+      if (bowlerStats) {
+        bowlerStats.wickets = Math.max(0, bowlerStats.wickets - 1);
+      }
+    }
+  } else {
+    // Player was not out, mark them as out
+    if (!dismissalData?.type) {
+      throw new Error('Dismissal type is required when marking player out');
+    }
+
+    batsmanStats.isOut = true;
+    batsmanStats.isNotOut = false;
+    batsmanStats.dismissal = {
+      type: dismissalData.type,
+      bowler: dismissalData.bowlerId || null,
+      fielder: dismissalData.fielderId || null
+    };
+    
+    // Increment total wickets
+    innings.totalWickets = Math.min(10, innings.totalWickets + 1);
+    
+    // Add to fall of wickets
+    innings.fallOfWickets.push({
+      wicketNumber: innings.totalWickets,
+      runs: innings.totalRuns,
+      balls: innings.totalBalls,
+      player: playerId,
+      overs: getOversDisplay(innings.totalBalls)
+    });
+
+    // Credit bowler with wicket (except run-out)
+    if (dismissalData.bowlerId && dismissalData.type !== 'run-out') {
+      const bowlerStats = innings.bowlingStats.find(
+        s => s.player.toString() === dismissalData.bowlerId.toString()
+      );
+      if (bowlerStats) {
+        bowlerStats.wickets += 1;
+      }
+    }
+  }
+
+  await match.save();
+
+  return {
+    wasOut,
+    isNowOut: batsmanStats.isOut,
+    batsmanStats,
+    innings: innings.toObject()
+  };
+}
+
 module.exports = {
   recordBall,
   undoLastBall,
@@ -1288,6 +1395,7 @@ module.exports = {
   adjustBatsmanStats,
   adjustBowlerStats,
   changeBatsman,
+  toggleBatsmanDismissal,
   getOversDisplay,
   getBallDisplay,
   calculateCurrentRunRate,

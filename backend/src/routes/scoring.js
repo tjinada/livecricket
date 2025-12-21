@@ -537,6 +537,37 @@ router.put('/:matchId/batsmen/change', auth, async (req, res, next) => {
 });
 
 /**
+ * PUT /api/scoring/:matchId/batsman/:playerId/dismissal
+ * Toggle batsman's out/not-out status
+ */
+router.put('/:matchId/batsman/:playerId/dismissal', auth, async (req, res, next) => {
+  try {
+    const { matchId, playerId } = req.params;
+    const { type, bowlerId, fielderId } = req.body;
+
+    // If type is provided, we're marking them out; otherwise toggling to not-out
+    const dismissalData = type ? { type, bowlerId, fielderId } : null;
+
+    const result = await scoringEngine.toggleBatsmanDismissal(matchId, playerId, dismissalData);
+
+    // Broadcast update to SSE clients
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'score-update', {
+        innings: result.innings,
+        adjustment: true
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * GET /api/scoring/:matchId/stats
  * Get current match statistics
  */

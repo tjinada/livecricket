@@ -115,4 +115,20 @@ export class ScoringService {
       newBatsman: newBatsmanId
     });
   }
+
+  /**
+   * Toggle batsman's dismissal status (out <-> not out)
+   * If dismissalData is null, marks player as not out
+   * If dismissalData is provided, marks player as out with that dismissal
+   */
+  toggleBatsmanDismissal(matchId: string, playerId: string, dismissalData?: {
+    type: 'bowled' | 'caught' | 'lbw' | 'run-out' | 'stumped' | 'hit-wicket';
+    bowlerId?: string;
+    fielderId?: string;
+  }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(
+      `${this.apiUrl}/${matchId}/batsman/${playerId}/dismissal`,
+      dismissalData || {}
+    );
+  }
 }

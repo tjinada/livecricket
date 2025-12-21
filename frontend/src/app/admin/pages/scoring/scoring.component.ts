@@ -9,7 +9,7 @@ import { Player } from '../../../core/models';
 import { BackgroundSettingsComponent, BackgroundSettings } from '../../components/background-settings/background-settings.component';
 import { HighlightSettingsComponent } from '../../components/highlight-settings/highlight-settings.component';
 
-type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo' | 'adjustScore' | 'changeBatsman' | 'adjustBatsman' | 'adjustBowler';
+type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo' | 'adjustScore' | 'changeBatsman' | 'adjustBatsman' | 'adjustBowler' | 'manageBatsmen';
 
 @Component({
   selector: 'app-scoring',
@@ -769,6 +769,13 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                     class="w-full h-10 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium disabled:opacity-50"
                   >
                     🔄 Substitute Player
+                  </button>
+                  <button 
+                    (click)="openManageBatsmenModal()"
+                    [disabled]="processing"
+                    class="w-full h-10 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    🏏 Manage All Batsmen
                   </button>
                   <button 
                     (click)="openModal('endInnings')"
@@ -1915,6 +1922,151 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {{ processing ? 'Saving...' : 'Save Changes' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Manage All Batsmen Modal -->
+      @if (activeModal === 'manageBatsmen') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">🏏 Manage All Batsmen</h3>
+            </div>
+            <div class="p-4 space-y-4">
+              <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <p class="text-purple-800 text-sm">
+                  View all batsmen who have batted. Toggle their out/not-out status or adjust their stats.
+                </p>
+              </div>
+
+              @if (getAllBatsmenWithStats().length === 0) {
+                <div class="text-center text-gray-500 py-8">
+                  <p>No batsmen have batted yet in this innings.</p>
+                </div>
+              } @else {
+                <div class="space-y-2">
+                  @for (batsman of getAllBatsmenWithStats(); track batsman.playerId) {
+                    <div 
+                      class="p-3 rounded-lg border flex items-center justify-between"
+                      [class.bg-red-50]="batsman.isOut"
+                      [class.border-red-200]="batsman.isOut"
+                      [class.bg-green-50]="!batsman.isOut"
+                      [class.border-green-200]="!batsman.isOut"
+                    >
+                      <div class="flex items-center gap-3">
+                        <div>
+                          <p class="font-medium text-gray-800">{{ batsman.name }}</p>
+                          <p class="text-sm text-gray-500">
+                            {{ batsman.runs }} ({{ batsman.balls }}) | 
+                            4s: {{ batsman.fours }} | 6s: {{ batsman.sixes }} | 
+                            SR: {{ batsman.strikeRate }}
+                          </p>
+                          @if (batsman.isOut && batsman.dismissalType) {
+                            <p class="text-xs text-red-600">
+                              {{ formatDismissal(batsman.dismissalType) }}
+                            </p>
+                          }
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        @if (batsman.isOut) {
+                          <button 
+                            (click)="toggleDismissal(batsman.playerId, false)"
+                            [disabled]="processing"
+                            class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50"
+                          >
+                            Mark Not Out
+                          </button>
+                        } @else {
+                          <button 
+                            (click)="openMarkOutDialog(batsman.playerId, batsman.name)"
+                            [disabled]="processing || isCurrentBatsman(batsman.playerId)"
+                            class="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+                            [title]="isCurrentBatsman(batsman.playerId) ? 'Cannot mark current batsman as out here - use wicket button' : 'Mark as out'"
+                          >
+                            Mark Out
+                          </button>
+                        }
+                        <button 
+                          (click)="openAdjustBatsmanModal(batsman.playerId)"
+                          class="p-1.5 text-gray-400 hover:text-gray-600"
+                          title="Adjust stats"
+                        >
+                          ✏️
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Mark Out Sub-dialog -->
+              @if (markOutDialogOpen) {
+                <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <h4 class="font-medium text-red-800 mb-3">Mark {{ markOutForm.playerName }} as Out</h4>
+                  <div class="space-y-3">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-2">Dismissal Type</label>
+                      <div class="grid grid-cols-3 gap-2">
+                        @for (type of dismissalTypes; track type.value) {
+                          <button 
+                            (click)="markOutForm.type = type.value"
+                            class="p-2 rounded-lg border text-xs font-medium transition-all"
+                            [class.border-red-500]="markOutForm.type === type.value"
+                            [class.bg-red-100]="markOutForm.type === type.value"
+                            [class.text-red-700]="markOutForm.type === type.value"
+                          >
+                            {{ type.label }}
+                          </button>
+                        }
+                      </div>
+                    </div>
+                    @if (['caught', 'stumped'].includes(markOutForm.type)) {
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fielder (optional)</label>
+                        <select 
+                          [(ngModel)]="markOutForm.fielderId"
+                          class="w-full px-3 py-2 border rounded-lg text-sm"
+                        >
+                          <option value="">Select Fielder</option>
+                          @for (player of bowlingTeamPlayers; track getPlayerId(player)) {
+                            <option [value]="getPlayerId(player)">{{ getSquadPlayerName(player) }}</option>
+                          }
+                        </select>
+                      </div>
+                    }
+                    <div class="flex gap-2 justify-end">
+                      <button 
+                        (click)="closeMarkOutDialog()"
+                        class="px-3 py-1.5 text-gray-600 hover:text-gray-800 text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        (click)="confirmMarkOut()"
+                        [disabled]="processing || !markOutForm.type"
+                        class="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {{ processing ? 'Saving...' : 'Confirm Out' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+
+              @if (error) {
+                <p class="text-red-600 text-sm">{{ error }}</p>
+              }
+            </div>
+            <div class="p-4 border-t flex justify-end">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Close
               </button>
             </div>
           </div>
@@ -3521,5 +3673,156 @@ export class ScoringComponent implements OnInit, OnDestroy {
     return this.currentInnings.bowlingStats.filter((bs: any) => 
       (bs.overs || 0) > 0 || (bs.balls || 0) > 0
     );
+  }
+
+  // ===========================================
+  // MANAGE ALL BATSMEN - Toggle Out/Not Out
+  // ===========================================
+
+  markOutDialogOpen = false;
+  markOutForm = {
+    playerId: '',
+    playerName: '',
+    type: '',
+    bowlerId: '',
+    fielderId: ''
+  };
+
+  // Open the manage batsmen modal
+  openManageBatsmenModal(): void {
+    this.markOutDialogOpen = false;
+    this.markOutForm = { playerId: '', playerName: '', type: '', bowlerId: '', fielderId: '' };
+    this.activeModal = 'manageBatsmen';
+  }
+
+  // Get all batsmen who have any stats in current innings
+  getAllBatsmenWithStats(): any[] {
+    if (!this.currentInnings?.battingStats) return [];
+    
+    return this.currentInnings.battingStats.map((bs: any) => {
+      const playerId = bs.player?._id || bs.player;
+      const strikeRate = bs.balls > 0 ? ((bs.runs / bs.balls) * 100).toFixed(1) : '0.0';
+      
+      return {
+        playerId: playerId?.toString(),
+        name: this.getPlayerName(bs.player),
+        runs: bs.runs || 0,
+        balls: bs.balls || 0,
+        fours: bs.fours || 0,
+        sixes: bs.sixes || 0,
+        strikeRate,
+        isOut: !!(bs.dismissal?.type),
+        dismissalType: bs.dismissal?.type || null,
+        dismissalBowler: bs.dismissal?.bowler,
+        dismissalFielder: bs.dismissal?.fielder
+      };
+    });
+  }
+
+  // Check if player is currently batting
+  isCurrentBatsman(playerId: string): boolean {
+    if (!this.currentInnings?.currentBatsmen) return false;
+    const strikerId = this.currentInnings.currentBatsmen.striker?._id || this.currentInnings.currentBatsmen.striker;
+    const nonStrikerId = this.currentInnings.currentBatsmen.nonStriker?._id || this.currentInnings.currentBatsmen.nonStriker;
+    return playerId === strikerId?.toString() || playerId === nonStrikerId?.toString();
+  }
+
+  // Format dismissal type for display
+  formatDismissal(type: string): string {
+    const formats: Record<string, string> = {
+      'bowled': 'Bowled',
+      'caught': 'Caught',
+      'lbw': 'LBW',
+      'run-out': 'Run Out',
+      'stumped': 'Stumped',
+      'hit-wicket': 'Hit Wicket'
+    };
+    return formats[type] || type;
+  }
+
+  // Open the mark out dialog
+  openMarkOutDialog(playerId: string, playerName: string): void {
+    this.markOutForm = {
+      playerId,
+      playerName,
+      type: '',
+      bowlerId: '',
+      fielderId: ''
+    };
+    this.markOutDialogOpen = true;
+  }
+
+  // Close mark out dialog
+  closeMarkOutDialog(): void {
+    this.markOutDialogOpen = false;
+    this.markOutForm = { playerId: '', playerName: '', type: '', bowlerId: '', fielderId: '' };
+  }
+
+  // Toggle dismissal status (mark out or not out)
+  toggleDismissal(playerId: string, markAsOut: boolean): void {
+    if (markAsOut) {
+      // This shouldn't be called directly - use openMarkOutDialog instead
+      return;
+    }
+
+    // Mark as NOT OUT - no dismissal data needed
+    this.processing = true;
+    this.error = '';
+
+    this.scoringService.toggleBatsmanDismissal(this.matchId, playerId).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.reloadMatch();
+        } else {
+          this.error = response.message || 'Failed to update dismissal status';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to update dismissal status';
+        this.processing = false;
+      }
+    });
+  }
+
+  // Confirm marking a player as out
+  confirmMarkOut(): void {
+    if (!this.markOutForm.type || !this.markOutForm.playerId) {
+      this.error = 'Please select a dismissal type';
+      return;
+    }
+
+    this.processing = true;
+    this.error = '';
+
+    const dismissalData: any = {
+      type: this.markOutForm.type
+    };
+
+    // Add bowler (use current bowler if available)
+    if (this.currentInnings?.currentBowler) {
+      dismissalData.bowlerId = this.currentInnings.currentBowler._id || this.currentInnings.currentBowler;
+    }
+
+    // Add fielder if applicable
+    if (this.markOutForm.fielderId) {
+      dismissalData.fielderId = this.markOutForm.fielderId;
+    }
+
+    this.scoringService.toggleBatsmanDismissal(this.matchId, this.markOutForm.playerId, dismissalData).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.closeMarkOutDialog();
+          this.reloadMatch();
+        } else {
+          this.error = response.message || 'Failed to mark player as out';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to mark player as out';
+        this.processing = false;
+      }
+    });
   }
 }
