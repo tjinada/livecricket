@@ -9,7 +9,7 @@ import { Player } from '../../../core/models';
 import { BackgroundSettingsComponent, BackgroundSettings } from '../../components/background-settings/background-settings.component';
 import { HighlightSettingsComponent } from '../../components/highlight-settings/highlight-settings.component';
 
-type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo' | 'adjustScore' | 'changeBatsman' | 'adjustBatsman' | 'adjustBowler' | 'manageBatsmen';
+type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo' | 'adjustScore' | 'changeBatsman' | 'adjustBatsman' | 'adjustBowler' | 'manageBatsmen' | 'manageBowlers';
 
 @Component({
   selector: 'app-scoring',
@@ -776,6 +776,13 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                     class="w-full h-10 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg font-medium disabled:opacity-50"
                   >
                     🏏 Manage All Batsmen
+                  </button>
+                  <button 
+                    (click)="openManageBowlersModal()"
+                    [disabled]="processing"
+                    class="w-full h-10 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    🎯 Manage All Bowlers
                   </button>
                   <button 
                     (click)="openModal('endInnings')"
@@ -2054,6 +2061,80 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                       </button>
                     </div>
                   </div>
+                </div>
+              }
+
+              @if (error) {
+                <p class="text-red-600 text-sm">{{ error }}</p>
+              }
+            </div>
+            <div class="p-4 border-t flex justify-end">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Manage All Bowlers Modal -->
+      @if (activeModal === 'manageBowlers') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">🎯 Manage All Bowlers</h3>
+            </div>
+            <div class="p-4 space-y-4">
+              <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                <p class="text-indigo-800 text-sm">
+                  View all bowlers who have bowled. Adjust their stats as needed.
+                </p>
+              </div>
+
+              @if (getAllBowlersWithStats().length === 0) {
+                <div class="text-center text-gray-500 py-8">
+                  <p>No bowlers have bowled yet in this innings.</p>
+                </div>
+              } @else {
+                <div class="space-y-2">
+                  @for (bowler of getAllBowlersWithStats(); track bowler.playerId) {
+                    <div 
+                      class="p-3 rounded-lg border flex items-center justify-between"
+                      [class.bg-blue-50]="isCurrentBowler(bowler.playerId)"
+                      [class.border-blue-300]="isCurrentBowler(bowler.playerId)"
+                      [class.bg-gray-50]="!isCurrentBowler(bowler.playerId)"
+                      [class.border-gray-200]="!isCurrentBowler(bowler.playerId)"
+                    >
+                      <div class="flex items-center gap-3">
+                        <div>
+                          <p class="font-medium text-gray-800">
+                            {{ bowler.name }}
+                            @if (isCurrentBowler(bowler.playerId)) {
+                              <span class="text-xs text-blue-600 ml-1">(bowling)</span>
+                            }
+                          </p>
+                          <p class="text-sm text-gray-500">
+                            {{ bowler.overs }}.{{ bowler.balls }} - {{ bowler.wickets }}/{{ bowler.runs }} | 
+                            M: {{ bowler.maidens }} | Econ: {{ bowler.economy }}
+                          </p>
+                          <p class="text-xs text-gray-400">
+                            Wd: {{ bowler.wides }} | Nb: {{ bowler.noBalls }}
+                          </p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button 
+                          (click)="openAdjustBowlerModal(bowler.playerId)"
+                          class="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700"
+                        >
+                          ✏️ Edit
+                        </button>
+                      </div>
+                    </div>
+                  }
                 </div>
               }
 
@@ -3824,5 +3905,47 @@ export class ScoringComponent implements OnInit, OnDestroy {
         this.processing = false;
       }
     });
+  }
+
+  // ===========================================
+  // MANAGE ALL BOWLERS
+  // ===========================================
+
+  // Open the manage bowlers modal
+  openManageBowlersModal(): void {
+    this.activeModal = 'manageBowlers';
+  }
+
+  // Get all bowlers who have any stats in current innings
+  getAllBowlersWithStats(): any[] {
+    if (!this.currentInnings?.bowlingStats) return [];
+    
+    return this.currentInnings.bowlingStats
+      .filter((bs: any) => (bs.overs || 0) > 0 || (bs.balls || 0) > 0)
+      .map((bs: any) => {
+        const playerId = bs.player?._id || bs.player;
+        const totalBalls = (bs.overs || 0) * 6 + (bs.balls || 0);
+        const economy = totalBalls > 0 ? ((bs.runs || 0) / totalBalls * 6).toFixed(2) : '0.00';
+        
+        return {
+          playerId: playerId?.toString(),
+          name: this.getPlayerName(bs.player),
+          overs: bs.overs || 0,
+          balls: bs.balls || 0,
+          runs: bs.runs || 0,
+          wickets: bs.wickets || 0,
+          maidens: bs.maidens || 0,
+          wides: bs.wides || 0,
+          noBalls: bs.noBalls || 0,
+          economy
+        };
+      });
+  }
+
+  // Check if player is the current bowler
+  isCurrentBowler(playerId: string): boolean {
+    if (!this.currentInnings?.currentBowler) return false;
+    const currentBowlerId = this.currentInnings.currentBowler._id || this.currentInnings.currentBowler;
+    return playerId === currentBowlerId?.toString();
   }
 }
