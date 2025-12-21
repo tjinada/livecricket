@@ -260,7 +260,7 @@ router.put('/:id/squad', auth, async (req, res, next) => {
     
     const { team1, team2 } = req.body;
     
-    // Validate squad size (max 15 per team)
+    // Validate squad size (min 11, max 15 per team)
     if (team1 && team1.length > 15) {
       return res.status(400).json({
         success: false,
@@ -275,21 +275,18 @@ router.put('/:id/squad', auth, async (req, res, next) => {
       });
     }
     
-    // Validate playing XI count
-    const team1PlayingXI = team1?.filter(p => p.isPlayingXI) || [];
-    const team2PlayingXI = team2?.filter(p => p.isPlayingXI) || [];
-    
-    if (team1PlayingXI.length > 0 && team1PlayingXI.length !== 11) {
+    // Validate minimum squad size (at least 11 players per team)
+    if (team1 && team1.length > 0 && team1.length < 11) {
       return res.status(400).json({
         success: false,
-        message: 'Team 1 must have exactly 11 players in playing XI'
+        message: 'Team 1 must have at least 11 players in squad'
       });
     }
     
-    if (team2PlayingXI.length > 0 && team2PlayingXI.length !== 11) {
+    if (team2 && team2.length > 0 && team2.length < 11) {
       return res.status(400).json({
         success: false,
-        message: 'Team 2 must have exactly 11 players in playing XI'
+        message: 'Team 2 must have at least 11 players in squad'
       });
     }
     
@@ -380,25 +377,23 @@ router.post('/:id/start', auth, async (req, res, next) => {
       });
     }
     
-    // Validate squads are set
-    const team1PlayingXI = match.squads.team1.filter(p => p.isPlayingXI);
-    const team2PlayingXI = match.squads.team2.filter(p => p.isPlayingXI);
+    // Validate squads are set (minimum 11 players per team)
+    const team1Squad = match.squads.team1 || [];
+    const team2Squad = match.squads.team2 || [];
     
-    if (team1PlayingXI.length !== 11 || team2PlayingXI.length !== 11) {
+    if (team1Squad.length < 11 || team2Squad.length < 11) {
       return res.status(400).json({
         success: false,
-        message: 'Both teams must have 11 players in playing XI'
+        message: 'Both teams must have at least 11 players in squad'
       });
     }
     
     const { openingBatsmen, openingBowler } = req.body;
     
-    if (!openingBatsmen?.striker || !openingBatsmen?.nonStriker || !openingBowler) {
-      return res.status(400).json({
-        success: false,
-        message: 'Opening batsmen and bowler are required'
-      });
-    }
+    // Opening batsmen and bowler are optional - can be set later in scoring screen
+    const hasStriker = openingBatsmen?.striker;
+    const hasNonStriker = openingBatsmen?.nonStriker;
+    const hasBowler = openingBowler;
     
     // Determine batting team based on toss
     let battingTeam, bowlingTeam;
@@ -414,6 +409,29 @@ router.post('/:id/start', auth, async (req, res, next) => {
         : match.team1;
     }
     
+    // Build batting stats array based on what's provided
+    const battingStats = [];
+    if (hasStriker) {
+      battingStats.push({ player: openingBatsmen.striker, position: 1 });
+    }
+    if (hasNonStriker) {
+      battingStats.push({ player: openingBatsmen.nonStriker, position: 2 });
+    }
+    
+    // Build bowling stats array based on what's provided
+    const bowlingStats = [];
+    if (hasBowler) {
+      bowlingStats.push({ player: openingBowler });
+    }
+    
+    // Build partnership object (only if both batsmen are set)
+    const partnership = (hasStriker && hasNonStriker) ? {
+      runs: 0,
+      balls: 0,
+      batsman1: openingBatsmen.striker,
+      batsman2: openingBatsmen.nonStriker
+    } : null;
+    
     // Initialize first innings
     match.innings.push({
       battingTeam,
@@ -421,24 +439,14 @@ router.post('/:id/start', auth, async (req, res, next) => {
       inningsNumber: 1,
       status: 'in-progress',
       currentBatsmen: {
-        striker: openingBatsmen.striker,
-        nonStriker: openingBatsmen.nonStriker
+        striker: hasStriker ? openingBatsmen.striker : null,
+        nonStriker: hasNonStriker ? openingBatsmen.nonStriker : null
       },
-      currentBowler: openingBowler,
-      battingStats: [
-        { player: openingBatsmen.striker, position: 1 },
-        { player: openingBatsmen.nonStriker, position: 2 }
-      ],
-      bowlingStats: [
-        { player: openingBowler }
-      ],
+      currentBowler: hasBowler ? openingBowler : null,
+      battingStats,
+      bowlingStats,
       overs: [],
-      partnership: {
-        runs: 0,
-        balls: 0,
-        batsman1: openingBatsmen.striker,
-        batsman2: openingBatsmen.nonStriker
-      }
+      partnership
     });
     
     match.status = 'live';
