@@ -1365,11 +1365,20 @@ async function generateMatchResult(matchId) {
   
   if (winType === 'runs') {
     // First batting team won - "won by Y runs"
-    resultText = `won by ${winMargin} run${winMargin !== 1 ? 's' : ''}`;
+    // winMargin from DB is stored as string "X runs" or as number
+    // Extract numeric value if it's a string like "2 runs"
+    const numericMargin = typeof winMargin === 'string' 
+      ? parseInt(winMargin) 
+      : winMargin;
+    resultText = `won by ${numericMargin} run${numericMargin !== 1 ? 's' : ''}`;
     resultSubtext = `${firstInnings?.totalRuns || 0}/${firstInnings?.totalWickets || 0} vs ${secondInnings?.totalRuns || 0}/${secondInnings?.totalWickets || 0}`;
   } else if (winType === 'wickets') {
     // Second batting team won - "X won by Y wickets"
-    resultText = `won by ${winMargin} wicket${winMargin !== 1 ? 's' : ''}`;
+    // winMargin from DB is stored as string "X wickets" or as number
+    const numericMargin = typeof winMargin === 'string' 
+      ? parseInt(winMargin) 
+      : winMargin;
+    resultText = `won by ${numericMargin} wicket${numericMargin !== 1 ? 's' : ''}`;
     
     // Calculate balls remaining
     const totalOvers = match.format === 'T20' ? 20 : 50;
