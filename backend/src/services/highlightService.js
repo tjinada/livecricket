@@ -342,6 +342,10 @@ async function generateInningsHighlights(matchId, inningsNumber) {
           runs: 0,
           wickets: 0,
           overs: '0.0',
+          // Team info - needed for display during highlights
+          battingTeam: innings.battingTeam?.name || 'Team',
+          battingTeamCode: innings.battingTeam?.code || 'TM',
+          battingTeamFlag: innings.battingTeam?.flagUrl || null,
           // Striker info
           strikerName: openingStriker?.name || 'Opener',
           strikerImage: openingStriker?.headshotPath || null,
@@ -585,6 +589,11 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       runs: runningScore,
       wickets: runningWickets,
       overs: getOversDisplay(runningBalls),
+      
+      // Team info - needed for display during highlights
+      battingTeam: innings.battingTeam?.name || 'Team',
+      battingTeamCode: innings.battingTeam?.code || 'TM',
+      battingTeamFlag: innings.battingTeam?.flagUrl || null,
       
       // Striker info
       strikerName: strikerStats?.name || 'Batsman',

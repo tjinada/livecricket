@@ -1293,6 +1293,42 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Get batting team name during highlights - uses highlight data's battingTeam
+   */
+  getHighlightBattingTeamName(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
+      // Check scoreAfter for battingTeam
+      const scoreAfter = this.highlightViewState.highlightData.scoreAfter;
+      if (scoreAfter?.battingTeam) {
+        return scoreAfter.battingTeam;
+      }
+      // Check highlightData directly for battingTeam
+      if (this.highlightViewState.highlightData.battingTeam) {
+        return this.highlightViewState.highlightData.battingTeam;
+      }
+    }
+    return this.getBattingTeamName();
+  }
+
+  /**
+   * Get innings label during highlights - uses highlight data's inningsNumber
+   */
+  getHighlightInningsLabel(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
+      // Check scoreAfter for isSecondInnings
+      const scoreAfter = this.highlightViewState.highlightData.scoreAfter;
+      if (scoreAfter?.isSecondInnings !== undefined) {
+        return scoreAfter.isSecondInnings ? '2nd Innings' : '1st Innings';
+      }
+      // Check highlightData for inningsNumber
+      if (this.highlightViewState.highlightData.inningsNumber !== undefined) {
+        return this.highlightViewState.highlightData.inningsNumber === 2 ? '2nd Innings' : '1st Innings';
+      }
+    }
+    return this.getInningsLabel();
+  }
+
+  /**
    * Get runs needed during highlights
    */
   getHighlightRunsNeeded(): number {
