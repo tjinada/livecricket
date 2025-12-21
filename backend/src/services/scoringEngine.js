@@ -1388,6 +1388,306 @@ async function toggleBatsmanDismissal(matchId, playerId, dismissalData = null) {
   };
 }
 
+/**
+ * Force end the current over and start a new one
+ * Useful for correcting mistakes or handling unusual situations
+ */
+async function forceNewOver(matchId) {
+  const match = await Match.findById(matchId);
+  
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.status !== 'live') {
+    throw new Error('Match is not live');
+  }
+
+  const innings = match.innings[match.currentInnings];
+  
+  if (!innings || innings.status !== 'in-progress') {
+    throw new Error('No innings in progress');
+  }
+
+  const currentBallsInOver = innings.totalBalls % 6;
+  
+  // If already at start of an over, nothing to do
+  if (currentBallsInOver === 0 && innings.totalBalls > 0) {
+    return {
+      message: 'Already at start of a new over',
+      innings: innings.toObject()
+    };
+  }
+
+  // Calculate how many balls to add to complete the over
+  const ballsToAdd = currentBallsInOver === 0 ? 0 : (6 - currentBallsInOver);
+  
+  // Update total balls to next complete over
+  innings.totalBalls += ballsToAdd;
+
+  // Update current bowler's stats if exists
+  if (innings.currentBowler) {
+    const bowlerStats = innings.bowlingStats.find(
+      s => s.player.toString() === innings.currentBowler.toString()
+    );
+    
+    if (bowlerStats) {
+      // Complete the over for the bowler
+      bowlerStats.overs += 1;
+      bowlerStats.balls = 0;
+    }
+  }
+
+  // Save completed over to overs array if we have current over data
+  if (innings.currentOver && innings.currentOver.length > 0) {
+    const completedOverNumber = Math.floor(innings.totalBalls / 6);
+    const overRuns = innings.currentOver.reduce((sum, b) => sum + (b.runs || 0), 0);
+    const overWickets = innings.currentOver.filter(b => b.isWicket).length;
+    
+    if (!innings.overs) {
+      innings.overs = [];
+    }
+    
+    innings.overs.push({
+      overNumber: completedOverNumber,
+      bowler: innings.currentBowler,
+      balls: [...innings.currentOver],
+      runs: overRuns,
+      wickets: overWickets,
+      forcedEnd: true  // Mark that this over was force-ended
+    });
+  }
+
+  // Rotate strike (end of over)
+  if (innings.currentBatsmen.striker && innings.currentBatsmen.nonStriker) {
+    const temp = innings.currentBatsmen.striker;
+    innings.currentBatsmen.striker = innings.currentBatsmen.nonStriker;
+    innings.currentBatsmen.nonStriker = temp;
+  }
+
+  // Save last bowler and clear current over
+  innings.lastBowler = innings.currentBowler;
+  innings.currentBowler = null;
+  innings.currentOver = [];
+
+  await match.save();
+
+  return {
+    message: 'Over force-ended successfully',
+    ballsAdded: ballsToAdd,
+    newTotalBalls: innings.totalBalls,
+    innings: innings.toObject()
+  };
+}
+
+/**
+ * Bulk update innings data from Match Editor
+ * Allows admin to update all batting stats, bowling stats, totals, and extras in one call
+ */
+async function bulkUpdateInnings(matchId, updateData) {
+  const match = await Match.findById(matchId)
+    .populate('squads.team1.player', 'name')
+    .populate('squads.team2.player', 'name');
+  
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  const { inningsIndex } = updateData;
+  const targetInningsIndex = inningsIndex !== undefined ? inningsIndex : match.currentInnings;
+  const innings = match.innings[targetInningsIndex];
+  
+  if (!innings) {
+    throw new Error('Innings not found');
+  }
+
+  // Update batting stats
+  if (updateData.battingStats && Array.isArray(updateData.battingStats)) {
+    for (const statUpdate of updateData.battingStats) {
+      const existingStat = innings.battingStats.find(
+        s => s.player.toString() === statUpdate.playerId.toString()
+      );
+      
+      if (existingStat) {
+        // Update existing stats
+        if (typeof statUpdate.runs === 'number') existingStat.runs = Math.max(0, statUpdate.runs);
+        if (typeof statUpdate.balls === 'number') existingStat.balls = Math.max(0, statUpdate.balls);
+        if (typeof statUpdate.fours === 'number') existingStat.fours = Math.max(0, statUpdate.fours);
+        if (typeof statUpdate.sixes === 'number') existingStat.sixes = Math.max(0, statUpdate.sixes);
+        
+        // Handle dismissal
+        if (statUpdate.isOut === false) {
+          existingStat.isOut = false;
+          existingStat.isNotOut = false;
+          existingStat.dismissal = { type: null, bowler: null, fielder: null };
+        } else if (statUpdate.isOut === true && statUpdate.dismissal) {
+          existingStat.isOut = true;
+          existingStat.isNotOut = false;
+          existingStat.dismissal = {
+            type: statUpdate.dismissal.type || null,
+            bowler: statUpdate.dismissal.bowlerId || null,
+            fielder: statUpdate.dismissal.fielderId || null
+          };
+        }
+      } else if (statUpdate.isNew) {
+        // Add new batsman
+        innings.battingStats.push({
+          player: statUpdate.playerId,
+          runs: statUpdate.runs || 0,
+          balls: statUpdate.balls || 0,
+          fours: statUpdate.fours || 0,
+          sixes: statUpdate.sixes || 0,
+          isOut: statUpdate.isOut || false,
+          dismissal: statUpdate.dismissal ? {
+            type: statUpdate.dismissal.type || null,
+            bowler: statUpdate.dismissal.bowlerId || null,
+            fielder: statUpdate.dismissal.fielderId || null
+          } : { type: null, bowler: null, fielder: null },
+          position: innings.battingStats.length + 1
+        });
+      }
+    }
+  }
+
+  // Handle removed batsmen
+  if (updateData.removedBatsmen && Array.isArray(updateData.removedBatsmen)) {
+    innings.battingStats = innings.battingStats.filter(
+      s => !updateData.removedBatsmen.includes(s.player.toString())
+    );
+  }
+
+  // Update bowling stats
+  if (updateData.bowlingStats && Array.isArray(updateData.bowlingStats)) {
+    for (const statUpdate of updateData.bowlingStats) {
+      const existingStat = innings.bowlingStats.find(
+        s => s.player.toString() === statUpdate.playerId.toString()
+      );
+      
+      if (existingStat) {
+        // Parse overs if provided as string like "3.4"
+        if (typeof statUpdate.overs === 'string' && statUpdate.overs.includes('.')) {
+          const [overs, balls] = statUpdate.overs.split('.').map(Number);
+          existingStat.overs = Math.max(0, overs || 0);
+          existingStat.balls = Math.max(0, Math.min(5, balls || 0));
+        } else {
+          if (typeof statUpdate.overs === 'number') existingStat.overs = Math.max(0, statUpdate.overs);
+          if (typeof statUpdate.balls === 'number') existingStat.balls = Math.max(0, Math.min(5, statUpdate.balls));
+        }
+        
+        if (typeof statUpdate.maidens === 'number') existingStat.maidens = Math.max(0, statUpdate.maidens);
+        if (typeof statUpdate.runs === 'number') existingStat.runs = Math.max(0, statUpdate.runs);
+        if (typeof statUpdate.wickets === 'number') existingStat.wickets = Math.max(0, statUpdate.wickets);
+        if (typeof statUpdate.wides === 'number') existingStat.wides = Math.max(0, statUpdate.wides);
+        if (typeof statUpdate.noBalls === 'number') existingStat.noBalls = Math.max(0, statUpdate.noBalls);
+      } else if (statUpdate.isNew) {
+        // Add new bowler
+        let overs = 0, balls = 0;
+        if (typeof statUpdate.overs === 'string' && statUpdate.overs.includes('.')) {
+          const parts = statUpdate.overs.split('.').map(Number);
+          overs = parts[0] || 0;
+          balls = Math.min(5, parts[1] || 0);
+        } else {
+          overs = statUpdate.overs || 0;
+          balls = statUpdate.balls || 0;
+        }
+        
+        innings.bowlingStats.push({
+          player: statUpdate.playerId,
+          overs: overs,
+          balls: balls,
+          runs: statUpdate.runs || 0,
+          wickets: statUpdate.wickets || 0,
+          wides: statUpdate.wides || 0,
+          noBalls: statUpdate.noBalls || 0,
+          maidens: statUpdate.maidens || 0,
+          dotBalls: 0
+        });
+      }
+    }
+  }
+
+  // Handle removed bowlers
+  if (updateData.removedBowlers && Array.isArray(updateData.removedBowlers)) {
+    innings.bowlingStats = innings.bowlingStats.filter(
+      s => !updateData.removedBowlers.includes(s.player.toString())
+    );
+  }
+
+  // Update current batsmen
+  if (updateData.currentBatsmen) {
+    if (updateData.currentBatsmen.striker) {
+      innings.currentBatsmen.striker = updateData.currentBatsmen.striker;
+    }
+    if (updateData.currentBatsmen.nonStriker) {
+      innings.currentBatsmen.nonStriker = updateData.currentBatsmen.nonStriker;
+    }
+  }
+
+  // Update current bowler
+  if (updateData.currentBowler !== undefined) {
+    innings.currentBowler = updateData.currentBowler;
+  }
+
+  // Update innings totals
+  if (updateData.totals) {
+    if (typeof updateData.totals.runs === 'number') {
+      innings.totalRuns = Math.max(0, updateData.totals.runs);
+    }
+    if (typeof updateData.totals.wickets === 'number') {
+      innings.totalWickets = Math.max(0, Math.min(10, updateData.totals.wickets));
+    }
+    if (typeof updateData.totals.balls === 'number') {
+      const maxBalls = getMaxBalls(match.format);
+      innings.totalBalls = Math.max(0, Math.min(maxBalls, updateData.totals.balls));
+    }
+  }
+
+  // Update extras
+  if (updateData.extras) {
+    if (typeof updateData.extras.wides === 'number') {
+      innings.extras.wides = Math.max(0, updateData.extras.wides);
+    }
+    if (typeof updateData.extras.noBalls === 'number') {
+      innings.extras.noBalls = Math.max(0, updateData.extras.noBalls);
+    }
+    if (typeof updateData.extras.byes === 'number') {
+      innings.extras.byes = Math.max(0, updateData.extras.byes);
+    }
+    if (typeof updateData.extras.legByes === 'number') {
+      innings.extras.legByes = Math.max(0, updateData.extras.legByes);
+    }
+  }
+
+  // Recalculate fall of wickets based on dismissed batsmen
+  const dismissedBatsmen = innings.battingStats.filter(s => s.isOut);
+  innings.fallOfWickets = dismissedBatsmen.map((s, idx) => ({
+    wicketNumber: idx + 1,
+    runs: innings.totalRuns, // We don't have exact timing, so use current total
+    balls: innings.totalBalls,
+    player: s.player,
+    overs: getOversDisplay(innings.totalBalls)
+  }));
+
+  await match.save();
+
+  // Return populated match for response
+  const populatedMatch = await Match.findById(matchId)
+    .populate('team1', 'name code flagUrl')
+    .populate('team2', 'name code flagUrl')
+    .populate('innings.battingStats.player', 'name')
+    .populate('innings.bowlingStats.player', 'name')
+    .populate('innings.battingStats.dismissal.bowler', 'name')
+    .populate('innings.battingStats.dismissal.fielder', 'name')
+    .populate('squads.team1.player', 'name')
+    .populate('squads.team2.player', 'name');
+
+  return {
+    match: populatedMatch.toObject(),
+    innings: populatedMatch.innings[targetInningsIndex],
+    inningsIndex: targetInningsIndex
+  };
+}
+
 module.exports = {
   recordBall,
   undoLastBall,
@@ -1402,6 +1702,8 @@ module.exports = {
   adjustBowlerStats,
   changeBatsman,
   toggleBatsmanDismissal,
+  forceNewOver,
+  bulkUpdateInnings,
   getOversDisplay,
   getBallDisplay,
   calculateCurrentRunRate,

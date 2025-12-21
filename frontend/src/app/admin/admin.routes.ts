@@ -28,6 +28,10 @@ export const ADMIN_ROUTES: Routes = [
         loadComponent: () => import('./pages/scoring/scoring.component').then(m => m.ScoringComponent)
       },
       {
+        path: 'editor/:id',
+        loadComponent: () => import('./pages/match-editor/match-editor.component').then(m => m.MatchEditorComponent)
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent)
       }

@@ -650,4 +650,62 @@ router.get('/:matchId/stats', async (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/scoring/:matchId/force-new-over
+ * Force end the current over and start a new one
+ */
+router.post('/:matchId/force-new-over', auth, async (req, res, next) => {
+  try {
+    const { matchId } = req.params;
+
+    const result = await scoringEngine.forceNewOver(matchId);
+
+    // Broadcast update to SSE clients
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'over-complete', {
+        innings: result.innings,
+        forced: true,
+        ballsAdded: result.ballsAdded
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/scoring/:matchId/bulk-update
+ * Bulk update innings data from Match Editor
+ * Allows admin to update all batting stats, bowling stats, totals, and extras in one call
+ */
+router.put('/:matchId/bulk-update', auth, async (req, res, next) => {
+  try {
+    const { matchId } = req.params;
+    const updateData = req.body;
+
+    const result = await scoringEngine.bulkUpdateInnings(matchId, updateData);
+
+    // Broadcast update to SSE clients
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'score-update', {
+        innings: result.innings,
+        bulkUpdate: true,
+        inningsIndex: result.inningsIndex
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

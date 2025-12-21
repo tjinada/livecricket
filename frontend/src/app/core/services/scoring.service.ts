@@ -137,4 +137,63 @@ export class ScoringService {
       dismissalData || {}
     );
   }
+
+  /**
+   * Force end the current over and start a new one
+   */
+  forceNewOver(matchId: string): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${matchId}/force-new-over`, {});
+  }
+
+  /**
+   * Bulk update innings data from Match Editor
+   */
+  bulkUpdateInnings(matchId: string, updateData: {
+    inningsIndex: number;
+    battingStats?: Array<{
+      playerId: string;
+      runs?: number;
+      balls?: number;
+      fours?: number;
+      sixes?: number;
+      isOut?: boolean;
+      dismissal?: {
+        type: string;
+        bowlerId?: string;
+        fielderId?: string;
+      };
+      isNew?: boolean;
+    }>;
+    bowlingStats?: Array<{
+      playerId: string;
+      overs?: string | number;
+      balls?: number;
+      maidens?: number;
+      runs?: number;
+      wickets?: number;
+      wides?: number;
+      noBalls?: number;
+      isNew?: boolean;
+    }>;
+    removedBatsmen?: string[];
+    removedBowlers?: string[];
+    currentBatsmen?: {
+      striker?: string;
+      nonStriker?: string;
+    };
+    currentBowler?: string | null;
+    totals?: {
+      runs?: number;
+      wickets?: number;
+      balls?: number;
+    };
+    extras?: {
+      wides?: number;
+      noBalls?: number;
+      byes?: number;
+      legByes?: number;
+    };
+  }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/bulk-update`, updateData);
+  }
 }

@@ -45,6 +45,14 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               {{ isDisplayConnected ? 'Live' : 'Reconnecting...' }}
             </div>
             <a 
+              [href]="'/admin/editor/' + matchId" 
+              target="_blank"
+              class="text-sm text-amber-600 hover:text-amber-800"
+              title="Open Match Editor in new window"
+            >
+              📝 Editor
+            </a>
+            <a 
               [href]="'/display/' + matchId" 
               target="_blank"
               class="text-sm text-green-600 hover:text-green-800"
@@ -783,6 +791,14 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                     class="w-full h-10 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg font-medium disabled:opacity-50"
                   >
                     🎯 Manage All Bowlers
+                  </button>
+                  <button 
+                    (click)="forceNewOver()"
+                    [disabled]="processing || needsBowler"
+                    class="w-full h-10 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg font-medium disabled:opacity-50"
+                    title="End the current over early and start a new one"
+                  >
+                    ⏭️ Force New Over
                   </button>
                   <button 
                     (click)="openModal('endInnings')"
@@ -4043,5 +4059,34 @@ export class ScoringComponent implements OnInit, OnDestroy {
   // Check if innings exists
   hasInnings(index: number): boolean {
     return !!(this.match?.innings?.[index]);
+  }
+
+  // ===========================================
+  // FORCE NEW OVER
+  // ===========================================
+
+  // Force end the current over and start a new one
+  forceNewOver(): void {
+    if (!confirm('Are you sure you want to force end this over? This will:\n\n• Complete the current over\n• Add remaining balls to the count\n• Rotate strike\n• Require selecting a new bowler')) {
+      return;
+    }
+
+    this.processing = true;
+    this.error = '';
+
+    this.scoringService.forceNewOver(this.matchId).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.reloadMatch();
+        } else {
+          this.error = response.message || 'Failed to force new over';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to force new over';
+        this.processing = false;
+      }
+    });
   }
 }

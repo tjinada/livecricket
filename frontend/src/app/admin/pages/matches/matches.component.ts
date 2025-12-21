@@ -214,6 +214,13 @@ const PLAYING_XI_SIZE = 11;
                         Score Match
                       </button>
                       <button 
+                        (click)="goToEditor(match)"
+                        class="px-3 py-1 text-sm bg-amber-100 text-amber-700 rounded hover:bg-amber-200"
+                        title="Open Match Editor in new window"
+                      >
+                        📝 Editor
+                      </button>
+                      <button 
                         (click)="confirmDelete(match)"
                         class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
                       >
@@ -226,6 +233,13 @@ const PLAYING_XI_SIZE = 11;
                         class="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200"
                       >
                         Manage Display
+                      </button>
+                      <button 
+                        (click)="goToEditor(match)"
+                        class="px-3 py-1 text-sm bg-amber-100 text-amber-700 rounded hover:bg-amber-200"
+                        title="Open Match Editor"
+                      >
+                        📝 Editor
                       </button>
                       <button 
                         (click)="confirmDelete(match)"
@@ -1681,6 +1695,11 @@ export class MatchesComponent implements OnInit {
 
   goToScoring(match: Match) {
     this.router.navigate(['/admin/scoring', match._id]);
+  }
+
+  goToEditor(match: Match) {
+    // Open editor in a new tab/window - ideal for dual monitor setup
+    window.open(`/admin/editor/${match._id}`, '_blank');
   }
 
   // Title generation helpers
