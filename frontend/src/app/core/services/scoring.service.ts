@@ -87,8 +87,11 @@ export class ScoringService {
     balls?: number;
     fours?: number;
     sixes?: number;
-  }): Observable<ApiResponse<any>> {
-    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/batsman/${playerId}/adjust`, adjustments);
+  }, inningsIndex?: number): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/batsman/${playerId}/adjust`, {
+      ...adjustments,
+      inningsIndex
+    });
   }
 
   /**
@@ -102,8 +105,11 @@ export class ScoringService {
     maidens?: number;
     wides?: number;
     noBalls?: number;
-  }): Observable<ApiResponse<any>> {
-    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/bowler/${playerId}/adjust`, adjustments);
+  }, inningsIndex?: number): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/bowler/${playerId}/adjust`, {
+      ...adjustments,
+      inningsIndex
+    });
   }
 
   /**

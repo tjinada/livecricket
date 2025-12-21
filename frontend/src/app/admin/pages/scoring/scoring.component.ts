@@ -1943,9 +1943,38 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <h3 class="text-lg font-semibold">🏏 Manage All Batsmen</h3>
             </div>
             <div class="p-4 space-y-4">
+              <!-- Innings Tabs -->
+              @if (hasInnings(1)) {
+                <div class="flex border-b">
+                  <button 
+                    (click)="selectedManageInnings = 0"
+                    class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+                    [class.border-purple-600]="selectedManageInnings === 0"
+                    [class.text-purple-600]="selectedManageInnings === 0"
+                    [class.border-transparent]="selectedManageInnings !== 0"
+                    [class.text-gray-500]="selectedManageInnings !== 0"
+                  >
+                    {{ getInningsLabel(0) }}
+                  </button>
+                  <button 
+                    (click)="selectedManageInnings = 1"
+                    class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+                    [class.border-purple-600]="selectedManageInnings === 1"
+                    [class.text-purple-600]="selectedManageInnings === 1"
+                    [class.border-transparent]="selectedManageInnings !== 1"
+                    [class.text-gray-500]="selectedManageInnings !== 1"
+                  >
+                    {{ getInningsLabel(1) }}
+                  </button>
+                </div>
+              }
+
               <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
                 <p class="text-purple-800 text-sm">
                   View all batsmen who have batted. Toggle their out/not-out status or adjust their stats.
+                  @if (selectedManageInnings !== match?.currentInnings) {
+                    <span class="block mt-1 text-purple-600 font-medium">Viewing completed innings.</span>
+                  }
                 </p>
               </div>
 
@@ -1998,7 +2027,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                           </button>
                         }
                         <button 
-                          (click)="openAdjustBatsmanModal(batsman.playerId)"
+                          (click)="openAdjustBatsmanModal(batsman.playerId, batsman.inningsIndex)"
                           class="p-1.5 text-gray-400 hover:text-gray-600"
                           title="Adjust stats"
                         >
@@ -2088,9 +2117,38 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <h3 class="text-lg font-semibold">🎯 Manage All Bowlers</h3>
             </div>
             <div class="p-4 space-y-4">
+              <!-- Innings Tabs -->
+              @if (hasInnings(1)) {
+                <div class="flex border-b">
+                  <button 
+                    (click)="selectedManageInnings = 0"
+                    class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+                    [class.border-indigo-600]="selectedManageInnings === 0"
+                    [class.text-indigo-600]="selectedManageInnings === 0"
+                    [class.border-transparent]="selectedManageInnings !== 0"
+                    [class.text-gray-500]="selectedManageInnings !== 0"
+                  >
+                    {{ getInningsLabel(0) }}
+                  </button>
+                  <button 
+                    (click)="selectedManageInnings = 1"
+                    class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+                    [class.border-indigo-600]="selectedManageInnings === 1"
+                    [class.text-indigo-600]="selectedManageInnings === 1"
+                    [class.border-transparent]="selectedManageInnings !== 1"
+                    [class.text-gray-500]="selectedManageInnings !== 1"
+                  >
+                    {{ getInningsLabel(1) }}
+                  </button>
+                </div>
+              }
+
               <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
                 <p class="text-indigo-800 text-sm">
                   View all bowlers who have bowled. Adjust their stats as needed.
+                  @if (selectedManageInnings !== match?.currentInnings) {
+                    <span class="block mt-1 text-indigo-600 font-medium">Viewing completed innings.</span>
+                  }
                 </p>
               </div>
 
@@ -2127,7 +2185,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                       </div>
                       <div class="flex items-center gap-2">
                         <button 
-                          (click)="openAdjustBowlerModal(bowler.playerId)"
+                          (click)="openAdjustBowlerModal(bowler.playerId, bowler.inningsIndex)"
                           class="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700"
                         >
                           ✏️ Edit
@@ -3504,7 +3562,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
     runs: 0,
     balls: 0,
     fours: 0,
-    sixes: 0
+    sixes: 0,
+    inningsIndex: 0
   };
 
   // Bowler stats adjustment form
@@ -3517,7 +3576,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
     wickets: 0,
     maidens: 0,
     wides: 0,
-    noBalls: 0
+    noBalls: 0,
+    inningsIndex: 0
   };
 
   // Open score adjustment modal - pre-populate with current values
@@ -3637,8 +3697,11 @@ export class ScoringComponent implements OnInit, OnDestroy {
   }
 
   // Open batsman stats adjustment modal
-  openAdjustBatsmanModal(playerId: string): void {
-    const battingStat = this.currentInnings?.battingStats?.find((bs: any) => {
+  openAdjustBatsmanModal(playerId: string, inningsIndex?: number): void {
+    const targetIndex = inningsIndex !== undefined ? inningsIndex : this.selectedManageInnings;
+    const innings = this.match?.innings?.[targetIndex];
+    
+    const battingStat = innings?.battingStats?.find((bs: any) => {
       const bsId = bs.player?._id || bs.player;
       return bsId === playerId || bsId?.toString() === playerId;
     });
@@ -3654,7 +3717,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
       runs: battingStat.runs || 0,
       balls: battingStat.balls || 0,
       fours: battingStat.fours || 0,
-      sixes: battingStat.sixes || 0
+      sixes: battingStat.sixes || 0,
+      inningsIndex: targetIndex
     };
     this.activeModal = 'adjustBatsman';
   }
@@ -3669,10 +3733,11 @@ export class ScoringComponent implements OnInit, OnDestroy {
       balls: this.adjustBatsmanForm.balls,
       fours: this.adjustBatsmanForm.fours,
       sixes: this.adjustBatsmanForm.sixes
-    }).subscribe({
+    }, this.adjustBatsmanForm.inningsIndex).subscribe({
       next: (response) => {
         if (response.success) {
           this.closeModal();
+          this.reloadMatch();
         } else {
           this.error = response.message || 'Failed to adjust batsman stats';
         }
@@ -3686,8 +3751,11 @@ export class ScoringComponent implements OnInit, OnDestroy {
   }
 
   // Open bowler stats adjustment modal
-  openAdjustBowlerModal(playerId: string): void {
-    const bowlingStat = this.currentInnings?.bowlingStats?.find((bs: any) => {
+  openAdjustBowlerModal(playerId: string, inningsIndex?: number): void {
+    const targetIndex = inningsIndex !== undefined ? inningsIndex : this.selectedManageInnings;
+    const innings = this.match?.innings?.[targetIndex];
+    
+    const bowlingStat = innings?.bowlingStats?.find((bs: any) => {
       const bsId = bs.player?._id || bs.player;
       return bsId === playerId || bsId?.toString() === playerId;
     });
@@ -3706,7 +3774,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
       wickets: bowlingStat.wickets || 0,
       maidens: bowlingStat.maidens || 0,
       wides: bowlingStat.wides || 0,
-      noBalls: bowlingStat.noBalls || 0
+      noBalls: bowlingStat.noBalls || 0,
+      inningsIndex: targetIndex
     };
     this.activeModal = 'adjustBowler';
   }
@@ -3724,10 +3793,11 @@ export class ScoringComponent implements OnInit, OnDestroy {
       maidens: this.adjustBowlerForm.maidens,
       wides: this.adjustBowlerForm.wides,
       noBalls: this.adjustBowlerForm.noBalls
-    }).subscribe({
+    }, this.adjustBowlerForm.inningsIndex).subscribe({
       next: (response) => {
         if (response.success) {
           this.closeModal();
+          this.reloadMatch();
         } else {
           this.error = response.message || 'Failed to adjust bowler stats';
         }
@@ -3773,14 +3843,17 @@ export class ScoringComponent implements OnInit, OnDestroy {
   openManageBatsmenModal(): void {
     this.markOutDialogOpen = false;
     this.markOutForm = { playerId: '', playerName: '', type: '', bowlerId: '', fielderId: '' };
+    this.selectedManageInnings = this.match?.currentInnings || 0;
     this.activeModal = 'manageBatsmen';
   }
 
-  // Get all batsmen who have any stats in current innings
-  getAllBatsmenWithStats(): any[] {
-    if (!this.currentInnings?.battingStats) return [];
+  // Get all batsmen who have any stats in specified innings
+  getAllBatsmenWithStats(inningsIndex?: number): any[] {
+    const targetIndex = inningsIndex !== undefined ? inningsIndex : this.selectedManageInnings;
+    const innings = this.match?.innings?.[targetIndex];
+    if (!innings?.battingStats) return [];
     
-    return this.currentInnings.battingStats.map((bs: any) => {
+    return innings.battingStats.map((bs: any) => {
       const playerId = bs.player?._id || bs.player;
       const strikeRate = bs.balls > 0 ? ((bs.runs / bs.balls) * 100).toFixed(1) : '0.0';
       
@@ -3795,13 +3868,15 @@ export class ScoringComponent implements OnInit, OnDestroy {
         isOut: !!(bs.dismissal?.type),
         dismissalType: bs.dismissal?.type || null,
         dismissalBowler: bs.dismissal?.bowler,
-        dismissalFielder: bs.dismissal?.fielder
+        dismissalFielder: bs.dismissal?.fielder,
+        inningsIndex: targetIndex
       };
     });
   }
 
-  // Check if player is currently batting
+  // Check if player is currently batting (only for current innings)
   isCurrentBatsman(playerId: string): boolean {
+    if (this.selectedManageInnings !== this.match?.currentInnings) return false;
     if (!this.currentInnings?.currentBatsmen) return false;
     const strikerId = this.currentInnings.currentBatsmen.striker?._id || this.currentInnings.currentBatsmen.striker;
     const nonStrikerId = this.currentInnings.currentBatsmen.nonStriker?._id || this.currentInnings.currentBatsmen.nonStriker;
@@ -3911,16 +3986,22 @@ export class ScoringComponent implements OnInit, OnDestroy {
   // MANAGE ALL BOWLERS
   // ===========================================
 
+  // Selected innings for management modals (0 = first innings, 1 = second innings)
+  selectedManageInnings = 0;
+
   // Open the manage bowlers modal
   openManageBowlersModal(): void {
+    this.selectedManageInnings = this.match?.currentInnings || 0;
     this.activeModal = 'manageBowlers';
   }
 
-  // Get all bowlers who have any stats in current innings
-  getAllBowlersWithStats(): any[] {
-    if (!this.currentInnings?.bowlingStats) return [];
+  // Get all bowlers who have any stats in specified innings
+  getAllBowlersWithStats(inningsIndex?: number): any[] {
+    const targetIndex = inningsIndex !== undefined ? inningsIndex : this.selectedManageInnings;
+    const innings = this.match?.innings?.[targetIndex];
+    if (!innings?.bowlingStats) return [];
     
-    return this.currentInnings.bowlingStats
+    return innings.bowlingStats
       .filter((bs: any) => (bs.overs || 0) > 0 || (bs.balls || 0) > 0)
       .map((bs: any) => {
         const playerId = bs.player?._id || bs.player;
@@ -3937,15 +4018,30 @@ export class ScoringComponent implements OnInit, OnDestroy {
           maidens: bs.maidens || 0,
           wides: bs.wides || 0,
           noBalls: bs.noBalls || 0,
-          economy
+          economy,
+          inningsIndex: targetIndex
         };
       });
   }
 
-  // Check if player is the current bowler
+  // Check if player is the current bowler (only for current innings)
   isCurrentBowler(playerId: string): boolean {
+    if (this.selectedManageInnings !== this.match?.currentInnings) return false;
     if (!this.currentInnings?.currentBowler) return false;
     const currentBowlerId = this.currentInnings.currentBowler._id || this.currentInnings.currentBowler;
     return playerId === currentBowlerId?.toString();
+  }
+
+  // Get innings label for tabs
+  getInningsLabel(index: number): string {
+    const innings = this.match?.innings?.[index];
+    if (!innings) return `Innings ${index + 1}`;
+    const teamName = this.getTeamNameById(innings.battingTeam);
+    return `${teamName} Batting`;
+  }
+
+  // Check if innings exists
+  hasInnings(index: number): boolean {
+    return !!(this.match?.innings?.[index]);
   }
 }

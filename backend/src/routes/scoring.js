@@ -435,20 +435,21 @@ router.put('/:matchId/adjust-score', auth, async (req, res, next) => {
 router.put('/:matchId/batsman/:playerId/adjust', auth, async (req, res, next) => {
   try {
     const { matchId, playerId } = req.params;
-    const { runs, balls, fours, sixes } = req.body;
+    const { runs, balls, fours, sixes, inningsIndex } = req.body;
 
     const result = await scoringEngine.adjustBatsmanStats(matchId, playerId, {
       runs,
       balls,
       fours,
       sixes
-    });
+    }, inningsIndex !== undefined ? inningsIndex : null);
 
     // Broadcast update to SSE clients
     if (broadcastToMatch) {
       broadcastToMatch(matchId, 'score-update', {
         innings: result.innings,
-        adjustment: true
+        adjustment: true,
+        inningsIndex: result.inningsIndex
       });
     }
 
@@ -468,7 +469,7 @@ router.put('/:matchId/batsman/:playerId/adjust', auth, async (req, res, next) =>
 router.put('/:matchId/bowler/:playerId/adjust', auth, async (req, res, next) => {
   try {
     const { matchId, playerId } = req.params;
-    const { overs, balls, runs, wickets, maidens, wides, noBalls } = req.body;
+    const { overs, balls, runs, wickets, maidens, wides, noBalls, inningsIndex } = req.body;
 
     const result = await scoringEngine.adjustBowlerStats(matchId, playerId, {
       overs,
@@ -478,13 +479,14 @@ router.put('/:matchId/bowler/:playerId/adjust', auth, async (req, res, next) => 
       maidens,
       wides,
       noBalls
-    });
+    }, inningsIndex !== undefined ? inningsIndex : null);
 
     // Broadcast update to SSE clients
     if (broadcastToMatch) {
       broadcastToMatch(matchId, 'score-update', {
         innings: result.innings,
-        adjustment: true
+        adjustment: true,
+        inningsIndex: result.inningsIndex
       });
     }
 

@@ -1069,22 +1069,24 @@ async function adjustScore(matchId, newValues) {
 
 /**
  * Manually adjust a batsman's stats
+ * @param {string} matchId - Match ID
+ * @param {string} playerId - Player ID
+ * @param {object} adjustments - Stats to adjust
+ * @param {number} inningsIndex - Optional innings index (defaults to current innings)
  */
-async function adjustBatsmanStats(matchId, playerId, adjustments) {
+async function adjustBatsmanStats(matchId, playerId, adjustments, inningsIndex = null) {
   const match = await Match.findById(matchId);
   
   if (!match) {
     throw new Error('Match not found');
   }
 
-  if (match.status !== 'live') {
-    throw new Error('Match is not live');
-  }
-
-  const innings = match.innings[match.currentInnings];
+  // Use specified innings or current innings
+  const targetInningsIndex = inningsIndex !== null ? inningsIndex : match.currentInnings;
+  const innings = match.innings[targetInningsIndex];
   
   if (!innings) {
-    throw new Error('No innings found');
+    throw new Error('Innings not found');
   }
 
   const batsmanStats = innings.battingStats.find(
@@ -1092,7 +1094,7 @@ async function adjustBatsmanStats(matchId, playerId, adjustments) {
   );
 
   if (!batsmanStats) {
-    throw new Error('Batsman not found in current innings');
+    throw new Error('Batsman not found in specified innings');
   }
 
   const { runs, balls, fours, sixes } = adjustments;
@@ -1119,28 +1121,31 @@ async function adjustBatsmanStats(matchId, playerId, adjustments) {
 
   return {
     batsmanStats: batsmanStats,
-    innings: innings.toObject()
+    innings: innings.toObject(),
+    inningsIndex: targetInningsIndex
   };
 }
 
 /**
  * Manually adjust a bowler's stats
+ * @param {string} matchId - Match ID
+ * @param {string} playerId - Player ID
+ * @param {object} adjustments - Stats to adjust
+ * @param {number} inningsIndex - Optional innings index (defaults to current innings)
  */
-async function adjustBowlerStats(matchId, playerId, adjustments) {
+async function adjustBowlerStats(matchId, playerId, adjustments, inningsIndex = null) {
   const match = await Match.findById(matchId);
   
   if (!match) {
     throw new Error('Match not found');
   }
 
-  if (match.status !== 'live') {
-    throw new Error('Match is not live');
-  }
-
-  const innings = match.innings[match.currentInnings];
+  // Use specified innings or current innings
+  const targetInningsIndex = inningsIndex !== null ? inningsIndex : match.currentInnings;
+  const innings = match.innings[targetInningsIndex];
   
   if (!innings) {
-    throw new Error('No innings found');
+    throw new Error('Innings not found');
   }
 
   const bowlerStats = innings.bowlingStats.find(
@@ -1148,7 +1153,7 @@ async function adjustBowlerStats(matchId, playerId, adjustments) {
   );
 
   if (!bowlerStats) {
-    throw new Error('Bowler not found in current innings');
+    throw new Error('Bowler not found in specified innings');
   }
 
   const { overs, balls, runs, wickets, maidens, wides, noBalls } = adjustments;
@@ -1179,7 +1184,8 @@ async function adjustBowlerStats(matchId, playerId, adjustments) {
 
   return {
     bowlerStats: bowlerStats,
-    innings: innings.toObject()
+    innings: innings.toObject(),
+    inningsIndex: targetInningsIndex
   };
 }
 
