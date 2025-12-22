@@ -565,6 +565,61 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 </div>
               </div>
 
+              <!-- Recent Overs (collapsible, last 5 overs) -->
+              @if (getRecentOvers().length > 0) {
+                <div class="bg-white rounded-lg shadow">
+                  <button 
+                    (click)="showRecentOvers = !showRecentOvers"
+                    class="w-full p-4 flex justify-between items-center hover:bg-gray-50 transition-colors"
+                  >
+                    <div class="flex items-center gap-2">
+                      <h3 class="font-semibold text-gray-800">Recent Overs</h3>
+                      <span class="text-xs text-gray-500">(Last {{ getRecentOvers().length }})</span>
+                    </div>
+                    <span class="text-gray-400">{{ showRecentOvers ? '▲' : '▼' }}</span>
+                  </button>
+                  @if (showRecentOvers) {
+                    <div class="px-4 pb-4 space-y-3">
+                      <p class="text-xs text-gray-400">Click any ball to edit</p>
+                      @for (over of getRecentOvers(); track over.overIndex) {
+                        <div class="border rounded-lg p-3 bg-gray-50">
+                          <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">Over {{ over.overNumber }}</span>
+                            <div class="flex items-center gap-2">
+                              <span class="text-xs bg-gray-200 px-2 py-0.5 rounded">{{ over.runs }} runs</span>
+                              @if (over.wickets > 0) {
+                                <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">{{ over.wickets }}W</span>
+                              }
+                            </div>
+                          </div>
+                          <div class="flex gap-2 flex-wrap">
+                            @for (ball of over.balls; track $index) {
+                              <button 
+                                (click)="openEditCompletedOverBallModal(over.overIndex, $index)"
+                                class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 transition-all"
+                                [class.bg-gray-200]="ball.display === '0' || ball.display === '•'"
+                                [class.text-gray-600]="ball.display === '0' || ball.display === '•'"
+                                [class.bg-green-500]="ball.display === '4'"
+                                [class.text-white]="ball.display === '4' || ball.display === '6' || ball.display === 'W'"
+                                [class.bg-purple-500]="ball.display === '6'"
+                                [class.bg-red-500]="ball.display === 'W'"
+                                [class.bg-yellow-400]="ball.display?.includes('Wd') || ball.display?.includes('Nb')"
+                                [class.text-yellow-800]="ball.display?.includes('Wd') || ball.display?.includes('Nb')"
+                                [class.bg-blue-200]="!['0', '•', '4', '6', 'W'].includes(ball.display) && !ball.display?.includes('Wd') && !ball.display?.includes('Nb')"
+                                [class.text-blue-800]="!['0', '•', '4', '6', 'W'].includes(ball.display) && !ball.display?.includes('Wd') && !ball.display?.includes('Nb')"
+                                title="Ball {{ $index + 1 }}: {{ ball.display }} - Click to edit"
+                              >
+                                {{ ball.display === '0' ? '•' : ball.display }}
+                              </button>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
               <!-- Playing XI & Reserves -->
               <div class="bg-white rounded-lg shadow p-4">
                 <div class="flex justify-between items-center mb-3">
@@ -2264,7 +2319,14 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div class="p-4 border-b">
-              <h3 class="text-lg font-semibold">Edit Ball {{ editBallForm.ballIndex + 1 }}</h3>
+              <h3 class="text-lg font-semibold">
+                Edit Ball {{ editBallForm.ballIndex + 1 }}
+                @if (editBallForm.overIndex >= 0) {
+                  <span class="text-sm font-normal text-gray-500">(Over {{ editBallForm.overIndex + 1 }})</span>
+                } @else {
+                  <span class="text-sm font-normal text-gray-500">(Current Over)</span>
+                }
+              </h3>
               <p class="text-sm text-gray-500">Current: {{ editBallForm.currentDisplay }}</p>
             </div>
             <div class="p-4 space-y-4">
@@ -2388,6 +2450,27 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 </div>
               }
 
+              <!-- Delete Ball - Only allowed in current over -->
+              @if (editBallForm.overIndex === -1) {
+                <div class="pt-2 border-t">
+                  <button 
+                    (click)="setEditBallType('delete')"
+                    class="w-full p-2 rounded-lg border text-center text-sm font-medium bg-red-50 hover:bg-red-100 text-red-700 transition-all"
+                    [class.border-red-500]="editBallForm.type === 'delete'"
+                    [class.bg-red-200]="editBallForm.type === 'delete'"
+                  >
+                    🗑️ Delete Ball
+                  </button>
+                  <p class="text-xs text-gray-500 mt-1">Remove this ball completely</p>
+                </div>
+              } @else {
+                <div class="pt-2 border-t">
+                  <p class="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                    ⚠️ Balls in completed overs cannot be deleted, only edited to a different value.
+                  </p>
+                </div>
+              }
+
               <!-- Delete Ball Option -->
               <div class="pt-2 border-t">
                 <button 
@@ -2476,6 +2559,9 @@ export class ScoringComponent implements OnInit, OnDestroy {
   thirdUmpireActive = false;
   customMessageText = '';
 
+  // Recent overs display (last 5 overs)
+  showRecentOvers = false;
+
   // SSE connection
   private eventSource: EventSource | null = null;
   isDisplayConnected = true;
@@ -2501,7 +2587,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
     currentDisplay: '',
     type: '' as 'dot' | 'runs' | 'wicket' | 'wide' | 'noball' | 'bye' | 'legbye' | 'delete' | '',
     runs: 0,
-    extraRuns: 0
+    extraRuns: 0,
+    overIndex: -1  // -1 = current over, >= 0 = index in overs array
   };
 
   constructor(
@@ -4703,10 +4790,42 @@ export class ScoringComponent implements OnInit, OnDestroy {
   }
 
   // ===========================================
+  // RECENT OVERS HELPER METHODS (Last 5 overs)
+  // ===========================================
+
+  // Get the last 5 completed overs (most recent first)
+  getRecentOvers(): Array<{
+    overIndex: number;
+    overNumber: number;
+    runs: number;
+    wickets: number;
+    balls: any[];
+  }> {
+    if (!this.currentInnings?.overs || this.currentInnings.overs.length === 0) {
+      return [];
+    }
+    
+    const overs = this.currentInnings.overs;
+    const lastFive = overs.slice(-5).reverse(); // Get last 5, most recent first
+    
+    return lastFive.map((over: any, idx: number) => {
+      // Calculate the actual index in the overs array
+      const actualIndex = overs.length - 1 - idx;
+      return {
+        overIndex: actualIndex,
+        overNumber: over.overNumber || actualIndex + 1,
+        runs: over.runs || over.balls?.reduce((sum: number, b: any) => sum + (b.runs || 0), 0) || 0,
+        wickets: over.wickets || over.balls?.filter((b: any) => b.isWicket).length || 0,
+        balls: over.balls || []
+      };
+    });
+  }
+
+  // ===========================================
   // EDIT BALL METHODS
   // ===========================================
 
-  // Open edit ball modal
+  // Open edit ball modal for current over
   openEditBallModal(ballIndex: number): void {
     if (!this.currentInnings?.currentOver) return;
     
@@ -4718,7 +4837,30 @@ export class ScoringComponent implements OnInit, OnDestroy {
       currentDisplay: ball.display || '',
       type: '',
       runs: 0,
-      extraRuns: 0
+      extraRuns: 0,
+      overIndex: -1  // -1 means current over
+    };
+    
+    this.activeModal = 'editBall';
+  }
+
+  // Open edit ball modal for a completed over (any of the last 5)
+  openEditCompletedOverBallModal(overIndex: number, ballIndex: number): void {
+    if (!this.currentInnings?.overs) return;
+    
+    const over = this.currentInnings.overs[overIndex];
+    if (!over?.balls) return;
+    
+    const ball = over.balls[ballIndex];
+    if (!ball) return;
+    
+    this.editBallForm = {
+      ballIndex,
+      currentDisplay: ball.display || '',
+      type: '',
+      runs: 0,
+      extraRuns: 0,
+      overIndex  // >= 0 means completed over at this index
     };
     
     this.activeModal = 'editBall';
@@ -4748,10 +4890,12 @@ export class ScoringComponent implements OnInit, OnDestroy {
     this.error = '';
     
     const ballIndex = this.editBallForm.ballIndex;
+    const overIndex = this.editBallForm.overIndex;
     
     // Build the new ball data
     let newBallData: any = {
       ballIndex,
+      overIndex,  // Include overIndex to tell backend which over to edit
       type: this.editBallForm.type
     };
     
