@@ -679,6 +679,45 @@ router.post('/:matchId/force-new-over', auth, async (req, res, next) => {
 });
 
 /**
+ * PUT /api/scoring/:matchId/set-opening-batsman
+ * Set an opening batsman when match was started without batsmen selected
+ */
+router.put('/:matchId/set-opening-batsman', auth, async (req, res, next) => {
+  try {
+    const { matchId } = req.params;
+    const { position, playerId } = req.body;
+
+    if (!position || !playerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Position and playerId are required'
+      });
+    }
+
+    if (!['striker', 'nonStriker'].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Position must be striker or nonStriker'
+      });
+    }
+
+    const result = await scoringEngine.setOpeningBatsman(matchId, position, playerId);
+
+    // Broadcast update to SSE clients
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'batsmen-change', result);
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * PUT /api/scoring/:matchId/bulk-update
  * Bulk update innings data from Match Editor
  * Allows admin to update all batting stats, bowling stats, totals, and extras in one call

@@ -146,6 +146,16 @@ export class ScoringService {
   }
 
   /**
+   * Set an opening batsman when match was started without batsmen
+   */
+  setOpeningBatsman(matchId: string, position: 'striker' | 'nonStriker', playerId: string): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/set-opening-batsman`, {
+      position,
+      playerId
+    });
+  }
+
+  /**
    * Bulk update innings data from Match Editor
    */
   bulkUpdateInnings(matchId: string, updateData: {

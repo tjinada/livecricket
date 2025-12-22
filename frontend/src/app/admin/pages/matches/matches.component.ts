@@ -185,7 +185,7 @@ const MIN_SQUAD_SIZE = 11;
                         </button>
                       } @else {
                         <button 
-                          (click)="setupStart(match)"
+                          (click)="startMatchDirectly(match)"
                           class="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
                         >
                           Start Match
@@ -1327,6 +1327,31 @@ export class MatchesComponent implements OnInit {
   }
 
   // Start Match
+  // Start match directly without selecting batsmen/bowler - they'll be set in scoring screen
+  startMatchDirectly(match: Match) {
+    this.saving = true;
+    this.error = '';
+
+    // Start match with no pre-selected players
+    this.matchService.startMatch(match._id, {}).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.loadMatches();
+          // Navigate directly to scoring page
+          this.router.navigate(['/admin/scoring', match._id]);
+        } else {
+          this.error = response.message || 'Failed to start match';
+        }
+        this.saving = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to start match';
+        this.saving = false;
+      }
+    });
+  }
+
+  // Legacy method - kept for compatibility but no longer used from UI
   setupStart(match: Match) {
     // Reload match to get populated squad
     this.matchService.getById(match._id).subscribe({

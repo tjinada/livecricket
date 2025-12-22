@@ -379,35 +379,40 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <div class="bg-white rounded-lg shadow">
                 <div class="p-4 border-b flex justify-between items-center">
                   <h3 class="font-semibold text-gray-800">Batsmen</h3>
-                  <div class="flex items-center gap-3">
-                    <button 
-                      (click)="openChangeBatsmanModal()"
-                      [disabled]="processing"
-                      class="text-sm text-green-600 hover:text-green-800 disabled:opacity-50"
-                    >
-                      Change Batsmen
-                    </button>
-                    <span class="text-gray-300">|</span>
+                  @if (strikerStats && nonStrikerStats) {
                     <button 
                       (click)="swapBatsmen()"
                       [disabled]="processing"
                       class="text-sm text-green-600 hover:text-green-800 disabled:opacity-50"
                     >
-                      Swap Strike
+                      ⇄ Swap Strike
                     </button>
-                  </div>
+                  }
                 </div>
                 <div class="divide-y">
-                  @if (strikerStats) {
-                    <div class="p-4 flex justify-between items-center bg-green-50">
-                      <div class="flex items-center gap-3">
-                        <span class="text-green-600 font-bold">*</span>
-                        <div>
-                          <p class="font-medium text-gray-800">{{ getPlayerName(currentInnings?.currentBatsmen?.striker) }}</p>
-                          <p class="text-xs text-gray-500">Striker</p>
-                        </div>
+                  <!-- Striker -->
+                  <div class="p-4" [class.bg-green-50]="strikerStats">
+                    <div class="flex items-center gap-3">
+                      <span class="font-bold" [class.text-green-600]="strikerStats" [class.text-yellow-600]="!strikerStats">*</span>
+                      <div class="flex-1">
+                        <label class="text-xs text-gray-500 mb-1 block">Striker</label>
+                        <select 
+                          [ngModel]="getCurrentStrikerId()"
+                          (ngModelChange)="changeStriker($event)"
+                          [disabled]="processing"
+                          class="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          [class.border-yellow-300]="!strikerStats"
+                          [class.border-gray-300]="strikerStats"
+                        >
+                          <option value="">-- Select Striker --</option>
+                          @for (player of getAvailableBatsmenForPosition('striker'); track getPlayerId(player)) {
+                            <option [value]="getPlayerId(player)">
+                              #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
+                            </option>
+                          }
+                        </select>
                       </div>
-                      <div class="flex items-center gap-3">
+                      @if (strikerStats) {
                         <div class="text-right">
                           <p class="text-xl font-bold text-gray-800">
                             {{ strikerStats.runs || 0 }}<span class="text-sm text-gray-500">({{ strikerStats.balls || 0 }})</span>
@@ -423,19 +428,32 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                         >
                           ✏️
                         </button>
-                      </div>
+                      }
                     </div>
-                  }
-                  @if (nonStrikerStats) {
-                    <div class="p-4 flex justify-between items-center">
-                      <div class="flex items-center gap-3">
-                        <span class="text-gray-400">○</span>
-                        <div>
-                          <p class="font-medium text-gray-800">{{ getPlayerName(currentInnings?.currentBatsmen?.nonStriker) }}</p>
-                          <p class="text-xs text-gray-500">Non-Striker</p>
-                        </div>
+                  </div>
+                  <!-- Non-Striker -->
+                  <div class="p-4" [class.bg-gray-50]="nonStrikerStats">
+                    <div class="flex items-center gap-3">
+                      <span [class.text-gray-400]="nonStrikerStats" [class.text-yellow-600]="!nonStrikerStats">○</span>
+                      <div class="flex-1">
+                        <label class="text-xs text-gray-500 mb-1 block">Non-Striker</label>
+                        <select 
+                          [ngModel]="getCurrentNonStrikerId()"
+                          (ngModelChange)="changeNonStriker($event)"
+                          [disabled]="processing"
+                          class="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          [class.border-yellow-300]="!nonStrikerStats"
+                          [class.border-gray-300]="nonStrikerStats"
+                        >
+                          <option value="">-- Select Non-Striker --</option>
+                          @for (player of getAvailableBatsmenForPosition('nonStriker'); track getPlayerId(player)) {
+                            <option [value]="getPlayerId(player)">
+                              #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
+                            </option>
+                          }
+                        </select>
                       </div>
-                      <div class="flex items-center gap-3">
+                      @if (nonStrikerStats) {
                         <div class="text-right">
                           <p class="text-xl font-bold text-gray-800">
                             {{ nonStrikerStats.runs || 0 }}<span class="text-sm text-gray-500">({{ nonStrikerStats.balls || 0 }})</span>
@@ -451,9 +469,9 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                         >
                           ✏️
                         </button>
-                      </div>
+                      }
                     </div>
-                  }
+                  </div>
                 </div>
               </div>
 
@@ -461,20 +479,29 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
               <div class="bg-white rounded-lg shadow">
                 <div class="p-4 border-b flex justify-between items-center">
                   <h3 class="font-semibold text-gray-800">Bowler</h3>
-                  <button 
-                    (click)="openModal('changeBowler')"
-                    [disabled]="processing"
-                    class="text-sm text-green-600 hover:text-green-800 disabled:opacity-50"
-                  >
-                    Change Bowler
-                  </button>
                 </div>
-                @if (currentBowlerStats) {
-                  <div class="p-4 flex justify-between items-center">
-                    <div>
-                      <p class="font-medium text-gray-800">{{ getPlayerName(currentInnings?.currentBowler) }}</p>
+                <div class="p-4" [class.bg-yellow-50]="!currentBowlerStats">
+                  <div class="flex items-center gap-3">
+                    <span class="text-lg" [class.text-green-600]="currentBowlerStats" [class.text-yellow-600]="!currentBowlerStats">🎯</span>
+                    <div class="flex-1">
+                      <label class="text-xs text-gray-500 mb-1 block">Bowler</label>
+                      <select 
+                        [ngModel]="getCurrentBowlerId()"
+                        (ngModelChange)="changeBowlerInline($event)"
+                        [disabled]="processing"
+                        class="w-full px-3 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        [class.border-yellow-300]="!currentBowlerStats"
+                        [class.border-gray-300]="currentBowlerStats"
+                      >
+                        <option value="">-- Select Bowler --</option>
+                        @for (player of getAvailableBowlersForSelection(); track getPlayerId(player)) {
+                          <option [value]="getPlayerId(player)">
+                            {{ getSquadPlayerName(player) }}
+                          </option>
+                        }
+                      </select>
                     </div>
-                    <div class="flex items-center gap-3">
+                    @if (currentBowlerStats) {
                       <div class="text-right">
                         <p class="text-lg font-bold text-gray-800">
                           {{ currentBowlerStats.wickets || 0 }}-{{ currentBowlerStats.runs || 0 }}
@@ -490,19 +517,9 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                       >
                         ✏️
                       </button>
-                    </div>
+                    }
                   </div>
-                } @else {
-                  <div class="p-4 text-center text-gray-500">
-                    <p>No bowler selected</p>
-                    <button 
-                      (click)="openModal('changeBowler')"
-                      class="mt-2 text-green-600 hover:text-green-800"
-                    >
-                      Select Bowler
-                    </button>
-                  </div>
-                }
+                </div>
               </div>
 
               <!-- This Over -->
@@ -2328,11 +2345,7 @@ export class ScoringComponent implements OnInit, OnDestroy {
           this.match = response.data;
           this.displayView = this.match.displayView || 'live-score';
           this.buildPlayerNameCache();
-          
-          // Auto-open bowler selection if needed
-          if (this.needsBowler && this.activeModal === 'none') {
-            this.openModal('changeBowler');
-          }
+          // Note: Bowler selection now handled via inline dropdown, not auto-opening modal
         }
         this.loading = false;
       },
@@ -2350,11 +2363,7 @@ export class ScoringComponent implements OnInit, OnDestroy {
             this.match = response.data;
             this.displayView = this.match.displayView || 'live-score';
             this.buildPlayerNameCache();
-            
-            // Auto-open bowler selection if needed
-            if (this.needsBowler && this.activeModal === 'none') {
-              this.openModal('changeBowler');
-            }
+            // Note: Bowler selection now handled via inline dropdown, not auto-opening modal
           }
           resolve();
         },
@@ -2570,7 +2579,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
     const team1Id = this.match.team1?._id || this.match.team1;
     const isTeam1Batting = battingTeamId === team1Id || battingTeamId?.toString() === team1Id?.toString();
     const squad = isTeam1Batting ? this.match.squads?.team2 : this.match.squads?.team1;
-    return squad?.filter((p: any) => p.isPlayingXI) || [];
+    // Return all squad players (no isPlayingXI filter since we simplified squad selection)
+    return squad || [];
   }
 
   get battingTeamPlayers() {
@@ -2579,7 +2589,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
     const team1Id = this.match.team1?._id || this.match.team1;
     const isTeam1Batting = battingTeamId === team1Id || battingTeamId?.toString() === team1Id?.toString();
     const squad = isTeam1Batting ? this.match.squads?.team1 : this.match.squads?.team2;
-    return squad?.filter((p: any) => p.isPlayingXI) || [];
+    // Return all squad players (no isPlayingXI filter since we simplified squad selection)
+    return squad || [];
   }
 
   get secondBattingTeamPlayers() {
@@ -2589,9 +2600,9 @@ export class ScoringComponent implements OnInit, OnDestroy {
     const team1Id = this.match.team1?._id || this.match.team1;
     const isTeam1BattedFirst = firstBattingTeamId === team1Id || firstBattingTeamId?.toString() === team1Id?.toString();
     const squad = isTeam1BattedFirst ? this.match.squads?.team2 : this.match.squads?.team1;
-    const playingXI = squad?.filter((p: any) => p.isPlayingXI) || [];
+    const allPlayers = squad || [];
     // Sort by batting order
-    return playingXI.sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+    return allPlayers.sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
   }
 
   get secondBowlingTeamPlayers() {
@@ -2601,7 +2612,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
     const team1Id = this.match.team1?._id || this.match.team1;
     const isTeam1BattedFirst = firstBattingTeamId === team1Id || firstBattingTeamId?.toString() === team1Id?.toString();
     const squad = isTeam1BattedFirst ? this.match.squads?.team1 : this.match.squads?.team2;
-    return squad?.filter((p: any) => p.isPlayingXI) || [];
+    // Return all squad players (no isPlayingXI filter since we simplified squad selection)
+    return squad || [];
   }
 
   // Helper to get player name from ID
@@ -4005,6 +4017,11 @@ export class ScoringComponent implements OnInit, OnDestroy {
   // Selected innings for management modals (0 = first innings, 1 = second innings)
   selectedManageInnings = 0;
 
+  // Inline player selection for initial setup
+  inlineStrikerSelection = '';
+  inlineNonStrikerSelection = '';
+  inlineBowlerSelection = '';
+
   // Open the manage bowlers modal
   openManageBowlersModal(): void {
     this.selectedManageInnings = this.match?.currentInnings || 0;
@@ -4085,6 +4102,255 @@ export class ScoringComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.error = err.error?.message || 'Failed to force new over';
+        this.processing = false;
+      }
+    });
+  }
+
+  // ===========================================
+  // INLINE PLAYER SELECTION (Initial Setup)
+  // ===========================================
+
+  // Get available batsmen for inline selection, excluding already selected player
+  getAvailableBatsmenForInlineSelection(position: 'striker' | 'nonStriker'): any[] {
+    const otherSelection = position === 'striker' 
+      ? this.inlineNonStrikerSelection 
+      : this.inlineStrikerSelection;
+    
+    return this.battingTeamPlayers
+      .filter((p: any) => this.getPlayerId(p) !== otherSelection)
+      .sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+  }
+
+  // Set striker via inline dropdown
+  setInlineStriker(): void {
+    if (!this.inlineStrikerSelection) return;
+
+    this.processing = true;
+    this.error = '';
+
+    this.scoringService.setOpeningBatsman(this.matchId, 'striker', this.inlineStrikerSelection).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.inlineStrikerSelection = '';
+          this.reloadMatch();
+        } else {
+          this.error = response.message || 'Failed to set striker';
+          this.inlineStrikerSelection = '';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to set striker';
+        this.inlineStrikerSelection = '';
+        this.processing = false;
+      }
+    });
+  }
+
+  // Set non-striker via inline dropdown
+  setInlineNonStriker(): void {
+    if (!this.inlineNonStrikerSelection) return;
+
+    this.processing = true;
+    this.error = '';
+
+    this.scoringService.setOpeningBatsman(this.matchId, 'nonStriker', this.inlineNonStrikerSelection).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.inlineNonStrikerSelection = '';
+          this.reloadMatch();
+        } else {
+          this.error = response.message || 'Failed to set non-striker';
+          this.inlineNonStrikerSelection = '';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to set non-striker';
+        this.inlineNonStrikerSelection = '';
+        this.processing = false;
+      }
+    });
+  }
+
+  // Set bowler via inline dropdown
+  setInlineBowler(): void {
+    if (!this.inlineBowlerSelection) return;
+
+    this.processing = true;
+    this.error = '';
+
+    this.scoringService.changeBowler(this.matchId, this.inlineBowlerSelection).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.inlineBowlerSelection = '';
+          this.reloadMatch();
+        } else {
+          this.error = response.message || 'Failed to set bowler';
+          this.inlineBowlerSelection = '';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to set bowler';
+        this.inlineBowlerSelection = '';
+        this.processing = false;
+      }
+    });
+  }
+
+  // ===========================================
+  // PERSISTENT DROPDOWN PLAYER SELECTION
+  // ===========================================
+
+  // Get current striker ID for dropdown binding
+  getCurrentStrikerId(): string {
+    const striker = this.currentInnings?.currentBatsmen?.striker;
+    return striker?._id?.toString() || striker?.toString() || '';
+  }
+
+  // Get current non-striker ID for dropdown binding
+  getCurrentNonStrikerId(): string {
+    const nonStriker = this.currentInnings?.currentBatsmen?.nonStriker;
+    return nonStriker?._id?.toString() || nonStriker?.toString() || '';
+  }
+
+  // Get current bowler ID for dropdown binding
+  getCurrentBowlerId(): string {
+    const bowler = this.currentInnings?.currentBowler;
+    return bowler?._id?.toString() || bowler?.toString() || '';
+  }
+
+  // Get available batsmen for a position (includes current player, excludes other position and out players)
+  getAvailableBatsmenForPosition(position: 'striker' | 'nonStriker'): any[] {
+    if (!this.currentInnings) return [];
+    
+    const currentStrikerId = this.getCurrentStrikerId();
+    const currentNonStrikerId = this.getCurrentNonStrikerId();
+    const otherPositionId = position === 'striker' ? currentNonStrikerId : currentStrikerId;
+    
+    return this.battingTeamPlayers
+      .filter((p: any) => {
+        const playerId = this.getPlayerId(p);
+        // Exclude the other position's player
+        if (playerId === otherPositionId) return false;
+        // Check if player is already out
+        const battingStat = this.currentInnings?.battingStats?.find((bs: any) => {
+          const bsId = bs.player?._id || bs.player;
+          return bsId === playerId || bsId?.toString() === playerId;
+        });
+        if (battingStat?.isOut || battingStat?.dismissal?.type) return false;
+        return true;
+      })
+      .sort((a: any, b: any) => (a.battingOrder || 99) - (b.battingOrder || 99));
+  }
+
+  // Get available bowlers for selection (all bowling team players)
+  getAvailableBowlersForSelection(): any[] {
+    return this.bowlingTeamPlayers || [];
+  }
+
+  // Change striker via dropdown
+  changeStriker(newPlayerId: string): void {
+    if (!newPlayerId || newPlayerId === this.getCurrentStrikerId()) return;
+
+    this.processing = true;
+    this.error = '';
+
+    // Use setOpeningBatsman if no current striker, otherwise use changeBatsman
+    if (!this.getCurrentStrikerId()) {
+      this.scoringService.setOpeningBatsman(this.matchId, 'striker', newPlayerId).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.reloadMatch();
+          } else {
+            this.error = response.message || 'Failed to set striker';
+          }
+          this.processing = false;
+        },
+        error: (err) => {
+          this.error = err.error?.message || 'Failed to set striker';
+          this.processing = false;
+        }
+      });
+    } else {
+      this.scoringService.changeBatsman(this.matchId, 'striker', newPlayerId).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.reloadMatch();
+          } else {
+            this.error = response.message || 'Failed to change striker';
+          }
+          this.processing = false;
+        },
+        error: (err) => {
+          this.error = err.error?.message || 'Failed to change striker';
+          this.processing = false;
+        }
+      });
+    }
+  }
+
+  // Change non-striker via dropdown
+  changeNonStriker(newPlayerId: string): void {
+    if (!newPlayerId || newPlayerId === this.getCurrentNonStrikerId()) return;
+
+    this.processing = true;
+    this.error = '';
+
+    // Use setOpeningBatsman if no current non-striker, otherwise use changeBatsman
+    if (!this.getCurrentNonStrikerId()) {
+      this.scoringService.setOpeningBatsman(this.matchId, 'nonStriker', newPlayerId).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.reloadMatch();
+          } else {
+            this.error = response.message || 'Failed to set non-striker';
+          }
+          this.processing = false;
+        },
+        error: (err) => {
+          this.error = err.error?.message || 'Failed to set non-striker';
+          this.processing = false;
+        }
+      });
+    } else {
+      this.scoringService.changeBatsman(this.matchId, 'nonStriker', newPlayerId).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.reloadMatch();
+          } else {
+            this.error = response.message || 'Failed to change non-striker';
+          }
+          this.processing = false;
+        },
+        error: (err) => {
+          this.error = err.error?.message || 'Failed to change non-striker';
+          this.processing = false;
+        }
+      });
+    }
+  }
+
+  // Change bowler via inline dropdown
+  changeBowlerInline(newPlayerId: string): void {
+    if (!newPlayerId || newPlayerId === this.getCurrentBowlerId()) return;
+
+    this.processing = true;
+    this.error = '';
+
+    this.scoringService.changeBowler(this.matchId, newPlayerId).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.reloadMatch();
+        } else {
+          this.error = response.message || 'Failed to change bowler';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to change bowler';
         this.processing = false;
       }
     });

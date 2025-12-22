@@ -113,8 +113,8 @@ export class MatchService {
     return this.http.put<ApiResponse<Match>>(`${this.apiUrl}/${id}/toss`, toss);
   }
 
-  startMatch(id: string, data: { openingBatsmen: { striker: string, nonStriker: string }, openingBowler: string }): Observable<ApiResponse<Match>> {
-    return this.http.post<ApiResponse<Match>>(`${this.apiUrl}/${id}/start`, data);
+  startMatch(id: string, data?: { openingBatsmen?: { striker?: string, nonStriker?: string }, openingBowler?: string }): Observable<ApiResponse<Match>> {
+    return this.http.post<ApiResponse<Match>>(`${this.apiUrl}/${id}/start`, data || {});
   }
 
   setDisplayView(id: string, view: string, selectedPlayer?: string): Observable<ApiResponse<any>> {

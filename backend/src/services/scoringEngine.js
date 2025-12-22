@@ -1688,6 +1688,87 @@ async function bulkUpdateInnings(matchId, updateData) {
   };
 }
 
+/**
+ * Set an opening batsman when match was started without batsmen selected
+ * Creates batting stats entry if needed and sets the player as striker or non-striker
+ */
+async function setOpeningBatsman(matchId, position, playerId) {
+  const match = await Match.findById(matchId);
+  
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.status !== 'live') {
+    throw new Error('Match is not live');
+  }
+
+  const innings = match.innings[match.currentInnings];
+  
+  if (!innings) {
+    throw new Error('No innings found');
+  }
+
+  // Verify player is in the batting team's squad
+  const battingTeamSquad = match.team1.toString() === innings.battingTeam.toString()
+    ? match.squads.team1
+    : match.squads.team2;
+
+  const isInSquad = battingTeamSquad.some(
+    p => (p.player._id || p.player).toString() === playerId.toString()
+  );
+
+  if (!isInSquad) {
+    throw new Error('Player is not in batting team squad');
+  }
+
+  // Check if the player is already set at the other position
+  const otherPosition = position === 'striker' ? 'nonStriker' : 'striker';
+  const otherBatsmanId = innings.currentBatsmen[otherPosition];
+  
+  if (otherBatsmanId && otherBatsmanId.toString() === playerId.toString()) {
+    throw new Error('This player is already set at the other batting position');
+  }
+
+  // Set the batsman at the specified position
+  innings.currentBatsmen[position] = playerId;
+
+  // Add to batting stats if not already there
+  const existingStats = innings.battingStats.find(
+    s => s.player.toString() === playerId.toString()
+  );
+
+  if (!existingStats) {
+    innings.battingStats.push({
+      player: playerId,
+      runs: 0,
+      balls: 0,
+      fours: 0,
+      sixes: 0,
+      isOut: false,
+      position: innings.battingStats.length + 1
+    });
+  }
+
+  // Initialize partnership if both batsmen are now set
+  if (innings.currentBatsmen.striker && innings.currentBatsmen.nonStriker) {
+    innings.partnership = {
+      runs: 0,
+      balls: 0,
+      batsman1: innings.currentBatsmen.striker,
+      batsman2: innings.currentBatsmen.nonStriker
+    };
+  }
+
+  await match.save();
+
+  return {
+    position,
+    playerId,
+    currentBatsmen: innings.currentBatsmen
+  };
+}
+
 module.exports = {
   recordBall,
   undoLastBall,
@@ -1704,6 +1785,7 @@ module.exports = {
   toggleBatsmanDismissal,
   forceNewOver,
   bulkUpdateInnings,
+  setOpeningBatsman,
   getOversDisplay,
   getBallDisplay,
   calculateCurrentRunRate,
