@@ -1769,6 +1769,318 @@ async function setOpeningBatsman(matchId, position, playerId) {
   };
 }
 
+/**
+ * Edit a specific ball in the current over
+ * Allows admin to change the result of a ball or delete it
+ */
+async function editBall(matchId, ballData) {
+  const match = await Match.findById(matchId);
+  
+  if (!match) {
+    throw new Error('Match not found');
+  }
+
+  if (match.status !== 'live') {
+    throw new Error('Match is not live');
+  }
+
+  const innings = match.innings[match.currentInnings];
+  
+  if (!innings) {
+    throw new Error('No innings found');
+  }
+
+  if (!innings.currentOver || innings.currentOver.length === 0) {
+    throw new Error('No balls in current over to edit');
+  }
+
+  const { ballIndex } = ballData;
+  
+  if (ballIndex < 0 || ballIndex >= innings.currentOver.length) {
+    throw new Error('Invalid ball index');
+  }
+
+  const oldBall = innings.currentOver[ballIndex];
+  
+  // Handle delete
+  if (ballData.delete) {
+    // Reverse the effects of the old ball
+    reverseOldBallEffects(innings, oldBall);
+    
+    // Remove the ball from currentOver
+    innings.currentOver.splice(ballIndex, 1);
+    
+    await match.save();
+    
+    return {
+      innings,
+      deleted: true,
+      ballIndex
+    };
+  }
+
+  // Reverse the effects of the old ball first
+  reverseOldBallEffects(innings, oldBall);
+
+  // Create new ball data
+  const newBall = {
+    batsman: oldBall.batsman,
+    bowler: oldBall.bowler,
+    runs: 0,
+    isLegal: true,
+    extras: null,
+    wicket: null,
+    display: '0',
+    isFour: false,
+    isSix: false,
+    isWicket: false
+  };
+
+  // Set the ball data based on type
+  switch (ballData.type) {
+    case 'dot':
+      newBall.runs = 0;
+      newBall.display = '0';
+      newBall.isLegal = true;
+      break;
+      
+    case 'runs':
+      newBall.runs = ballData.runs || 0;
+      newBall.display = String(newBall.runs);
+      newBall.isLegal = true;
+      newBall.isFour = newBall.runs === 4;
+      newBall.isSix = newBall.runs === 6;
+      break;
+      
+    case 'wicket':
+      newBall.runs = 0;
+      newBall.isWicket = true;
+      newBall.isLegal = true;
+      newBall.display = 'W';
+      newBall.wicket = { type: 'bowled' }; // Default wicket type
+      break;
+      
+    case 'wide':
+      newBall.runs = 1 + (ballData.extraRuns || 0);
+      newBall.isLegal = false;
+      newBall.extras = { type: 'wide', runs: newBall.runs };
+      newBall.display = newBall.runs > 1 ? `Wd+${newBall.runs - 1}` : 'Wd';
+      break;
+      
+    case 'noball':
+      newBall.runs = 1 + (ballData.extraRuns || 0);
+      newBall.isLegal = false;
+      newBall.extras = { type: 'no-ball', runs: newBall.runs };
+      newBall.display = newBall.runs > 1 ? `Nb+${newBall.runs - 1}` : 'Nb';
+      break;
+      
+    case 'bye':
+      newBall.runs = ballData.extraRuns || 1;
+      newBall.isLegal = true;
+      newBall.extras = { type: 'bye', runs: newBall.runs };
+      newBall.display = `B${newBall.runs}`;
+      break;
+      
+    case 'legbye':
+      newBall.runs = ballData.extraRuns || 1;
+      newBall.isLegal = true;
+      newBall.extras = { type: 'leg-bye', runs: newBall.runs };
+      newBall.display = `Lb${newBall.runs}`;
+      break;
+  }
+
+  // Apply new ball effects
+  applyNewBallEffects(innings, newBall);
+
+  // Replace the ball in currentOver
+  innings.currentOver[ballIndex] = newBall;
+
+  await match.save();
+
+  return {
+    innings,
+    ball: newBall,
+    ballIndex
+  };
+}
+
+/**
+ * Helper to reverse the effects of a ball from innings totals
+ */
+function reverseOldBallEffects(innings, ball) {
+  // Subtract runs from total
+  innings.totalRuns = Math.max(0, innings.totalRuns - (ball.runs || 0));
+  
+  // Handle legal ball count
+  if (ball.isLegal) {
+    innings.totalBalls = Math.max(0, innings.totalBalls - 1);
+  }
+  
+  // Reverse extras
+  if (ball.extras) {
+    switch (ball.extras.type) {
+      case 'wide':
+        innings.extras.wides = Math.max(0, innings.extras.wides - (ball.extras.runs || 1));
+        break;
+      case 'no-ball':
+        innings.extras.noBalls = Math.max(0, innings.extras.noBalls - (ball.extras.runs || 1));
+        break;
+      case 'bye':
+        innings.extras.byes = Math.max(0, innings.extras.byes - (ball.extras.runs || 0));
+        break;
+      case 'leg-bye':
+        innings.extras.legByes = Math.max(0, innings.extras.legByes - (ball.extras.runs || 0));
+        break;
+    }
+  }
+  
+  // Reverse batsman stats (only for runs scored by batsman, not extras)
+  if (ball.batsman && !ball.extras) {
+    const batsmanStats = innings.battingStats.find(
+      s => s.player.toString() === ball.batsman.toString()
+    );
+    if (batsmanStats) {
+      batsmanStats.runs = Math.max(0, batsmanStats.runs - (ball.runs || 0));
+      if (ball.isLegal) {
+        batsmanStats.balls = Math.max(0, batsmanStats.balls - 1);
+      }
+      if (ball.isFour) batsmanStats.fours = Math.max(0, batsmanStats.fours - 1);
+      if (ball.isSix) batsmanStats.sixes = Math.max(0, batsmanStats.sixes - 1);
+    }
+  }
+  
+  // Reverse bowler stats
+  if (ball.bowler) {
+    const bowlerStats = innings.bowlingStats.find(
+      s => s.player.toString() === ball.bowler.toString()
+    );
+    if (bowlerStats) {
+      // Only count runs against bowler that aren't byes/leg-byes
+      const runsAgainstBowler = (!ball.extras || !['bye', 'leg-bye'].includes(ball.extras.type))
+        ? (ball.runs || 0)
+        : 0;
+      bowlerStats.runs = Math.max(0, bowlerStats.runs - runsAgainstBowler);
+      
+      if (ball.isLegal) {
+        bowlerStats.balls = Math.max(0, bowlerStats.balls - 1);
+        // Recalculate overs
+        bowlerStats.overs = Math.floor(bowlerStats.balls / 6);
+      }
+      
+      if (ball.extras?.type === 'wide') {
+        bowlerStats.wides = Math.max(0, bowlerStats.wides - (ball.extras.runs || 1));
+      }
+      if (ball.extras?.type === 'no-ball') {
+        bowlerStats.noBalls = Math.max(0, bowlerStats.noBalls - 1);
+      }
+      if (ball.isWicket) {
+        bowlerStats.wickets = Math.max(0, bowlerStats.wickets - 1);
+      }
+    }
+  }
+  
+  // Reverse wicket
+  if (ball.isWicket) {
+    innings.totalWickets = Math.max(0, innings.totalWickets - 1);
+  }
+  
+  // Reverse partnership stats
+  if (innings.partnership) {
+    innings.partnership.runs = Math.max(0, innings.partnership.runs - (ball.runs || 0));
+    if (ball.isLegal) {
+      innings.partnership.balls = Math.max(0, innings.partnership.balls - 1);
+    }
+  }
+}
+
+/**
+ * Helper to apply the effects of a new ball to innings totals
+ */
+function applyNewBallEffects(innings, ball) {
+  // Add runs to total
+  innings.totalRuns += ball.runs || 0;
+  
+  // Handle legal ball count
+  if (ball.isLegal) {
+    innings.totalBalls += 1;
+  }
+  
+  // Apply extras
+  if (ball.extras) {
+    switch (ball.extras.type) {
+      case 'wide':
+        innings.extras.wides += ball.extras.runs || 1;
+        break;
+      case 'no-ball':
+        innings.extras.noBalls += ball.extras.runs || 1;
+        break;
+      case 'bye':
+        innings.extras.byes += ball.extras.runs || 0;
+        break;
+      case 'leg-bye':
+        innings.extras.legByes += ball.extras.runs || 0;
+        break;
+    }
+  }
+  
+  // Apply batsman stats (only for runs scored by batsman, not extras)
+  if (ball.batsman && !ball.extras) {
+    const batsmanStats = innings.battingStats.find(
+      s => s.player.toString() === ball.batsman.toString()
+    );
+    if (batsmanStats) {
+      batsmanStats.runs += ball.runs || 0;
+      if (ball.isLegal) {
+        batsmanStats.balls += 1;
+      }
+      if (ball.isFour) batsmanStats.fours += 1;
+      if (ball.isSix) batsmanStats.sixes += 1;
+    }
+  }
+  
+  // Apply bowler stats
+  if (ball.bowler) {
+    const bowlerStats = innings.bowlingStats.find(
+      s => s.player.toString() === ball.bowler.toString()
+    );
+    if (bowlerStats) {
+      // Only count runs against bowler that aren't byes/leg-byes
+      const runsAgainstBowler = (!ball.extras || !['bye', 'leg-bye'].includes(ball.extras.type))
+        ? (ball.runs || 0)
+        : 0;
+      bowlerStats.runs += runsAgainstBowler;
+      
+      if (ball.isLegal) {
+        bowlerStats.balls += 1;
+        // Recalculate overs
+        bowlerStats.overs = Math.floor(bowlerStats.balls / 6);
+      }
+      
+      if (ball.extras?.type === 'wide') {
+        bowlerStats.wides += ball.extras.runs || 1;
+      }
+      if (ball.extras?.type === 'no-ball') {
+        bowlerStats.noBalls += 1;
+      }
+      if (ball.isWicket) {
+        bowlerStats.wickets += 1;
+      }
+    }
+  }
+  
+  // Apply wicket
+  if (ball.isWicket) {
+    innings.totalWickets += 1;
+  }
+  
+  // Apply partnership stats
+  if (innings.partnership) {
+    innings.partnership.runs += ball.runs || 0;
+    if (ball.isLegal) {
+      innings.partnership.balls += 1;
+    }
+  }
+}
 module.exports = {
   recordBall,
   undoLastBall,
@@ -1786,6 +2098,7 @@ module.exports = {
   forceNewOver,
   bulkUpdateInnings,
   setOpeningBatsman,
+  editBall,
   getOversDisplay,
   getBallDisplay,
   calculateCurrentRunRate,

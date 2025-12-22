@@ -9,7 +9,7 @@ import { Player } from '../../../core/models';
 import { BackgroundSettingsComponent, BackgroundSettings } from '../../components/background-settings/background-settings.component';
 import { HighlightSettingsComponent } from '../../components/highlight-settings/highlight-settings.component';
 
-type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo' | 'adjustScore' | 'changeBatsman' | 'adjustBatsman' | 'adjustBowler' | 'manageBatsmen' | 'manageBowlers';
+type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 'secondInnings' | 'endMatch' | 'undo' | 'substitute' | 'playerStats' | 'highlightVideo' | 'adjustScore' | 'changeBatsman' | 'adjustBatsman' | 'adjustBowler' | 'manageBatsmen' | 'manageBowlers' | 'editBall';
 
 @Component({
   selector: 'app-scoring',
@@ -533,11 +533,15 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
 
               <!-- This Over -->
               <div class="bg-white rounded-lg shadow p-4">
-                <h3 class="font-semibold text-gray-800 mb-3">This Over</h3>
+                <div class="flex justify-between items-center mb-3">
+                  <h3 class="font-semibold text-gray-800">This Over</h3>
+                  <span class="text-xs text-gray-400">Click ball to edit</span>
+                </div>
                 <div class="flex gap-2 flex-wrap">
                   @for (ball of currentInnings?.currentOver || []; track $index) {
-                    <div 
-                      class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
+                    <button 
+                      (click)="openEditBallModal($index)"
+                      class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold cursor-pointer hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 transition-all"
                       [class.bg-gray-200]="ball.display === '0' || ball.display === '•'"
                       [class.text-gray-600]="ball.display === '0' || ball.display === '•'"
                       [class.bg-green-500]="ball.display === '4'"
@@ -548,9 +552,10 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                       [class.text-yellow-800]="ball.display?.includes('Wd') || ball.display?.includes('Nb')"
                       [class.bg-blue-200]="!['0', '•', '4', '6', 'W'].includes(ball.display) && !ball.display?.includes('Wd') && !ball.display?.includes('Nb')"
                       [class.text-blue-800]="!['0', '•', '4', '6', 'W'].includes(ball.display) && !ball.display?.includes('Wd') && !ball.display?.includes('Nb')"
+                      title="Ball {{ $index + 1 }}: {{ ball.display }} - Click to edit"
                     >
                       {{ ball.display === '0' ? '•' : ball.display }}
-                    </div>
+                    </button>
                   }
                   @for (i of getRemainingBalls(); track i) {
                     <div class="w-10 h-10 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300">
@@ -2253,6 +2258,173 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
           </div>
         </div>
       }
+
+      <!-- Edit Ball Modal -->
+      @if (activeModal === 'editBall') {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="p-4 border-b">
+              <h3 class="text-lg font-semibold">Edit Ball {{ editBallForm.ballIndex + 1 }}</h3>
+              <p class="text-sm text-gray-500">Current: {{ editBallForm.currentDisplay }}</p>
+            </div>
+            <div class="p-4 space-y-4">
+              <!-- Quick Options -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Ball Type</label>
+                <div class="grid grid-cols-4 gap-2">
+                  <button 
+                    (click)="setEditBallType('dot')"
+                    class="p-3 rounded-lg border text-center font-bold transition-all"
+                    [class.border-blue-500]="editBallForm.type === 'dot'"
+                    [class.bg-blue-50]="editBallForm.type === 'dot'"
+                  >
+                    •
+                  </button>
+                  @for (r of [1, 2, 3]; track r) {
+                    <button 
+                      (click)="setEditBallRuns(r)"
+                      class="p-3 rounded-lg border text-center font-bold transition-all"
+                      [class.border-blue-500]="editBallForm.type === 'runs' && editBallForm.runs === r"
+                      [class.bg-blue-50]="editBallForm.type === 'runs' && editBallForm.runs === r"
+                    >
+                      {{ r }}
+                    </button>
+                  }
+                </div>
+                <div class="grid grid-cols-4 gap-2 mt-2">
+                  <button 
+                    (click)="setEditBallRuns(4)"
+                    class="p-3 rounded-lg border text-center font-bold bg-green-100 hover:bg-green-200 transition-all"
+                    [class.border-green-500]="editBallForm.type === 'runs' && editBallForm.runs === 4"
+                    [class.bg-green-200]="editBallForm.type === 'runs' && editBallForm.runs === 4"
+                  >
+                    4
+                  </button>
+                  <button 
+                    (click)="setEditBallRuns(5)"
+                    class="p-3 rounded-lg border text-center font-bold transition-all"
+                    [class.border-blue-500]="editBallForm.type === 'runs' && editBallForm.runs === 5"
+                    [class.bg-blue-50]="editBallForm.type === 'runs' && editBallForm.runs === 5"
+                  >
+                    5
+                  </button>
+                  <button 
+                    (click)="setEditBallRuns(6)"
+                    class="p-3 rounded-lg border text-center font-bold bg-purple-100 hover:bg-purple-200 transition-all"
+                    [class.border-purple-500]="editBallForm.type === 'runs' && editBallForm.runs === 6"
+                    [class.bg-purple-200]="editBallForm.type === 'runs' && editBallForm.runs === 6"
+                  >
+                    6
+                  </button>
+                  <button 
+                    (click)="setEditBallType('wicket')"
+                    class="p-3 rounded-lg border text-center font-bold bg-red-100 hover:bg-red-200 transition-all"
+                    [class.border-red-500]="editBallForm.type === 'wicket'"
+                    [class.bg-red-200]="editBallForm.type === 'wicket'"
+                  >
+                    W
+                  </button>
+                </div>
+              </div>
+
+              <!-- Extras -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Extras</label>
+                <div class="grid grid-cols-4 gap-2">
+                  <button 
+                    (click)="setEditBallType('wide')"
+                    class="p-2 rounded-lg border text-center text-sm font-medium bg-yellow-50 hover:bg-yellow-100 transition-all"
+                    [class.border-yellow-500]="editBallForm.type === 'wide'"
+                    [class.bg-yellow-200]="editBallForm.type === 'wide'"
+                  >
+                    Wide
+                  </button>
+                  <button 
+                    (click)="setEditBallType('noball')"
+                    class="p-2 rounded-lg border text-center text-sm font-medium bg-yellow-50 hover:bg-yellow-100 transition-all"
+                    [class.border-yellow-500]="editBallForm.type === 'noball'"
+                    [class.bg-yellow-200]="editBallForm.type === 'noball'"
+                  >
+                    No Ball
+                  </button>
+                  <button 
+                    (click)="setEditBallType('bye')"
+                    class="p-2 rounded-lg border text-center text-sm font-medium bg-gray-50 hover:bg-gray-100 transition-all"
+                    [class.border-gray-500]="editBallForm.type === 'bye'"
+                    [class.bg-gray-200]="editBallForm.type === 'bye'"
+                  >
+                    Bye
+                  </button>
+                  <button 
+                    (click)="setEditBallType('legbye')"
+                    class="p-2 rounded-lg border text-center text-sm font-medium bg-gray-50 hover:bg-gray-100 transition-all"
+                    [class.border-gray-500]="editBallForm.type === 'legbye'"
+                    [class.bg-gray-200]="editBallForm.type === 'legbye'"
+                  >
+                    Leg Bye
+                  </button>
+                </div>
+              </div>
+
+              <!-- Extra runs for Wide/No Ball/Bye/Leg Bye -->
+              @if (['wide', 'noball', 'bye', 'legbye'].includes(editBallForm.type)) {
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Additional Runs</label>
+                  <div class="grid grid-cols-5 gap-2">
+                    @for (r of [0, 1, 2, 3, 4]; track r) {
+                      <button 
+                        (click)="editBallForm.extraRuns = r"
+                        class="p-2 rounded-lg border text-center font-medium transition-all"
+                        [class.border-yellow-500]="editBallForm.extraRuns === r"
+                        [class.bg-yellow-100]="editBallForm.extraRuns === r"
+                      >
+                        {{ r }}
+                      </button>
+                    }
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Total: {{ editBallForm.type === 'wide' || editBallForm.type === 'noball' ? 1 + editBallForm.extraRuns : editBallForm.extraRuns }} runs
+                  </p>
+                </div>
+              }
+
+              <!-- Delete Ball Option -->
+              <div class="pt-2 border-t">
+                <button 
+                  (click)="setEditBallType('delete')"
+                  class="w-full p-2 rounded-lg border text-center text-sm font-medium text-red-600 hover:bg-red-50 transition-all"
+                  [class.border-red-500]="editBallForm.type === 'delete'"
+                  [class.bg-red-100]="editBallForm.type === 'delete'"
+                >
+                  🗑️ Delete This Ball
+                </button>
+                @if (editBallForm.type === 'delete') {
+                  <p class="text-xs text-red-500 mt-1 text-center">This will remove the ball and adjust scores accordingly.</p>
+                }
+              </div>
+
+              @if (error) {
+                <p class="text-red-600 text-sm">{{ error }}</p>
+              }
+            </div>
+            <div class="p-4 border-t flex justify-end gap-3">
+              <button 
+                (click)="closeModal()"
+                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button 
+                (click)="confirmEditBall()"
+                [disabled]="processing || !editBallForm.type"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {{ processing ? 'Saving...' : (editBallForm.type === 'delete' ? 'Delete Ball' : 'Update Ball') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -2322,6 +2494,15 @@ export class ScoringComponent implements OnInit, OnDestroy {
     { value: 'stumped', label: 'Stumped' },
     { value: 'hit-wicket', label: 'Hit Wicket' }
   ];
+
+  // Edit ball form
+  editBallForm = {
+    ballIndex: 0,
+    currentDisplay: '',
+    type: '' as 'dot' | 'runs' | 'wicket' | 'wide' | 'noball' | 'bye' | 'legbye' | 'delete' | '',
+    runs: 0,
+    extraRuns: 0
+  };
 
   constructor(
     private route: ActivatedRoute,
@@ -4518,6 +4699,115 @@ export class ScoringComponent implements OnInit, OnDestroy {
       if (a.isBowledLastOver && !b.isBowledLastOver) return 1; // Push prev over bowler down
       if (!a.isBowledLastOver && b.isBowledLastOver) return -1;
       return a.displayText.localeCompare(b.displayText);
+    });
+  }
+
+  // ===========================================
+  // EDIT BALL METHODS
+  // ===========================================
+
+  // Open edit ball modal
+  openEditBallModal(ballIndex: number): void {
+    if (!this.currentInnings?.currentOver) return;
+    
+    const ball = this.currentInnings.currentOver[ballIndex];
+    if (!ball) return;
+    
+    this.editBallForm = {
+      ballIndex,
+      currentDisplay: ball.display || '',
+      type: '',
+      runs: 0,
+      extraRuns: 0
+    };
+    
+    this.activeModal = 'editBall';
+  }
+
+  // Set edit ball type (for simple types like dot, wicket, wide, noball, bye, legbye, delete)
+  setEditBallType(type: 'dot' | 'wicket' | 'wide' | 'noball' | 'bye' | 'legbye' | 'delete'): void {
+    this.editBallForm.type = type;
+    this.editBallForm.runs = 0;
+    if (!['wide', 'noball', 'bye', 'legbye'].includes(type)) {
+      this.editBallForm.extraRuns = 0;
+    }
+  }
+
+  // Set edit ball runs (for run values)
+  setEditBallRuns(runs: number): void {
+    this.editBallForm.type = 'runs';
+    this.editBallForm.runs = runs;
+    this.editBallForm.extraRuns = 0;
+  }
+
+  // Confirm edit ball
+  confirmEditBall(): void {
+    if (!this.editBallForm.type) return;
+    
+    this.processing = true;
+    this.error = '';
+    
+    const ballIndex = this.editBallForm.ballIndex;
+    
+    // Build the new ball data
+    let newBallData: any = {
+      ballIndex,
+      type: this.editBallForm.type
+    };
+    
+    switch (this.editBallForm.type) {
+      case 'dot':
+        newBallData.runs = 0;
+        newBallData.isLegal = true;
+        break;
+      case 'runs':
+        newBallData.runs = this.editBallForm.runs;
+        newBallData.isLegal = true;
+        break;
+      case 'wicket':
+        newBallData.runs = 0;
+        newBallData.isWicket = true;
+        newBallData.isLegal = true;
+        break;
+      case 'wide':
+        newBallData.runs = 1 + this.editBallForm.extraRuns;
+        newBallData.extras = { type: 'wide', runs: 1 + this.editBallForm.extraRuns };
+        newBallData.isLegal = false;
+        break;
+      case 'noball':
+        newBallData.runs = 1 + this.editBallForm.extraRuns;
+        newBallData.extras = { type: 'no-ball', runs: 1 + this.editBallForm.extraRuns };
+        newBallData.isLegal = false;
+        break;
+      case 'bye':
+        newBallData.runs = this.editBallForm.extraRuns > 0 ? this.editBallForm.extraRuns : 1;
+        newBallData.extras = { type: 'bye', runs: newBallData.runs };
+        newBallData.isLegal = true;
+        break;
+      case 'legbye':
+        newBallData.runs = this.editBallForm.extraRuns > 0 ? this.editBallForm.extraRuns : 1;
+        newBallData.extras = { type: 'leg-bye', runs: newBallData.runs };
+        newBallData.isLegal = true;
+        break;
+      case 'delete':
+        newBallData.delete = true;
+        break;
+    }
+    
+    this.scoringService.editBall(this.matchId, newBallData).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.closeModal();
+          this.reloadMatch();
+        } else {
+          this.error = response.message || 'Failed to edit ball';
+        }
+        this.processing = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to edit ball';
+        this.processing = false;
+      }
     });
   }
 }

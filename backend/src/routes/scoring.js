@@ -747,4 +747,33 @@ router.put('/:matchId/bulk-update', auth, async (req, res, next) => {
   }
 });
 
+/**
+ * PUT /api/scoring/:matchId/edit-ball
+ * Edit a specific ball in the current over
+ */
+router.put('/:matchId/edit-ball', auth, async (req, res, next) => {
+  try {
+    const { matchId } = req.params;
+    const ballData = req.body;
+
+    const result = await scoringEngine.editBall(matchId, ballData);
+
+    // Broadcast update to SSE clients
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'score-update', {
+        innings: result.innings,
+        ballEdited: true,
+        ballIndex: ballData.ballIndex
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

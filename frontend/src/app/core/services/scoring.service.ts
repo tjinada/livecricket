@@ -206,4 +206,17 @@ export class ScoringService {
   }): Observable<ApiResponse<any>> {
     return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/bulk-update`, updateData);
   }
+
+  // Edit a specific ball in the current over
+  editBall(matchId: string, ballData: {
+    ballIndex: number;
+    type: string;
+    runs?: number;
+    isLegal?: boolean;
+    isWicket?: boolean;
+    extras?: { type: string; runs: number };
+    delete?: boolean;
+  }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.apiUrl}/${matchId}/edit-ball`, ballData);
+  }
 }
