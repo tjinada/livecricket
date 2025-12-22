@@ -405,9 +405,12 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                           [class.border-gray-300]="strikerStats"
                         >
                           <option value="">-- Select Striker --</option>
-                          @for (player of getAvailableBatsmenForPosition('striker'); track getPlayerId(player)) {
-                            <option [value]="getPlayerId(player)">
-                              #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
+                          @for (player of getBatsmenOptionsForDropdown('striker'); track player.id) {
+                            <option 
+                              [value]="player.id"
+                              [disabled]="player.isOut"
+                            >
+                              {{ player.displayText }}
                             </option>
                           }
                         </select>
@@ -446,9 +449,12 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                           [class.border-gray-300]="nonStrikerStats"
                         >
                           <option value="">-- Select Non-Striker --</option>
-                          @for (player of getAvailableBatsmenForPosition('nonStriker'); track getPlayerId(player)) {
-                            <option [value]="getPlayerId(player)">
-                              #{{ player.battingOrder }} - {{ getSquadPlayerName(player) }}
+                          @for (player of getBatsmenOptionsForDropdown('nonStriker'); track player.id) {
+                            <option 
+                              [value]="player.id"
+                              [disabled]="player.isOut"
+                            >
+                              {{ player.displayText }}
                             </option>
                           }
                         </select>
@@ -494,9 +500,12 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                         [class.border-gray-300]="currentBowlerStats"
                       >
                         <option value="">-- Select Bowler --</option>
-                        @for (player of getAvailableBowlersForSelection(); track getPlayerId(player)) {
-                          <option [value]="getPlayerId(player)">
-                            {{ getSquadPlayerName(player) }}
+                        @for (player of getBowlerOptionsForDropdown(); track player.id) {
+                          <option 
+                            [value]="player.id"
+                            [disabled]="player.isBowledLastOver"
+                          >
+                            {{ player.displayText }}
                           </option>
                         }
                       </select>
@@ -4353,6 +4362,162 @@ export class ScoringComponent implements OnInit, OnDestroy {
         this.error = err.error?.message || 'Failed to change bowler';
         this.processing = false;
       }
+    });
+  }
+
+  // ===========================================
+  // DROPDOWN OPTIONS WITH STATS
+  // ===========================================
+
+  // Get batsmen options with stats for dropdown
+  getBatsmenOptionsForDropdown(position: 'striker' | 'nonStriker'): Array<{
+    id: string;
+    displayText: string;
+    isOut: boolean;
+    isBatting: boolean;
+  }> {
+    if (!this.currentInnings) return [];
+    
+    const currentStrikerId = this.getCurrentStrikerId();
+    const currentNonStrikerId = this.getCurrentNonStrikerId();
+    const otherPositionId = position === 'striker' ? currentNonStrikerId : currentStrikerId;
+    
+    return this.battingTeamPlayers
+      .filter((p: any) => {
+        const playerId = this.getPlayerId(p);
+        // Exclude the other position's player
+        if (playerId === otherPositionId) return false;
+        return true;
+      })
+      .map((p: any) => {
+        const playerId = this.getPlayerId(p);
+        const playerName = this.getSquadPlayerName(p);
+        const battingOrder = p.battingOrder || 99;
+        
+        // Find batting stats for this player
+        const battingStat = this.currentInnings?.battingStats?.find((bs: any) => {
+          const bsId = bs.player?._id || bs.player;
+          return bsId === playerId || bsId?.toString() === playerId;
+        });
+        
+        const isOut = !!(battingStat?.isOut || battingStat?.dismissal?.type);
+        const hasBatted = !!battingStat;
+        const runs = battingStat?.runs || 0;
+        const balls = battingStat?.balls || 0;
+        
+        // Build display text with status
+        let statusText = '';
+        if (isOut) {
+          statusText = `[OUT ${runs}(${balls})]`;
+        } else if (hasBatted) {
+          statusText = `[${runs}(${balls})]`;
+        } else {
+          statusText = '[—]'; // em dash for "yet to bat"
+        }
+        
+        return {
+          id: playerId,
+          displayText: `#${battingOrder} - ${playerName} ${statusText}`,
+          isOut,
+          isBatting: playerId === currentStrikerId || playerId === currentNonStrikerId
+        };
+      })
+      .sort((a, b) => {
+        // Sort: currently batting first, then not out, then out, then by batting order
+        const aOrder = parseInt(a.displayText.match(/#(\d+)/)?.[1] || '99');
+        const bOrder = parseInt(b.displayText.match(/#(\d+)/)?.[1] || '99');
+        
+        if (a.isBatting && !b.isBatting) return -1;
+        if (!a.isBatting && b.isBatting) return 1;
+        if (!a.isOut && b.isOut) return -1;
+        if (a.isOut && !b.isOut) return 1;
+        return aOrder - bOrder;
+      });
+  }
+
+  // Get previous over's bowler ID
+  getPreviousOverBowlerId(): string | null {
+    if (!this.currentInnings) return null;
+    
+    // Get overs array
+    const overs = this.currentInnings.overs || [];
+    if (overs.length === 0) return null;
+    
+    // If current over has no balls, previous over is the last completed over
+    // If current over has balls, previous over is the one before that
+    const currentOverBalls = this.currentInnings.currentOver?.length || 0;
+    
+    if (currentOverBalls === 0 && overs.length > 0) {
+      // Current over is empty, last over in overs array is the previous
+      const lastOver = overs[overs.length - 1];
+      return lastOver?.bowler?._id?.toString() || lastOver?.bowler?.toString() || null;
+    } else if (overs.length > 0) {
+      // Current over has balls, check the last completed over
+      const lastOver = overs[overs.length - 1];
+      return lastOver?.bowler?._id?.toString() || lastOver?.bowler?.toString() || null;
+    }
+    
+    return null;
+  }
+
+  // Get bowler options with stats for dropdown
+  getBowlerOptionsForDropdown(): Array<{
+    id: string;
+    displayText: string;
+    isBowledLastOver: boolean;
+    isCurrentBowler: boolean;
+  }> {
+    if (!this.bowlingTeamPlayers) return [];
+    
+    const previousBowlerId = this.getPreviousOverBowlerId();
+    const currentBowlerId = this.getCurrentBowlerId();
+    
+    return this.bowlingTeamPlayers.map((p: any) => {
+      const playerId = this.getPlayerId(p);
+      const playerName = this.getSquadPlayerName(p);
+      
+      // Find bowling stats for this player
+      const bowlingStat = this.currentInnings?.bowlingStats?.find((bs: any) => {
+        const bsId = bs.player?._id || bs.player;
+        return bsId === playerId || bsId?.toString() === playerId;
+      });
+      
+      const hasBowled = !!bowlingStat && ((bowlingStat.overs || 0) > 0 || (bowlingStat.balls || 0) > 0);
+      const overs = bowlingStat?.overs || 0;
+      const balls = bowlingStat?.balls || 0;
+      const runs = bowlingStat?.runs || 0;
+      const wickets = bowlingStat?.wickets || 0;
+      
+      // Check if this bowler bowled the previous over
+      const isBowledLastOver = previousBowlerId === playerId && currentBowlerId !== playerId;
+      
+      // Build display text with stats
+      let statsText = '';
+      if (hasBowled) {
+        const oversDisplay = balls > 0 ? `${overs}.${balls}` : `${overs}`;
+        statsText = `[${wickets}-${runs}, ${oversDisplay} ov]`;
+      } else {
+        statsText = '[—]'; // em dash for "not bowled yet"
+      }
+      
+      // Add "(prev over)" indicator if they bowled the last over
+      if (isBowledLastOver) {
+        statsText += ' ⛔ prev over';
+      }
+      
+      return {
+        id: playerId,
+        displayText: `${playerName} ${statsText}`,
+        isBowledLastOver,
+        isCurrentBowler: playerId === currentBowlerId
+      };
+    }).sort((a, b) => {
+      // Sort: current bowler first, then by whether they've bowled, then alphabetically
+      if (a.isCurrentBowler && !b.isCurrentBowler) return -1;
+      if (!a.isCurrentBowler && b.isCurrentBowler) return 1;
+      if (a.isBowledLastOver && !b.isBowledLastOver) return 1; // Push prev over bowler down
+      if (!a.isBowledLastOver && b.isBowledLastOver) return -1;
+      return a.displayText.localeCompare(b.displayText);
     });
   }
 }
