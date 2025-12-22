@@ -620,18 +620,23 @@ async function undoLastBall(matchId) {
     // Remove from fall of wickets
     innings.fallOfWickets.pop();
 
+    // Determine who was dismissed - use dismissedPlayer if set, otherwise the batsman (striker)
+    const dismissedPlayerId = lastBall.wicket?.dismissedPlayer || lastBall.batsman;
+    
     // Revert batsman dismissal
-    const dismissedStats = innings.battingStats.find(
-      s => s.player.toString() === lastBall.wicket.dismissedPlayer.toString()
-    );
-    if (dismissedStats) {
-      dismissedStats.isOut = false;
-      dismissedStats.isNotOut = false;
-      dismissedStats.dismissal = { type: null, bowler: null, fielder: null };
+    if (dismissedPlayerId) {
+      const dismissedStats = innings.battingStats.find(
+        s => s.player.toString() === dismissedPlayerId.toString()
+      );
+      if (dismissedStats) {
+        dismissedStats.isOut = false;
+        dismissedStats.isNotOut = false;
+        dismissedStats.dismissal = { type: null, bowler: null, fielder: null };
+      }
     }
 
     // Revert bowler wicket (if applicable)
-    if (bowlerStats && lastBall.wicket.type !== 'run-out') {
+    if (bowlerStats && lastBall.wicket?.type !== 'run-out') {
       bowlerStats.wickets -= 1;
     }
 
