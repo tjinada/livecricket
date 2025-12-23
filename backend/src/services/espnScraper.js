@@ -104,7 +104,7 @@ async function fetchLiveMatchData(url) {
     }
 
     // ============================================
-    // NEW APPROACH: Find all tables and categorize them
+    // FIND ALL TABLES AND CATEGORIZE THEM
     // ============================================
     const allTables = [];
     
@@ -136,42 +136,152 @@ async function fetchLiveMatchData(url) {
       }
     });
 
-    result.debug.tablesFound = allTables.length;
-    result.debug.tableTypes = allTables.map(t => t.type);
-
-    // ============================================
-    // FIND TEAM NAMES FROM PAGE
-    // ============================================
-    const teamNames = [];
-    
-    // Look for innings headers like "Nepal (20 ovs maximum)" or "Netherlands (T: 107 runs from 20 ovs)"
-    $('span, div, p').each((i, el) => {
-      const text = $(el).text().trim();
-      // Match pattern: "TeamName (... ovs ...)" 
-      const match = text.match(/^([A-Za-z\s]+)\s*\(\s*(?:T:\s*\d+\s*runs\s*from\s*)?(\d+(?:\.\d)?)\s*[Oo]v/);
-      if (match && match[1].length < 30) {
-        const teamName = match[1].trim();
-        if (!teamNames.includes(teamName)) {
-          teamNames.push(teamName);
-        }
-      }
-    });
-
-    result.debug.teamNamesFound = teamNames;
-
-    // ============================================
-    // PAIR TABLES INTO INNINGS
-    // We expect pattern: Batting, Bowling, Batting, Bowling (for 2 innings)
-    // ============================================
     const battingTables = allTables.filter(t => t.type === 'batting');
     const bowlingTables = allTables.filter(t => t.type === 'bowling');
-    
+
+    result.debug.tablesFound = allTables.length;
+    result.debug.tableTypes = allTables.map(t => t.type);
     result.debug.battingTables = battingTables.length;
     result.debug.bowlingTables = bowlingTables.length;
 
+    // ============================================
+    // EXTRACT TEAM DATA FROM EMBEDDED JSON
+    // ESPN pages contain structured JSON with team information
+    // ============================================
+    let matchTeams = []; // Teams from the JSON (in home/away order)
+    
+    $('script').each((i, script) => {
+      const scriptContent = $(script).html() || '';
+      
+      // Only process scripts that contain team data
+      if (!scriptContent.includes('"longName"') || matchTeams.length >= 2) return;
+      
+      try {
+        // Look for team objects with longName field
+        // Pattern matches: "team": {..., "longName": "Team Name", ...}
+        const longNamePattern = /"longName"\s*:\s*"([^"]+)"/g;
+        let match;
+        const foundNames = [];
+        
+        while ((match = longNamePattern.exec(scriptContent)) !== null) {
+          const longName = match[1];
+          // Filter for team-like names (countries/regions with Women/Men suffix or known cricket nations)
+          if (longName && 
+              !foundNames.includes(longName) && 
+              (longName.includes('Women') || longName.includes('Men') || 
+               longName.match(/^(India|Australia|England|Pakistan|South Africa|New Zealand|West Indies|Sri Lanka|Bangladesh|Afghanistan|Zimbabwe|Ireland|Scotland|Netherlands|Nepal|UAE|Oman|USA|Canada|Kenya|Hong Kong|Papua New Guinea)/i))) {
+            foundNames.push(longName);
+          }
+        }
+        
+        // Take first two unique team names found
+        if (foundNames.length >= 2 && matchTeams.length === 0) {
+          matchTeams = foundNames.slice(0, 2);
+        }
+      } catch (e) {
+        console.error('Error parsing team JSON:', e.message);
+      }
+    });
+
+    result.debug.teamsFromJson = matchTeams;
+
+    // ============================================
+    // DETERMINE INNINGS ORDER
+    // ESPN scorecard shows batting team first in each innings section
+    // We need to find which team batted first
+    // ============================================
+    let inningsTeams = [];
+    
+    // Method 1: Look for innings section headers
+    // ESPN shows text like "Sri Lanka Women Innings" before each batting section
+    const inningsHeaderPattern = /^([A-Za-z\s]+?)\s+(?:1st\s+|2nd\s+)?[Ii]nnings/i;
+    
+    $('span, div, h2, h3, h4, p').each((i, el) => {
+      if (inningsTeams.length >= 2) return;
+      
+      const text = $(el).text().trim();
+      const match = text.match(inningsHeaderPattern);
+      
+      if (match) {
+        let teamName = match[1].trim();
+        
+        // Validate it's actually a team name (not just "Innings")
+        if (teamName.length > 3 && teamName.length < 30) {
+          // Try to match with known team names from JSON
+          const matchedTeam = matchTeams.find(t => 
+            t.toLowerCase().includes(teamName.toLowerCase()) || 
+            teamName.toLowerCase().includes(t.toLowerCase())
+          );
+          
+          const finalName = matchedTeam || teamName;
+          
+          if (!inningsTeams.includes(finalName)) {
+            inningsTeams.push(finalName);
+          }
+        }
+      }
+    });
+    
+    // Method 2: Look for team name patterns like "Team (20 ovs maximum)"
+    if (inningsTeams.length < 2) {
+      $('span, div, p').each((i, el) => {
+        if (inningsTeams.length >= 2) return;
+        
+        const text = $(el).text().trim();
+        // Match pattern: "TeamName (... ovs ...)" 
+        const match = text.match(/^([A-Za-z\s]+)\s*\(\s*(?:T:\s*\d+\s*runs\s*from\s*)?(\d+(?:\.\d)?)\s*[Oo]v/);
+        
+        if (match && match[1].length < 30 && match[1].length > 3) {
+          let teamName = match[1].trim();
+          
+          // Try to match with known team names from JSON
+          const matchedTeam = matchTeams.find(t => 
+            t.toLowerCase().includes(teamName.toLowerCase()) || 
+            teamName.toLowerCase().includes(t.toLowerCase())
+          );
+          
+          const finalName = matchedTeam || teamName;
+          
+          if (!inningsTeams.includes(finalName)) {
+            inningsTeams.push(finalName);
+          }
+        }
+      });
+    }
+    
+    // Method 3: If we have matchTeams but couldn't determine batting order,
+    // we'll assign teams to innings based on table parsing (handled below)
+    
+    result.debug.inningsTeams = inningsTeams;
+    
+    // Use innings order if determined, otherwise we'll use team detection per table
+    const teamNames = inningsTeams.length >= 2 ? inningsTeams : matchTeams;
+    result.debug.teamNamesFound = teamNames;
+
+    // ============================================
+    // PARSE INNINGS DATA
     // Process each batting table as an innings
+    // ============================================
     battingTables.forEach((battingTable, inningsIdx) => {
-      const teamName = teamNames[inningsIdx] || `Innings ${inningsIdx + 1}`;
+      // Try to find the team name for this innings
+      let teamName = teamNames[inningsIdx];
+      
+      // If no team name yet, try to find it from the table's context
+      if (!teamName) {
+        // Look at content near the batting table for team identification
+        const parentDiv = battingTable.element.closest('div');
+        const precedingText = parentDiv.prev().text() || '';
+        
+        // Check if any known team name appears
+        for (const team of matchTeams) {
+          if (precedingText.includes(team)) {
+            teamName = team;
+            break;
+          }
+        }
+      }
+      
+      teamName = teamName || `Innings ${inningsIdx + 1}`;
       const bowlingTable = bowlingTables[inningsIdx]; // Corresponding bowling table
       
       const innings = {
@@ -206,7 +316,6 @@ async function fetchLiveMatchData(url) {
         const dismissal = cellValues[1] || '';
         
         // Parse numeric values - R, B, M, 4s, 6s, SR
-        // Find the runs column (first numeric value after dismissal)
         let runs = 0, balls = 0, fours = 0, sixes = 0, strikeRate = 0;
         
         // ESPN typical layout: Name | Dismissal | R | B | M | 4s | 6s | SR
@@ -276,7 +385,6 @@ async function fetchLiveMatchData(url) {
       }
 
       // Look for extras near the batting table
-      // Search in parent elements for "Extras" text
       const parentDiv = battingTable.element.closest('div');
       const parentText = parentDiv.text();
       const extrasMatch = parentText.match(/Extras[:\s]*(\d+)\s*\(([^)]+)\)/i) ||
