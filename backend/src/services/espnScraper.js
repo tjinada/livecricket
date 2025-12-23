@@ -145,45 +145,102 @@ async function fetchLiveMatchData(url) {
     result.debug.bowlingTables = bowlingTables.length;
 
     // ============================================
-    // EXTRACT TEAM DATA FROM EMBEDDED JSON
-    // ESPN pages contain structured JSON with team information
+    // EXTRACT TEAM DATA AND INNINGS DATA FROM EMBEDDED JSON
+    // ESPN pages contain structured JSON with team and innings information
     // ============================================
     let matchTeams = []; // Teams from the JSON (in home/away order)
+    let jsonInningsData = []; // Innings data from JSON (more reliable than HTML parsing)
     
     $('script').each((i, script) => {
       const scriptContent = $(script).html() || '';
       
-      // Only process scripts that contain team data
-      if (!scriptContent.includes('"longName"') || matchTeams.length >= 2) return;
+      // Only process scripts that contain team/innings data
+      if (!scriptContent.includes('"longName"')) return;
       
       try {
-        // Look for team objects with longName field
-        // Pattern matches: "team": {..., "longName": "Team Name", ...}
-        const longNamePattern = /"longName"\s*:\s*"([^"]+)"/g;
-        let match;
-        const foundNames = [];
-        
-        while ((match = longNamePattern.exec(scriptContent)) !== null) {
-          const longName = match[1];
-          // Filter for team-like names (countries/regions with Women/Men suffix or known cricket nations)
-          if (longName && 
-              !foundNames.includes(longName) && 
-              (longName.includes('Women') || longName.includes('Men') || 
-               longName.match(/^(India|Australia|England|Pakistan|South Africa|New Zealand|West Indies|Sri Lanka|Bangladesh|Afghanistan|Zimbabwe|Ireland|Scotland|Netherlands|Nepal|UAE|Oman|USA|Canada|Kenya|Hong Kong|Papua New Guinea)/i))) {
-            foundNames.push(longName);
+        // Extract team names
+        if (matchTeams.length < 2) {
+          const longNamePattern = /"longName"\s*:\s*"([^"]+)"/g;
+          let match;
+          const foundNames = [];
+          
+          while ((match = longNamePattern.exec(scriptContent)) !== null) {
+            const longName = match[1];
+            if (longName && 
+                !foundNames.includes(longName) && 
+                (longName.includes('Women') || longName.includes('Men') || 
+                 longName.match(/^(India|Australia|England|Pakistan|South Africa|New Zealand|West Indies|Sri Lanka|Bangladesh|Afghanistan|Zimbabwe|Ireland|Scotland|Netherlands|Nepal|UAE|Oman|USA|Canada|Kenya|Hong Kong|Papua New Guinea)/i))) {
+              foundNames.push(longName);
+            }
+          }
+          
+          if (foundNames.length >= 2 && matchTeams.length === 0) {
+            matchTeams = foundNames.slice(0, 2);
           }
         }
         
-        // Take first two unique team names found
-        if (foundNames.length >= 2 && matchTeams.length === 0) {
-          matchTeams = foundNames.slice(0, 2);
+        // Extract innings data from JSON - look for innings blocks
+        // The structure has inningNumber followed by team info and then stats
+        if (scriptContent.includes('"inningNumber"') && scriptContent.includes('"extras"')) {
+          // Split by inningNumber to get each innings block
+          const inningBlocks = scriptContent.split(/"inningNumber"\s*:\s*/);
+          
+          for (let blockIdx = 1; blockIdx < inningBlocks.length; blockIdx++) {
+            const block = inningBlocks[blockIdx];
+            
+            // Extract inning number (first number after split)
+            const inningNumMatch = block.match(/^(\d+)/);
+            if (!inningNumMatch) continue;
+            const inningNum = parseInt(inningNumMatch[1]);
+            
+            // Skip if we already have this innings
+            if (jsonInningsData.find(ji => ji.inningNumber === inningNum)) continue;
+            
+            // Extract team longName - look for the first longName after team object
+            const teamMatch = block.match(/"team"\s*:\s*\{[^}]*"longName"\s*:\s*"([^"]+)"/);
+            const teamName = teamMatch ? teamMatch[1] : null;
+            if (!teamName) continue;
+            
+            // Extract runs, wickets, overs (look for these fields at the innings level, not nested)
+            // These appear after the team object in the innings
+            const runsMatch = block.match(/"runs"\s*:\s*(\d+)/);
+            const wicketsMatch = block.match(/"wickets"\s*:\s*(\d+)/);
+            const oversMatch = block.match(/"overs"\s*:\s*([\d.]+)/);
+            const extrasMatch = block.match(/"extras"\s*:\s*(\d+)/);
+            const byesMatch = block.match(/"byes"\s*:\s*(\d+)/);
+            const legbyesMatch = block.match(/"legbyes"\s*:\s*(\d+)/);
+            const widesMatch = block.match(/"wides"\s*:\s*(\d+)/);
+            const noballsMatch = block.match(/"noballs"\s*:\s*(\d+)/);
+            
+            // Only add if we have the essential fields
+            if (runsMatch && wicketsMatch) {
+              jsonInningsData.push({
+                inningNumber: inningNum,
+                team: teamName,
+                runs: parseInt(runsMatch[1]),
+                wickets: parseInt(wicketsMatch[1]),
+                overs: oversMatch ? parseFloat(oversMatch[1]) : 0,
+                extras: {
+                  total: extrasMatch ? parseInt(extrasMatch[1]) : 0,
+                  byes: byesMatch ? parseInt(byesMatch[1]) : 0,
+                  legByes: legbyesMatch ? parseInt(legbyesMatch[1]) : 0,
+                  wides: widesMatch ? parseInt(widesMatch[1]) : 0,
+                  noBalls: noballsMatch ? parseInt(noballsMatch[1]) : 0
+                }
+              });
+            }
+          }
         }
       } catch (e) {
-        console.error('Error parsing team JSON:', e.message);
+        console.error('Error parsing ESPN JSON:', e.message);
       }
     });
+    
+    // Sort innings by number
+    jsonInningsData.sort((a, b) => a.inningNumber - b.inningNumber);
 
     result.debug.teamsFromJson = matchTeams;
+    result.debug.jsonInningsData = jsonInningsData;
 
     // ============================================
     // DETERMINE INNINGS ORDER
@@ -249,8 +306,10 @@ async function fetchLiveMatchData(url) {
       });
     }
     
-    // Method 3: If we have matchTeams but couldn't determine batting order,
-    // we'll assign teams to innings based on table parsing (handled below)
+    // Method 3: Use team order from JSON innings data if available
+    if (inningsTeams.length < 2 && jsonInningsData.length >= 2) {
+      inningsTeams = jsonInningsData.map(ji => ji.team);
+    }
     
     result.debug.inningsTeams = inningsTeams;
     
@@ -384,26 +443,54 @@ async function fetchLiveMatchData(url) {
         });
       }
 
-      // Look for extras near the batting table
-      const parentDiv = battingTable.element.closest('div');
-      const parentText = parentDiv.text();
-      const extrasMatch = parentText.match(/Extras[:\s]*(\d+)\s*\(([^)]+)\)/i) ||
-                          parentText.match(/\(([^)]*(?:lb|nb|w|b)[^)]*)\)\s*(\d+)/i);
-      if (extrasMatch) {
+      // Get extras and totals - prefer JSON data (more reliable than HTML parsing)
+      const jsonInnings = jsonInningsData.find(ji => 
+        ji.team.toLowerCase().includes(teamName.toLowerCase()) || 
+        teamName.toLowerCase().includes(ji.team.toLowerCase())
+      ) || jsonInningsData[inningsIdx];
+      
+      if (jsonInnings) {
+        // Use JSON data for extras (much more reliable)
         innings.extras = {
-          total: parseInt(extrasMatch[1], 10) || parseInt(extrasMatch[2], 10) || 0,
-          breakdown: extrasMatch[2] || extrasMatch[1] || ''
+          total: jsonInnings.extras.total,
+          wides: jsonInnings.extras.wides,
+          noBalls: jsonInnings.extras.noBalls,
+          byes: jsonInnings.extras.byes,
+          legByes: jsonInnings.extras.legByes,
+          breakdown: `b ${jsonInnings.extras.byes}, lb ${jsonInnings.extras.legByes}, w ${jsonInnings.extras.wides}, nb ${jsonInnings.extras.noBalls}`
         };
-      }
-
-      // Look for total
-      const totalMatch = parentText.match(/Total[^)]*\(([^)]+)\)\s*(\d+)(?:\/(\d+))?/i);
-      if (totalMatch) {
-        innings.overs = totalMatch[1].trim();
+        
+        // Use JSON data for total
         innings.total = {
-          runs: parseInt(totalMatch[2], 10) || 0,
-          wickets: parseInt(totalMatch[3], 10) || 10
+          runs: jsonInnings.runs,
+          wickets: jsonInnings.wickets
         };
+        
+        innings.overs = jsonInnings.overs.toString();
+      } else {
+        // Fallback: Look for extras near the batting table in HTML
+        const parentDiv = battingTable.element.closest('div');
+        const parentText = parentDiv.text();
+        const extrasMatch = parentText.match(/Extras[:\s]*(\d+)\s*\(([^)]+)\)/i);
+        if (extrasMatch) {
+          const extrasTotal = parseInt(extrasMatch[1], 10) || 0;
+          const breakdown = extrasMatch[2] || '';
+          innings.extras = {
+            total: extrasTotal,
+            breakdown: breakdown,
+            ...parseExtras(breakdown)
+          };
+        }
+
+        // Fallback: Look for total in HTML
+        const totalMatch = parentText.match(/Total[^)]*\(([^)]+)\)\s*(\d+)(?:\/(\d+))?/i);
+        if (totalMatch) {
+          innings.overs = totalMatch[1].trim();
+          innings.total = {
+            runs: parseInt(totalMatch[2], 10) || 0,
+            wickets: parseInt(totalMatch[3], 10) || 10
+          };
+        }
       }
 
       // Only add if we found batting data
