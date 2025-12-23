@@ -32,6 +32,14 @@ export interface Match {
   };
   displayView: string;
   selectedPlayerForStats?: any;
+  // ESPN Integration
+  espnUrl?: string | null;
+  espnPlayerMappings?: Array<{
+    espnName: string;
+    player: string;
+    team: string;
+  }>;
+  lastEspnSync?: string | null;
   backgrounds?: {
     useTeamBackground: boolean;
     views?: {

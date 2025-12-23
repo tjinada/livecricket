@@ -3,11 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiResponse } from '../models';
 
-export interface EspnTeamData {
-  name: string;
-  score: string;
-  overs: string;
-}
+// ============================================
+// ESPN DATA TYPES
+// ============================================
 
 export interface EspnBatsmanData {
   name: string;
@@ -49,7 +47,6 @@ export interface EspnInnings {
   extras: EspnExtras | null;
   total: { runs: number; wickets: number } | null;
   overs: string | null;
-  fallOfWickets?: string | null;
 }
 
 export interface EspnMatchData {
@@ -61,29 +58,114 @@ export interface EspnMatchData {
   matchStatus: string | null;
   matchState: EspnMatchState;
   recentOvers?: string | null;
-  rawJson?: any;
-  // Legacy flat arrays (for backward compatibility)
-  batting?: EspnBatsmanData[];
-  bowling?: EspnBowlerData[];
-  extras?: EspnExtras | null;
+  debug?: any;
 }
 
-export interface EspnPreviewData {
-  teams: EspnTeamData[];
-  battingTeam: string | null;
-  matchStatus: string | null;
-  state: EspnMatchState;
-  battingCard: string;
-  bowlingCard: string;
+// ============================================
+// SYNC PREVIEW TYPES
+// ============================================
+
+export interface PlayerCandidate {
+  player: { _id: string; name: string };
+  score: number;
+  matchType: string;
+}
+
+export interface BattingSyncPreview {
+  espnName: string;
+  espnStats: {
+    runs: number;
+    balls: number;
+    fours: number;
+    sixes: number;
+    strikeRate: number;
+    isNotOut: boolean;
+    dismissal: string | null;
+  };
+  matchedPlayer: { _id: string; name: string } | null;
+  matchType: string;
+  confidence: number;
+  candidates: PlayerCandidate[];
+}
+
+export interface BowlingSyncPreview {
+  espnName: string;
+  espnStats: {
+    overs: number;
+    maidens: number;
+    runs: number;
+    wickets: number;
+    economy: number;
+    dotBalls: number;
+  };
+  matchedPlayer: { _id: string; name: string } | null;
+  matchType: string;
+  confidence: number;
+  candidates: PlayerCandidate[];
+}
+
+export interface InningsSyncPreview {
+  espnTeam: string;
+  localTeam: { _id: string; name: string };
+  total: { runs: number; wickets: number } | null;
+  overs: string | null;
   extras: EspnExtras | null;
-  rawData: EspnMatchData;
+  batting: BattingSyncPreview[];
+  bowling: BowlingSyncPreview[];
 }
 
-export interface EspnErrorResponse {
-  success: false;
-  message: string;
-  suggestion?: string;
+export interface EspnSyncPreview {
+  matchId: string;
+  espnUrl: string;
+  matchStatus: string | null;
+  target: number | null;
+  teamMapping: {
+    matched: boolean;
+    mapping: { [key: string]: { team: any; squadKey: string } };
+  };
+  innings: InningsSyncPreview[];
 }
+
+// ============================================
+// SYNC REQUEST TYPES
+// ============================================
+
+export interface BattingSyncData {
+  playerId: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  isNotOut: boolean;
+}
+
+export interface BowlingSyncData {
+  playerId: string;
+  overs: number;
+  maidens: number;
+  runs: number;
+  wickets: number;
+  dotBalls: number;
+}
+
+export interface InningsSyncData {
+  localTeamId: string;
+  total: { runs: number; wickets: number } | null;
+  overs: string | null;
+  extras: EspnExtras | null;
+  batting: BattingSyncData[];
+  bowling: BowlingSyncData[];
+  isComplete: boolean;
+}
+
+export interface EspnSyncRequest {
+  playerMappings: { [espnName: string]: { playerId: string; teamId: string } };
+  inningsData: InningsSyncData[];
+}
+
+// ============================================
+// SERVICE
+// ============================================
 
 @Injectable({
   providedIn: 'root'
@@ -95,7 +177,6 @@ export class EspnService {
 
   /**
    * Fetch live match data from ESPN Cricinfo URL
-   * Note: May return 403 if ESPN blocks the request
    */
   fetchMatchData(url: string): Observable<ApiResponse<EspnMatchData>> {
     return this.http.post<ApiResponse<EspnMatchData>>(`${this.apiUrl}/fetch-match`, { url });
@@ -103,23 +184,39 @@ export class EspnService {
 
   /**
    * Parse ESPN JSON data copied from browser DevTools
-   * This is the reliable method when URL fetching is blocked
    */
   parseJson(json: any): Observable<ApiResponse<EspnMatchData>> {
     return this.http.post<ApiResponse<EspnMatchData>>(`${this.apiUrl}/parse-json`, { json });
   }
 
   /**
-   * Preview what data can be extracted from an ESPN URL
+   * Set or update ESPN URL for a match
    */
-  previewUrl(url: string): Observable<ApiResponse<EspnPreviewData>> {
-    return this.http.post<ApiResponse<EspnPreviewData>>(`${this.apiUrl}/preview`, { url });
+  setMatchEspnUrl(matchId: string, espnUrl: string | null): Observable<ApiResponse<{ espnUrl: string | null }>> {
+    return this.http.patch<ApiResponse<{ espnUrl: string | null }>>(
+      `${this.apiUrl}/match/${matchId}/url`,
+      { espnUrl }
+    );
+  }
+
+  /**
+   * Get sync preview for a match - fetches ESPN data and matches players
+   */
+  getSyncPreview(matchId: string): Observable<ApiResponse<EspnSyncPreview>> {
+    return this.http.get<ApiResponse<EspnSyncPreview>>(`${this.apiUrl}/match/${matchId}/preview`);
+  }
+
+  /**
+   * Apply ESPN data to match
+   */
+  syncMatch(matchId: string, syncData: EspnSyncRequest): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/match/${matchId}/sync`, syncData);
   }
 
   /**
    * Test if ESPN service is available
    */
-  testService(): Observable<ApiResponse<{ message: string; methods: any; note: string }>> {
-    return this.http.get<ApiResponse<{ message: string; methods: any; note: string }>>(`${this.apiUrl}/test`);
+  testService(): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/test`);
   }
 }

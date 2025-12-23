@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatchService, Match } from '../../../core/services/match.service';
 import { ScoringService } from '../../../core/services/scoring.service';
+import { EspnService } from '../../../core/services/espn.service';
 import { ApiResponse } from '../../../core/models';
+import { EspnSyncModalComponent } from '../../components/espn-sync-modal/espn-sync-modal.component';
 
 interface BattingStatEdit {
   playerId: string;
@@ -54,7 +56,7 @@ interface InningsEdit {
 @Component({
   selector: 'app-match-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, EspnSyncModalComponent],
   template: `
     <div class="min-h-screen bg-gray-100">
       <!-- Header -->
@@ -105,6 +107,49 @@ interface InningsEdit {
                 Last updated: {{ lastUpdateTime | date:'HH:mm:ss' }}
               </div>
             </div>
+          </div>
+
+          <!-- ESPN Sync Section -->
+          <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">📡</span>
+                <h3 class="font-semibold text-gray-800">ESPN Sync</h3>
+              </div>
+              @if (match.lastEspnSync) {
+                <span class="text-xs text-gray-500">
+                  Last sync: {{ match.lastEspnSync | date:'MMM d, HH:mm' }}
+                </span>
+              }
+            </div>
+            <div class="flex gap-3">
+              <input 
+                type="text"
+                [(ngModel)]="espnUrl"
+                placeholder="https://www.espncricinfo.com/.../full-scorecard"
+                class="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <button 
+                (click)="saveEspnUrl()"
+                [disabled]="!espnUrl || espnUrl === match.espnUrl || savingEspnUrl"
+                class="px-3 py-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {{ savingEspnUrl ? 'Saving...' : 'Save URL' }}
+              </button>
+              <button 
+                (click)="openEspnSyncModal()"
+                [disabled]="!match.espnUrl"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <span>🔄</span>
+                <span>Refresh from ESPN</span>
+              </button>
+            </div>
+            @if (!match.espnUrl) {
+              <p class="text-xs text-gray-500 mt-2">
+                Add an ESPN Cricinfo full-scorecard URL to enable syncing match data.
+              </p>
+            }
           </div>
 
           <!-- Innings Selector -->
@@ -669,6 +714,15 @@ interface InningsEdit {
         </div>
       }
 
+      <!-- ESPN Sync Modal -->
+      @if (showEspnSyncModal) {
+        <app-espn-sync-modal
+          [matchId]="matchId"
+          (onClose)="closeEspnSyncModal()"
+          (onSyncComplete)="onEspnSyncComplete()"
+        />
+      }
+
       <!-- Dismissal Editor Modal -->
       @if (showDismissalModal && editingDismissal) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -765,6 +819,11 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   showDismissalModal = false;
   editingDismissal: BattingStatEdit | null = null;
 
+  // ESPN Sync
+  showEspnSyncModal = false;
+  espnUrl = '';
+  savingEspnUrl = false;
+
   // Cache for player data
   private battingTeamPlayers: Array<{playerId: string, name: string}> = [];
   private bowlingTeamPlayers: Array<{playerId: string, name: string}> = [];
@@ -773,7 +832,8 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private matchService: MatchService,
-    private scoringService: ScoringService
+    private scoringService: ScoringService,
+    private espnService: EspnService
   ) {}
 
   ngOnInit(): void {
@@ -788,12 +848,13 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     this.closeSSE();
   }
 
-  private loadMatch(): void {
+  loadMatch(): void {
     this.loading = true;
     this.matchService.getById(this.matchId).subscribe({
       next: (response: ApiResponse<Match>) => {
         if (response.success && response.data) {
           this.match = response.data;
+          this.espnUrl = this.match.espnUrl || '';
           this.selectedInningsIndex = this.match?.currentInnings || 0;
           this.cacheTeamPlayers();
           this.loadInningsData();
@@ -1320,5 +1381,44 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         this.saving = false;
       }
     });
+  }
+
+  // ESPN Sync Methods
+  saveEspnUrl(): void {
+    if (!this.espnUrl || this.espnUrl === this.match?.espnUrl) return;
+
+    this.savingEspnUrl = true;
+    this.espnService.setMatchEspnUrl(this.matchId, this.espnUrl).subscribe({
+      next: (response) => {
+        if (response.success && this.match) {
+          this.match.espnUrl = this.espnUrl;
+          this.showToast('ESPN URL saved');
+        }
+        this.savingEspnUrl = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to save ESPN URL';
+        this.savingEspnUrl = false;
+      }
+    });
+  }
+
+  openEspnSyncModal(): void {
+    if (!this.match?.espnUrl) {
+      this.error = 'Please save an ESPN URL first';
+      return;
+    }
+    this.showEspnSyncModal = true;
+  }
+
+  closeEspnSyncModal(): void {
+    this.showEspnSyncModal = false;
+  }
+
+  onEspnSyncComplete(): void {
+    this.showEspnSyncModal = false;
+    this.showToast('Match data synced from ESPN');
+    // Reload match data
+    this.loadMatch();
   }
 }

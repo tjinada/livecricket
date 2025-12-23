@@ -186,6 +186,24 @@ const inningsSchema = new mongoose.Schema({
   partnership: partnershipSchema
 }, { _id: true });
 
+// Sub-schema for ESPN player mapping (for manual name matching)
+const espnPlayerMappingSchema = new mongoose.Schema({
+  espnName: {
+    type: String,
+    required: true
+  },
+  player: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Player',
+    required: true
+  },
+  team: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Country',
+    required: true
+  }
+}, { _id: false });
+
 // Sub-schema for background configuration
 const backgroundSchema = new mongoose.Schema({
   type: {
@@ -304,6 +322,17 @@ const matchSchema = new mongoose.Schema({
   selectedPlayerForStats: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Player',
+    default: null
+  },
+  // ESPN Integration
+  espnUrl: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  espnPlayerMappings: [espnPlayerMappingSchema],
+  lastEspnSync: {
+    type: Date,
     default: null
   },
   // Background configuration per view
