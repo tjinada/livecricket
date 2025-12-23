@@ -4,3 +4,4 @@ export * from './player.service';
 export * from './match.service';
 export * from './scoring.service';
 export * from './upload.service';
+export * from './espn.service';

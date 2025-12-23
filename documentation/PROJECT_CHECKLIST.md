@@ -374,6 +374,15 @@
 
 ## Recent Completions (December 2024)
 
+### ESPN Cricinfo Data Import Feature (December 22, 2024)
+- Backend: espnScraper.js service using axios + cheerio
+- Backend: /api/espn routes for fetching match data
+- Frontend: EspnService for API calls
+- Frontend: EspnFetchComponent for UI
+- Frontend: EspnImportComponent as standalone page
+- Added ESPN Import link to admin navigation
+- Added axios and cheerio dependencies to backend
+
 ### Match Display Refactoring (Phase 7 of internal refactoring)
 - Extracted 11 services from monolithic match-display.component.ts
 - Created 6 view sub-components:

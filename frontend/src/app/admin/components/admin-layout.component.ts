@@ -52,6 +52,13 @@ import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/rou
               >
                 Settings
               </a>
+              <a 
+                routerLink="/admin/espn-import" 
+                routerLinkActive="text-green-600"
+                class="text-gray-600 hover:text-gray-800"
+              >
+                ESPN Import
+              </a>
             </nav>
           </div>
           <div class="flex items-center gap-4">

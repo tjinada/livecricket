@@ -34,6 +34,7 @@ app.use('/api/seed', require('./routes/seed'));
 app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/highlights', require('./routes/highlights'));
+app.use('/api/espn', require('./routes/espn'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

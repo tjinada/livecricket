@@ -2084,5 +2084,101 @@ docker-compose down -v
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: 2024*
+## Appendix D: ESPN Cricinfo Data Import
+
+### Overview
+
+The application includes a feature to fetch live match data from ESPN Cricinfo. This allows administrators to quickly import scores and player statistics from external matches.
+
+### API Endpoints
+
+#### POST /api/espn/fetch-match
+
+Fetch live match data from an ESPN Cricinfo URL.
+
+**Request Body:**
+```json
+{
+  "url": "https://www.espncricinfo.com/live-cricket-score/..."
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "teams": {
+      "India": { "score": "245/6", "overs": "40.2" },
+      "Australia": { "score": "178", "overs": "" }
+    },
+    "battingTeam": "India",
+    "battingTeamOvers": "40.2 ov (target 179)",
+    "target": 179,
+    "matchStatus": "India need 34 runs from 58 balls",
+    "matchState": {
+      "isStarted": true,
+      "isLive": true,
+      "isComplete": false,
+      "isBreak": false
+    },
+    "batting": [
+      {
+        "name": "Virat Kohli",
+        "dismissal": "not out",
+        "runs": 67,
+        "balls": 45,
+        "fours": 6,
+        "sixes": 2,
+        "strikeRate": 148.89,
+        "isNotOut": true
+      }
+    ],
+    "bowling": [
+      {
+        "name": "Mitchell Starc",
+        "overs": 8,
+        "maidens": 0,
+        "runs": 48,
+        "wickets": 2,
+        "economy": 6.0,
+        "dotBalls": 24
+      }
+    ],
+    "extras": {
+      "total": 12,
+      "breakdown": "b 4, lb 2, w 5, nb 1"
+    }
+  }
+}
+```
+
+#### POST /api/espn/preview
+
+Preview extracted data with formatted summary before importing.
+
+### Usage Flow
+
+1. Admin navigates to **ESPN Import** page
+2. Pastes ESPN Cricinfo match URL
+3. Clicks **Fetch Data** to retrieve match information
+4. Reviews batting and bowling cards
+5. Copies data or uses it to manually update local match
+
+### Technical Implementation
+
+- Uses **axios** for HTTP requests with browser-like headers
+- Uses **cheerio** for HTML parsing
+- Extracts team scores, batting cards, bowling cards, extras
+- Handles various ESPN page layouts
+
+### Notes
+
+- ESPN Cricinfo page structures may change over time
+- Some scorecard elements may not be parseable depending on match state
+- Data is for reference; administrators manually map to local players
+
+---
+
+*Document Version: 1.1*
+*Last Updated: December 22, 2024*

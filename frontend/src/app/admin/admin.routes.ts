@@ -34,6 +34,10 @@ export const ADMIN_ROUTES: Routes = [
       {
         path: 'settings',
         loadComponent: () => import('./pages/settings/settings.component').then(m => m.SettingsComponent)
+      },
+      {
+        path: 'espn-import',
+        loadComponent: () => import('./pages/espn-import/espn-import.component').then(m => m.EspnImportComponent)
       }
     ]
   }
