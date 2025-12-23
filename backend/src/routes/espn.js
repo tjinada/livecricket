@@ -107,8 +107,8 @@ router.get('/match/:matchId/preview', auth, async (req, res, next) => {
 
     // Get the match with populated teams and squads
     const match = await Match.findById(matchId)
-      .populate('team1', 'name shortName')
-      .populate('team2', 'name shortName')
+      .populate('team1', 'name shortName code')
+      .populate('team2', 'name shortName code')
       .populate('squads.team1.player', 'name')
       .populate('squads.team2.player', 'name');
 
@@ -529,6 +529,123 @@ router.get('/test', async (req, res) => {
 // ============================================
 
 /**
+ * Common cricket team name abbreviations and variations
+ * Maps abbreviations/short names to full country names
+ */
+const TEAM_NAME_ALIASES = {
+  // Standard abbreviations
+  'ind': ['india', 'ind'],
+  'aus': ['australia', 'aus'],
+  'eng': ['england', 'eng'],
+  'pak': ['pakistan', 'pak'],
+  'sa': ['south africa', 'sa', 'rsa'],
+  'nz': ['new zealand', 'nz'],
+  'wi': ['west indies', 'wi', 'windies'],
+  'sl': ['sri lanka', 'sl'],
+  'ban': ['bangladesh', 'ban'],
+  'afg': ['afghanistan', 'afg'],
+  'zim': ['zimbabwe', 'zim'],
+  'ire': ['ireland', 'ire'],
+  'sco': ['scotland', 'sco'],
+  'ned': ['netherlands', 'ned', 'holland'],
+  'nep': ['nepal', 'nep'],
+  'uae': ['uae', 'united arab emirates'],
+  'oman': ['oman'],
+  'usa': ['usa', 'united states'],
+  'can': ['canada', 'can'],
+  'ken': ['kenya', 'ken'],
+  'hk': ['hong kong', 'hk'],
+  'png': ['papua new guinea', 'png'],
+  // Full names map to themselves
+  'india': ['india', 'ind'],
+  'australia': ['australia', 'aus'],
+  'england': ['england', 'eng'],
+  'pakistan': ['pakistan', 'pak'],
+  'south africa': ['south africa', 'sa', 'rsa'],
+  'new zealand': ['new zealand', 'nz'],
+  'west indies': ['west indies', 'wi', 'windies'],
+  'sri lanka': ['sri lanka', 'sl'],
+  'bangladesh': ['bangladesh', 'ban'],
+  'afghanistan': ['afghanistan', 'afg'],
+  'zimbabwe': ['zimbabwe', 'zim'],
+  'ireland': ['ireland', 'ire'],
+  'scotland': ['scotland', 'sco'],
+  'netherlands': ['netherlands', 'ned', 'holland'],
+  'nepal': ['nepal', 'nep']
+};
+
+/**
+ * Normalize team name by removing common suffixes and extracting core name
+ */
+function normalizeTeamName(name) {
+  return name
+    .toLowerCase()
+    .replace(/\s*(women|men|w|m)\s*$/i, '') // Remove Women/Men suffix
+    .replace(/\s*(women's|men's)\s*/i, '') // Remove Women's/Men's
+    .replace(/-w$|-m$/i, '') // Remove -W or -M suffix
+    .trim();
+}
+
+/**
+ * Check if two team names refer to the same country
+ */
+function teamsMatch(espnName, localName, localShortName, localCode) {
+  const espnNorm = normalizeTeamName(espnName);
+  const localNorm = normalizeTeamName(localName);
+  const localShortNorm = localShortName ? normalizeTeamName(localShortName) : null;
+  const localCodeNorm = localCode ? localCode.toLowerCase() : null;
+  
+  // Direct match after normalization
+  if (espnNorm === localNorm) return true;
+  if (localShortNorm && espnNorm === localShortNorm) return true;
+  if (localCodeNorm && espnNorm === localCodeNorm) return true;
+  
+  // Check if one contains the other
+  if (espnNorm.includes(localNorm) || localNorm.includes(espnNorm)) return true;
+  if (localShortNorm && (espnNorm.includes(localShortNorm) || localShortNorm.includes(espnNorm))) return true;
+  
+  // Check if ESPN name starts with local code (e.g., "SL Women" starts with "SL")
+  if (localCodeNorm && espnNorm.startsWith(localCodeNorm)) return true;
+  
+  // Check alias mappings
+  // Find all aliases for the ESPN team name
+  const espnAliases = TEAM_NAME_ALIASES[espnNorm] || [];
+  const localAliases = TEAM_NAME_ALIASES[localNorm] || [];
+  const localShortAliases = localShortNorm ? (TEAM_NAME_ALIASES[localShortNorm] || []) : [];
+  const localCodeAliases = localCodeNorm ? (TEAM_NAME_ALIASES[localCodeNorm] || []) : [];
+  
+  // Check if any ESPN alias matches local name or its aliases
+  for (const alias of espnAliases) {
+    if (alias === localNorm) return true;
+    if (localShortNorm && alias === localShortNorm) return true;
+    if (localCodeNorm && alias === localCodeNorm) return true;
+    if (localAliases.includes(alias)) return true;
+    if (localShortAliases.includes(alias)) return true;
+    if (localCodeAliases.includes(alias)) return true;
+  }
+  
+  // Check if local name's aliases match ESPN
+  for (const alias of localAliases) {
+    if (alias === espnNorm) return true;
+    if (espnAliases.includes(alias)) return true;
+  }
+  
+  // Check short name aliases too
+  for (const alias of localShortAliases) {
+    if (alias === espnNorm) return true;
+    if (espnAliases.includes(alias)) return true;
+  }
+  
+  // Check code aliases
+  for (const alias of localCodeAliases) {
+    if (alias === espnNorm) return true;
+    if (espnAliases.includes(alias)) return true;
+  }
+  
+  return false;
+}
+
+/**
  * Match ESPN team names to local teams
  */
 function matchEspnTeamsToLocal(espnData, match) {
@@ -538,17 +655,16 @@ function matchEspnTeamsToLocal(espnData, match) {
     mapping: {}
   };
 
-  const team1Name = match.team1.name.toLowerCase();
-  const team1Short = match.team1.shortName?.toLowerCase();
-  const team2Name = match.team2.name.toLowerCase();
-  const team2Short = match.team2.shortName?.toLowerCase();
+  const team1Name = match.team1.name;
+  const team1Short = match.team1.shortName;
+  const team1Code = match.team1.code;
+  const team2Name = match.team2.name;
+  const team2Short = match.team2.shortName;
+  const team2Code = match.team2.code;
 
   for (const espnTeamName of espnTeams) {
-    const espnLower = espnTeamName.toLowerCase();
-
     // Check team1
-    if (espnLower.includes(team1Name) || team1Name.includes(espnLower) ||
-        (team1Short && (espnLower.includes(team1Short) || team1Short.includes(espnLower)))) {
+    if (teamsMatch(espnTeamName, team1Name, team1Short, team1Code)) {
       result.mapping[espnTeamName] = {
         team: match.team1,
         squadKey: 'team1',
@@ -556,8 +672,7 @@ function matchEspnTeamsToLocal(espnData, match) {
       };
     }
     // Check team2
-    else if (espnLower.includes(team2Name) || team2Name.includes(espnLower) ||
-             (team2Short && (espnLower.includes(team2Short) || team2Short.includes(espnLower)))) {
+    else if (teamsMatch(espnTeamName, team2Name, team2Short, team2Code)) {
       result.mapping[espnTeamName] = {
         team: match.team2,
         squadKey: 'team2',
