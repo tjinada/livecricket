@@ -214,6 +214,32 @@ async function fetchLiveMatchData(url) {
             
             // Only add if we have the essential fields
             if (runsMatch && wicketsMatch) {
+              // Extract current batsmen info (for live matches)
+              let currentBatsmen = [];
+              
+              // Look for inningBatsmen array in this block
+              const batsmenBlockMatch = block.match(/"inningBatsmen"\s*:\s*\[([\s\S]*?)\]/);              if (batsmenBlockMatch) {
+                const batsmenBlock = batsmenBlockMatch[1];
+                // Split by player objects
+                const playerMatches = batsmenBlock.matchAll(/"player"\s*:\s*\{[^}]*"longName"\s*:\s*"([^"]+)"[^}]*\}[\s\S]*?"runs"\s*:\s*(\d+)[\s\S]*?"balls"\s*:\s*(\d+)[\s\S]*?"isOnStrike"\s*:\s*(true|false)/g);
+                
+                for (const pm of playerMatches) {
+                  currentBatsmen.push({
+                    name: pm[1],
+                    runs: parseInt(pm[2]),
+                    balls: parseInt(pm[3]),
+                    isOnStrike: pm[4] === 'true'
+                  });
+                }
+              }
+              
+              // Also try to extract current bowler
+              let currentBowler = null;
+              const bowlerMatch = block.match(/"inningBowlers"\s*:\s*\[[\s\S]*?"player"\s*:\s*\{[^}]*"longName"\s*:\s*"([^"]+)"/);
+              if (bowlerMatch) {
+                currentBowler = bowlerMatch[1];
+              }
+              
               jsonInningsData.push({
                 inningNumber: inningNum,
                 team: teamName,
@@ -226,7 +252,10 @@ async function fetchLiveMatchData(url) {
                   legByes: legbyesMatch ? parseInt(legbyesMatch[1]) : 0,
                   wides: widesMatch ? parseInt(widesMatch[1]) : 0,
                   noBalls: noballsMatch ? parseInt(noballsMatch[1]) : 0
-                }
+                },
+                currentBatsmen: currentBatsmen,
+                currentBowler: currentBowler,
+                isCurrent: block.includes('"isCurrent":true') || block.includes('"isCurrent": true')
               });
             }
           }
@@ -467,6 +496,24 @@ async function fetchLiveMatchData(url) {
         };
         
         innings.overs = jsonInnings.overs.toString();
+        
+        // Add current batsmen info (striker/non-striker) for live matches
+        if (jsonInnings.currentBatsmen && jsonInnings.currentBatsmen.length > 0) {
+          innings.currentBatsmen = jsonInnings.currentBatsmen;
+          // Identify striker and non-striker
+          const striker = jsonInnings.currentBatsmen.find(b => b.isOnStrike);
+          const nonStriker = jsonInnings.currentBatsmen.find(b => !b.isOnStrike);
+          if (striker) innings.striker = striker;
+          if (nonStriker) innings.nonStriker = nonStriker;
+        }
+        
+        // Add current bowler for live matches
+        if (jsonInnings.currentBowler) {
+          innings.currentBowler = jsonInnings.currentBowler;
+        }
+        
+        // Mark if this is the current innings
+        innings.isCurrent = jsonInnings.isCurrent || false;
       } else {
         // Fallback: Look for extras near the batting table in HTML
         const parentDiv = battingTable.element.closest('div');

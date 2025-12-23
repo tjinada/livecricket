@@ -185,6 +185,24 @@ router.get('/match/:matchId/preview', auth, async (req, res, next) => {
         total: espnInnings.total,
         overs: espnInnings.overs,
         extras: espnInnings.extras,
+        isCurrent: espnInnings.isCurrent || false,
+        // Current batsmen info for live matches
+        striker: espnInnings.striker ? {
+          espnName: espnInnings.striker.name,
+          runs: espnInnings.striker.runs,
+          balls: espnInnings.striker.balls,
+          matchedPlayer: matchPlayer(espnInnings.striker.name, squad, match.espnPlayerMappings, localTeam._id).player
+        } : null,
+        nonStriker: espnInnings.nonStriker ? {
+          espnName: espnInnings.nonStriker.name,
+          runs: espnInnings.nonStriker.runs,
+          balls: espnInnings.nonStriker.balls,
+          matchedPlayer: matchPlayer(espnInnings.nonStriker.name, squad, match.espnPlayerMappings, localTeam._id).player
+        } : null,
+        currentBowler: espnInnings.currentBowler ? {
+          espnName: espnInnings.currentBowler,
+          matchedPlayer: matchPlayer(espnInnings.currentBowler, opposingSquad, match.espnPlayerMappings, localTeamInfo.opposingTeamId).player
+        } : null,
         batting: [],
         bowling: []
       };
@@ -301,7 +319,7 @@ router.post('/match/:matchId/sync', auth, async (req, res, next) => {
 
     // Update each innings
     for (const syncInnings of inningsData) {
-      const { localTeamId, batting, bowling, total, extras } = syncInnings;
+      const { localTeamId, batting, bowling, total, extras, striker, nonStriker, currentBowler } = syncInnings;
 
       // Find matching innings in our match
       let matchInnings = match.innings.find(
@@ -414,14 +432,32 @@ router.post('/match/:matchId/sync', auth, async (req, res, next) => {
           bowlStats = matchInnings.bowlingStats[matchInnings.bowlingStats.length - 1];
         }
 
-        // Convert overs to balls
-        const oversFloat = parseFloat(bowlSync.overs) || 0;
-        const fullOvers = Math.floor(oversFloat);
-        const partialBalls = Math.round((oversFloat - fullOvers) * 10);
-        const totalBalls = (fullOvers * 6) + partialBalls;
+        // Convert overs to balls properly
+        // ESPN overs come as integers for complete overs (3 = 3.0 overs = 18 balls)
+        // or as decimals for partial overs (3.4 = 3 overs 4 balls = 22 balls)
+        const oversValue = bowlSync.overs;
+        let fullOvers, partialBalls, totalBalls;
+        
+        if (Number.isInteger(oversValue)) {
+          // Complete overs: 3 means 3.0 overs = 18 balls
+          fullOvers = oversValue;
+          partialBalls = 0;
+          totalBalls = fullOvers * 6;
+        } else {
+          // Partial overs: 3.4 means 3 overs and 4 balls = 22 balls
+          const oversFloat = parseFloat(oversValue) || 0;
+          fullOvers = Math.floor(oversFloat);
+          // Get the decimal part and convert - 3.4 -> 4 balls (not 0.4 * 10 = 4)
+          partialBalls = Math.round((oversFloat - fullOvers) * 10);
+          // Ensure partial balls is valid (0-5)
+          if (partialBalls > 5) partialBalls = 5;
+          totalBalls = (fullOvers * 6) + partialBalls;
+        }
 
-        bowlStats.overs = oversFloat;
-        bowlStats.balls = totalBalls;
+        // Store overs as complete overs and balls as partial balls (0-5)
+        // This is the correct format for cricket stats display
+        bowlStats.overs = fullOvers;
+        bowlStats.balls = partialBalls;  // Partial balls (0-5), NOT total balls
         bowlStats.runs = bowlSync.runs;
         bowlStats.wickets = bowlSync.wickets;
         bowlStats.maidens = bowlSync.maidens || 0;
@@ -433,6 +469,19 @@ router.post('/match/:matchId/sync', auth, async (req, res, next) => {
         matchInnings.status = 'completed';
       } else if (matchInnings.totalBalls > 0) {
         matchInnings.status = 'in-progress';
+      }
+      
+      // Update current batsmen (striker/non-striker) for live matches
+      if (striker && striker.playerId) {
+        matchInnings.currentBatsmen = matchInnings.currentBatsmen || {};
+        matchInnings.currentBatsmen.striker = striker.playerId;
+      }
+      if (nonStriker && nonStriker.playerId) {
+        matchInnings.currentBatsmen = matchInnings.currentBatsmen || {};
+        matchInnings.currentBatsmen.nonStriker = nonStriker.playerId;
+      }
+      if (currentBowler && currentBowler.playerId) {
+        matchInnings.currentBowler = currentBowler.playerId;
       }
     }
 
