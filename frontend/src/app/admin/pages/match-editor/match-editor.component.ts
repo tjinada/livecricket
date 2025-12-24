@@ -260,17 +260,11 @@ interface InningsEdit {
             <!-- Batting Stats -->
             <div class="bg-white rounded-lg shadow mb-6 overflow-hidden">
               <div class="p-4 border-b flex justify-between items-center bg-green-50">
-                <h3 class="font-semibold text-gray-800">🏏 Batting</h3>
+                <h3 class="font-semibold text-gray-800">🏏 Batting (Full Playing XI)</h3>
                 <div class="flex items-center gap-4">
                   <span class="text-sm text-gray-600">
                     Current: {{ getStrikerName() }}* / {{ getNonStrikerName() }}
                   </span>
-                  <button 
-                    (click)="openAddBatsmanModal()"
-                    class="text-sm text-green-600 hover:text-green-800 font-medium"
-                  >
-                    + Add Batsman
-                  </button>
                 </div>
               </div>
               <div class="overflow-x-auto">
@@ -294,12 +288,12 @@ interface InningsEdit {
                         <tr 
                           [class.bg-green-50]="bat.isStriker || bat.isNonStriker"
                           [class.bg-red-50]="bat.isOut"
-                          [class.bg-yellow-50]="bat.isNew"
+                          [class.bg-gray-50]="bat.isNew && !bat.isOut && !bat.isStriker && !bat.isNonStriker"
                         >
-                          <td class="px-3 py-2 font-medium">
+                          <td class="px-3 py-2 font-medium" [class.text-gray-400]="bat.isNew && bat.runs === 0 && bat.balls === 0 && !bat.isStriker && !bat.isNonStriker">
                             {{ bat.playerName }}
-                            @if (bat.isNew) {
-                              <span class="text-xs text-yellow-600 ml-1">(new)</span>
+                            @if (bat.isNew && bat.runs === 0 && bat.balls === 0 && !bat.isStriker && !bat.isNonStriker) {
+                              <span class="text-xs text-gray-400 ml-1">(DNB)</span>
                             }
                           </td>
                           <td class="px-3 py-2 text-center">
@@ -344,7 +338,6 @@ interface InningsEdit {
                               [(ngModel)]="bat.isOut"
                               (change)="onOutStatusChange(bat)"
                               class="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-                              [disabled]="bat.isStriker || bat.isNonStriker"
                             />
                           </td>
                           <td class="px-3 py-2">
@@ -375,40 +368,42 @@ interface InningsEdit {
                             }
                           </td>
                           <td class="px-3 py-2 text-center">
-                            @if (!bat.isOut) {
-                              <div class="flex justify-center gap-2">
-                                <label class="flex items-center gap-1 cursor-pointer" title="Striker">
-                                  <input 
-                                    type="radio" 
-                                    [name]="'striker'"
-                                    [checked]="bat.isStriker"
-                                    (change)="setStriker(bat.playerId)"
-                                    class="text-green-600"
-                                  />
-                                  <span class="text-xs">*</span>
-                                </label>
-                                <label class="flex items-center gap-1 cursor-pointer" title="Non-Striker">
-                                  <input 
-                                    type="radio" 
-                                    [name]="'nonStriker'"
-                                    [checked]="bat.isNonStriker"
-                                    (change)="setNonStriker(bat.playerId)"
-                                    class="text-blue-600"
-                                  />
-                                  <span class="text-xs">○</span>
-                                </label>
-                              </div>
-                            }
+                            <div class="flex justify-center gap-2">
+                              <label class="flex items-center gap-1 cursor-pointer" title="Striker">
+                                <input 
+                                  type="radio" 
+                                  [name]="'striker'"
+                                  [checked]="bat.isStriker"
+                                  (change)="setStriker(bat.playerId)"
+                                  class="text-green-600"
+                                  [disabled]="bat.isOut"
+                                />
+                                <span class="text-xs" [class.text-gray-300]="bat.isOut">*</span>
+                              </label>
+                              <label class="flex items-center gap-1 cursor-pointer" title="Non-Striker">
+                                <input 
+                                  type="radio" 
+                                  [name]="'nonStriker'"
+                                  [checked]="bat.isNonStriker"
+                                  (change)="setNonStriker(bat.playerId)"
+                                  class="text-blue-600"
+                                  [disabled]="bat.isOut"
+                                />
+                                <span class="text-xs" [class.text-gray-300]="bat.isOut">○</span>
+                              </label>
+                            </div>
                           </td>
                           <td class="px-3 py-2 text-center">
-                            <button 
-                              (click)="markBatsmanForRemoval(bat)"
-                              [disabled]="bat.isStriker || bat.isNonStriker"
-                              class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="Remove batsman"
-                            >
-                              🗑
-                            </button>
+                            @if (!bat.isNew || bat.runs > 0 || bat.balls > 0 || bat.isOut) {
+                              <button 
+                                (click)="markBatsmanForRemoval(bat)"
+                                [disabled]="bat.isStriker || bat.isNonStriker"
+                                class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Remove batsman"
+                              >
+                                🗑
+                              </button>
+                            }
                           </td>
                         </tr>
                       }
@@ -428,17 +423,11 @@ interface InningsEdit {
             <!-- Bowling Stats -->
             <div class="bg-white rounded-lg shadow mb-6 overflow-hidden">
               <div class="p-4 border-b flex justify-between items-center bg-blue-50">
-                <h3 class="font-semibold text-gray-800">🎯 Bowling</h3>
+                <h3 class="font-semibold text-gray-800">🎯 Bowling (Full Playing XI)</h3>
                 <div class="flex items-center gap-4">
                   <span class="text-sm text-gray-600">
                     Current: {{ getCurrentBowlerName() }}
                   </span>
-                  <button 
-                    (click)="openAddBowlerModal()"
-                    class="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    + Add Bowler
-                  </button>
                 </div>
               </div>
               <div class="overflow-x-auto">
@@ -461,12 +450,12 @@ interface InningsEdit {
                       @if (!bowl.toRemove) {
                         <tr 
                           [class.bg-blue-50]="bowl.isBowling"
-                          [class.bg-yellow-50]="bowl.isNew"
+                          [class.bg-gray-50]="bowl.isNew && !bowl.isBowling"
                         >
-                          <td class="px-3 py-2 font-medium">
+                          <td class="px-3 py-2 font-medium" [class.text-gray-400]="bowl.isNew && bowl.overs === '0.0' && !bowl.isBowling">
                             {{ bowl.playerName }}
-                            @if (bowl.isNew) {
-                              <span class="text-xs text-yellow-600 ml-1">(new)</span>
+                            @if (bowl.isNew && bowl.overs === '0.0' && !bowl.isBowling) {
+                              <span class="text-xs text-gray-400 ml-1">(DNB)</span>
                             }
                           </td>
                           <td class="px-3 py-2 text-center">
@@ -533,14 +522,16 @@ interface InningsEdit {
                             />
                           </td>
                           <td class="px-3 py-2 text-center">
-                            <button 
-                              (click)="markBowlerForRemoval(bowl)"
-                              [disabled]="bowl.isBowling"
-                              class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="Remove bowler"
-                            >
-                              🗑
-                            </button>
+                            @if (!bowl.isNew || bowl.overs !== '0.0' || bowl.runs > 0 || bowl.wickets > 0) {
+                              <button 
+                                (click)="markBowlerForRemoval(bowl)"
+                                [disabled]="bowl.isBowling"
+                                class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Remove bowler"
+                              >
+                                🗑
+                              </button>
+                            }
                           </td>
                         </tr>
                       }
@@ -913,41 +904,90 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     const nonStrikerId = (innings.currentBatsmen?.nonStriker?._id || innings.currentBatsmen?.nonStriker)?.toString();
     const currentBowlerId = (innings.currentBowler?._id || innings.currentBowler)?.toString();
 
-    // Build batting stats edit
-    const battingStats: BattingStatEdit[] = (innings.battingStats || []).map((bs: any) => {
+    // Build batting stats edit - include ALL playing XI players
+    const existingBattingStatsMap = new Map<string, any>();
+    (innings.battingStats || []).forEach((bs: any) => {
       const playerId = (bs.player?._id || bs.player)?.toString();
-      return {
-        playerId,
-        playerName: bs.player?.name || this.getPlayerNameById(playerId),
-        runs: bs.runs || 0,
-        balls: bs.balls || 0,
-        fours: bs.fours || 0,
-        sixes: bs.sixes || 0,
-        isOut: bs.isOut || false,
-        dismissalType: bs.dismissal?.type || null,
-        dismissalBowlerId: (bs.dismissal?.bowler?._id || bs.dismissal?.bowler)?.toString() || null,
-        dismissalFielderId: (bs.dismissal?.fielder?._id || bs.dismissal?.fielder)?.toString() || null,
-        isStriker: playerId === strikerId,
-        isNonStriker: playerId === nonStrikerId
-      };
+      existingBattingStatsMap.set(playerId, bs);
     });
 
-    // Build bowling stats edit
-    const bowlingStats: BowlingStatEdit[] = (innings.bowlingStats || []).map((bs: any) => {
+    const battingStats: BattingStatEdit[] = this.battingTeamPlayers.map(player => {
+      const bs = existingBattingStatsMap.get(player.playerId);
+      if (bs) {
+        // Player has existing batting stats
+        return {
+          playerId: player.playerId,
+          playerName: player.name,
+          runs: bs.runs || 0,
+          balls: bs.balls || 0,
+          fours: bs.fours || 0,
+          sixes: bs.sixes || 0,
+          isOut: bs.isOut || false,
+          dismissalType: bs.dismissal?.type || null,
+          dismissalBowlerId: (bs.dismissal?.bowler?._id || bs.dismissal?.bowler)?.toString() || null,
+          dismissalFielderId: (bs.dismissal?.fielder?._id || bs.dismissal?.fielder)?.toString() || null,
+          isStriker: player.playerId === strikerId,
+          isNonStriker: player.playerId === nonStrikerId
+        };
+      } else {
+        // Player hasn't batted yet - show with zero stats
+        return {
+          playerId: player.playerId,
+          playerName: player.name,
+          runs: 0,
+          balls: 0,
+          fours: 0,
+          sixes: 0,
+          isOut: false,
+          dismissalType: null,
+          dismissalBowlerId: null,
+          dismissalFielderId: null,
+          isStriker: player.playerId === strikerId,
+          isNonStriker: player.playerId === nonStrikerId,
+          isNew: true  // Mark as new - will be added to batting stats on save if modified
+        };
+      }
+    });
+
+    // Build bowling stats edit - include ALL playing XI players from bowling team
+    const existingBowlingStatsMap = new Map<string, any>();
+    (innings.bowlingStats || []).forEach((bs: any) => {
       const playerId = (bs.player?._id || bs.player)?.toString();
-      const overs = bs.overs || 0;
-      const balls = bs.balls || 0;
-      return {
-        playerId,
-        playerName: bs.player?.name || this.getPlayerNameById(playerId),
-        overs: `${overs}.${balls}`,
-        maidens: bs.maidens || 0,
-        runs: bs.runs || 0,
-        wickets: bs.wickets || 0,
-        wides: bs.wides || 0,
-        noBalls: bs.noBalls || 0,
-        isBowling: playerId === currentBowlerId
-      };
+      existingBowlingStatsMap.set(playerId, bs);
+    });
+
+    const bowlingStats: BowlingStatEdit[] = this.bowlingTeamPlayers.map(player => {
+      const bs = existingBowlingStatsMap.get(player.playerId);
+      if (bs) {
+        // Player has existing bowling stats
+        const overs = bs.overs || 0;
+        const balls = bs.balls || 0;
+        return {
+          playerId: player.playerId,
+          playerName: player.name,
+          overs: `${overs}.${balls}`,
+          maidens: bs.maidens || 0,
+          runs: bs.runs || 0,
+          wickets: bs.wickets || 0,
+          wides: bs.wides || 0,
+          noBalls: bs.noBalls || 0,
+          isBowling: player.playerId === currentBowlerId
+        };
+      } else {
+        // Player hasn't bowled yet - show with zero stats
+        return {
+          playerId: player.playerId,
+          playerName: player.name,
+          overs: '0.0',
+          maidens: 0,
+          runs: 0,
+          wickets: 0,
+          wides: 0,
+          noBalls: 0,
+          isBowling: player.playerId === currentBowlerId,
+          isNew: true  // Mark as new - will be added to bowling stats on save if modified
+        };
+      }
     });
 
     this.inningsEdit = {
@@ -1066,6 +1106,7 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   // Calculations
   calculateBatsmanTotal(): number {
     if (!this.inningsEdit) return 0;
+    // Sum up runs from all batsmen (including 'new' players who have runs)
     return this.inningsEdit.battingStats
       .filter(b => !b.toRemove)
       .reduce((sum, b) => sum + (b.runs || 0), 0);
@@ -1139,6 +1180,13 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
       bat.dismissalBowlerId = null;
       bat.dismissalFielderId = null;
     }
+    
+    // If marking a current batsman as out, clear their strike position
+    if (bat.isOut) {
+      bat.isStriker = false;
+      bat.isNonStriker = false;
+    }
+    
     this.markDirty();
   }
 
@@ -1305,8 +1353,15 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     this.error = '';
 
     // Build update payload
+    // For batting stats: include existing players + new players who have been modified
     const battingStats = this.inningsEdit.battingStats
       .filter(b => !b.toRemove)
+      .filter(b => {
+        // Include if not new (existing player), or if new AND has stats or is currently batting
+        if (!b.isNew) return true;
+        // New players only included if they have stats, are out, or are striker/non-striker
+        return b.runs > 0 || b.balls > 0 || b.isOut || b.isStriker || b.isNonStriker;
+      })
       .map(b => ({
         playerId: b.playerId,
         runs: b.runs,
@@ -1322,8 +1377,15 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         isNew: b.isNew
       }));
 
+    // For bowling stats: include existing players + new players who have been modified
     const bowlingStats = this.inningsEdit.bowlingStats
       .filter(b => !b.toRemove)
+      .filter(b => {
+        // Include if not new (existing player), or if new AND has stats or is currently bowling
+        if (!b.isNew) return true;
+        // New bowlers only included if they have stats or are the current bowler
+        return b.overs !== '0.0' || b.runs > 0 || b.wickets > 0 || b.wides > 0 || b.noBalls > 0 || b.isBowling;
+      })
       .map(b => ({
         playerId: b.playerId,
         overs: b.overs,
