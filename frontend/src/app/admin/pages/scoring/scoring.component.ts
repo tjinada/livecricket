@@ -240,6 +240,101 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
             </a>
           </div>
 
+          <!-- Match Editor - View Ball-by-Ball History -->
+          <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <h3 class="font-semibold text-gray-800 mb-3">📊 Match Details & Ball History</h3>
+            <p class="text-sm text-gray-500 mb-3">View detailed ball-by-ball history, over summaries, and player stats</p>
+            <div class="flex gap-2">
+              <a 
+                [routerLink]="['/admin/editor', matchId]"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+              >
+                <span>📝</span>
+                <span>Open Match Editor</span>
+                <span>→</span>
+              </a>
+              <button 
+                (click)="showFullScoringView = true"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <span>🏏</span>
+                <span>View Scoring Details</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Over History Section (Collapsible) -->
+          <div class="bg-white rounded-lg shadow mb-6">
+            <button 
+              (click)="showCompletedMatchOverHistory = !showCompletedMatchOverHistory"
+              class="w-full p-4 flex justify-between items-center hover:bg-gray-50 transition-colors"
+            >
+              <div class="flex items-center gap-2">
+                <h3 class="font-semibold text-gray-800">📜 Over-by-Over History</h3>
+                <span class="text-xs text-gray-500">(Click to {{ showCompletedMatchOverHistory ? 'hide' : 'show' }})</span>
+              </div>
+              <span class="text-gray-400 text-lg">{{ showCompletedMatchOverHistory ? '▲' : '▼' }}</span>
+            </button>
+            @if (showCompletedMatchOverHistory) {
+              <div class="px-4 pb-4">
+                <!-- Innings Selector -->
+                <div class="mb-4">
+                  <select 
+                    [(ngModel)]="selectedCompletedInningsIndex"
+                    class="px-3 py-2 border rounded-lg text-sm"
+                  >
+                    @for (innings of match.innings; track $index) {
+                      <option [value]="$index">
+                        {{ getTeamNameById(innings.battingTeam) }} - {{ innings.totalRuns }}/{{ innings.totalWickets }} ({{ getOversDisplayForInnings(innings) }} ov)
+                      </option>
+                    }
+                  </select>
+                </div>
+
+                <!-- Overs Display -->
+                @if (getCompletedMatchOvers().length > 0) {
+                  <div class="space-y-3 max-h-96 overflow-y-auto">
+                    @for (over of getCompletedMatchOvers(); track $index) {
+                      <div class="border rounded-lg p-3 bg-gray-50">
+                        <div class="flex justify-between items-center mb-2">
+                          <span class="text-sm font-medium text-gray-700">Over {{ over.overNumber || ($index + 1) }}</span>
+                          <div class="flex items-center gap-2">
+                            <span class="text-xs bg-gray-200 px-2 py-0.5 rounded">{{ over.runs || 0 }} runs</span>
+                            @if (over.wickets && over.wickets > 0) {
+                              <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">{{ over.wickets }}W</span>
+                            }
+                          </div>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                          @for (ball of over.balls || []; track $index) {
+                            <div 
+                              class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
+                              [class.bg-gray-200]="ball.display === '0' || ball.display === '•'"
+                              [class.text-gray-600]="ball.display === '0' || ball.display === '•'"
+                              [class.bg-green-500]="ball.display === '4'"
+                              [class.text-white]="ball.display === '4' || ball.display === '6' || ball.display === 'W'"
+                              [class.bg-purple-500]="ball.display === '6'"
+                              [class.bg-red-500]="ball.display === 'W'"
+                              [class.bg-yellow-400]="ball.display?.includes('Wd') || ball.display?.includes('Nb')"
+                              [class.text-yellow-800]="ball.display?.includes('Wd') || ball.display?.includes('Nb')"
+                              [class.bg-blue-200]="!['0', '•', '4', '6', 'W'].includes(ball.display) && !ball.display?.includes('Wd') && !ball.display?.includes('Nb')"
+                              [class.text-blue-800]="!['0', '•', '4', '6', 'W'].includes(ball.display) && !ball.display?.includes('Wd') && !ball.display?.includes('Nb')"
+                              [title]="'Ball ' + ($index + 1) + ': ' + (ball.display || ball.runs || 0)"
+                            >
+                              {{ ball.display === '0' ? '•' : (ball.display || ball.runs || '•') }}
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="text-gray-500 text-sm text-center py-4">No over history available for this innings</p>
+                }
+              </div>
+            }
+          </div>
+
           <!-- Back to Matches -->
           <div class="text-center">
             <a routerLink="/admin/matches" class="text-gray-600 hover:text-gray-800">
@@ -2562,6 +2657,11 @@ export class ScoringComponent implements OnInit, OnDestroy {
   // Recent overs display (last 5 overs)
   showRecentOvers = false;
 
+  // Completed match over history
+  showCompletedMatchOverHistory = false;
+  selectedCompletedInningsIndex = 0;
+  showFullScoringView = false;
+
   // SSE connection
   private eventSource: EventSource | null = null;
   isDisplayConnected = true;
@@ -4819,6 +4919,46 @@ export class ScoringComponent implements OnInit, OnDestroy {
         balls: over.balls || []
       };
     });
+  }
+
+  // Get overs for completed match history view
+  getCompletedMatchOvers(): Array<{
+    overNumber: number;
+    runs: number;
+    wickets: number;
+    balls: any[];
+  }> {
+    if (!this.match?.innings || !this.match.innings[this.selectedCompletedInningsIndex]) {
+      return [];
+    }
+    
+    const innings = this.match.innings[this.selectedCompletedInningsIndex];
+    const overs = innings.overs || [];
+    
+    return overs.map((over: any, idx: number) => ({
+      overNumber: over.overNumber || idx + 1,
+      runs: over.runs || over.balls?.reduce((sum: number, b: any) => sum + (b.totalRuns || b.runs || 0), 0) || 0,
+      wickets: over.wickets || over.balls?.filter((b: any) => b.isWicket).length || 0,
+      balls: (over.balls || []).map((b: any) => ({
+        display: b.display || this.formatBallDisplay(b),
+        runs: b.runs || 0
+      }))
+    }));
+  }
+
+  // Format ball display for over history
+  private formatBallDisplay(ball: any): string {
+    if (ball.isWicket) return 'W';
+    if (ball.isFour) return '4';
+    if (ball.isSix) return '6';
+    if (ball.isExtra) {
+      const extraRuns = ball.extraRuns || ball.runs || 1;
+      if (ball.extraType === 'wide') return extraRuns > 1 ? `Wd+${extraRuns-1}` : 'Wd';
+      if (ball.extraType === 'no-ball') return extraRuns > 1 ? `Nb+${extraRuns-1}` : 'Nb';
+      if (ball.extraType === 'bye') return `B${extraRuns}`;
+      if (ball.extraType === 'leg-bye') return `Lb${extraRuns}`;
+    }
+    return ball.runs?.toString() || '0';
   }
 
   // ===========================================
