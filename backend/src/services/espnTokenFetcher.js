@@ -30,15 +30,11 @@ const ESPN_API_BASE = 'https://hs-consumer-api.espncricinfo.com/v1/pages/match';
  */
 function escapeEarly(str) {
   if (!str) return str;
-  // encodeURIComponent leaves some chars unencoded, and uses uppercase hex
-  // ESPN's _escapeEarly encodes more chars and uses lowercase hex
   let encoded = '';
   for (const char of str) {
-    // These characters are safe and don't need encoding
     if (/[A-Za-z0-9._~-]/.test(char)) {
       encoded += char;
     } else {
-      // Encode everything else with lowercase hex
       encoded += '%' + char.charCodeAt(0).toString(16).toLowerCase();
     }
   }
@@ -47,29 +43,23 @@ function escapeEarly(str) {
 
 /**
  * Generate Akamai EdgeAuth token for a given URL path
- * @param {string} pathWithQuery - The URL path with query string (e.g., "/v1/pages/match/overs/details?lang=en&seriesId=...")
- * @returns {string} The auth token
  */
 function generateToken(pathWithQuery) {
   const startTime = Math.floor(Date.now() / 1000);
   const endTime = startTime + AKAMAI_CONFIG.windowSeconds;
   
-  // Build token fields
   const tokenFields = [];
   tokenFields.push(`exp=${endTime}`);
   
-  // Build HMAC input (includes URL for URL-based tokens)
   const hmacFields = [...tokenFields];
   const escapedPath = AKAMAI_CONFIG.escapeEarly ? escapeEarly(pathWithQuery) : pathWithQuery;
   hmacFields.push(`url=${escapedPath}`);
   
-  // Calculate HMAC
   const hmacInput = hmacFields.join(AKAMAI_CONFIG.fieldDelimiter);
   const hmac = crypto.createHmac(AKAMAI_CONFIG.algorithm, Buffer.from(AKAMAI_CONFIG.key, 'hex'));
   hmac.update(hmacInput);
   const signature = hmac.digest('hex');
   
-  // Final token
   tokenFields.push(`hmac=${signature}`);
   return tokenFields.join(AKAMAI_CONFIG.fieldDelimiter);
 }
@@ -79,19 +69,16 @@ function generateToken(pathWithQuery) {
  */
 function extractMatchIds(url) {
   try {
-    // Pattern: /series/name-SERIESID/match-name-MATCHID/
     const match = url.match(/series\/[^\/]+-(\d+)\/[^\/]+-(\d+)/);
     if (match) {
       return { seriesId: match[1], matchId: match[2] };
     }
     
-    // Pattern: /series/SERIESID/scorecard/MATCHID
     const directMatch = url.match(/series\/(\d+)\/scorecard\/(\d+)/);
     if (directMatch) {
       return { seriesId: directMatch[1], matchId: directMatch[2] };
     }
     
-    // Try to extract any 7-digit numbers
     const numbers = url.match(/(\d{7})/g);
     if (numbers && numbers.length >= 2) {
       return { seriesId: numbers[0], matchId: numbers[1] };
@@ -108,7 +95,6 @@ function extractMatchIds(url) {
  * Make a direct ESPN API call with generated token
  */
 async function callEspnApi(endpoint, params) {
-  // Build the path with query string
   const url = new URL(`${ESPN_API_BASE}/${endpoint}`);
   url.searchParams.set('lang', 'en');
   
@@ -116,10 +102,7 @@ async function callEspnApi(endpoint, params) {
     url.searchParams.set(key, value);
   }
   
-  // Extract path for token generation (everything after the domain)
   const pathWithQuery = url.pathname + url.search;
-  
-  // Generate token for this specific endpoint
   const token = generateToken(pathWithQuery);
   
   console.log(`API Call: ${endpoint}`);
@@ -160,7 +143,6 @@ async function fetchMatchData(url, options = {}) {
   };
 
   try {
-    // Extract match IDs from URL
     const ids = extractMatchIds(url);
     if (!ids) {
       return { success: false, error: 'Could not extract match/series IDs from URL' };
@@ -168,7 +150,6 @@ async function fetchMatchData(url, options = {}) {
     console.log(`\n=== ESPN Direct Fetch (No Browser) ===`);
     console.log(`Series: ${ids.seriesId}, Match: ${ids.matchId}\n`);
 
-    // Fetch scorecard
     try {
       console.log('Fetching scorecard...');
       capturedData.scorecard = await callEspnApi('scorecard', {
@@ -180,7 +161,6 @@ async function fetchMatchData(url, options = {}) {
       console.log('  ✗ Scorecard fetch failed:', e.message, '\n');
     }
 
-    // Fetch match details
     try {
       console.log('Fetching match details...');
       capturedData.matchDetails = await callEspnApi('details', {
@@ -192,7 +172,6 @@ async function fetchMatchData(url, options = {}) {
       console.log('  ✗ Match details fetch failed:', e.message, '\n');
     }
 
-    // Fetch overs/ball-by-ball data
     if (captureOvers) {
       try {
         console.log('Fetching overs details (ball-by-ball)...');
@@ -253,7 +232,45 @@ async function fetchOversData(url) {
 }
 
 /**
+ * Fetch ball-by-ball commentary for a specific innings
+ */
+async function fetchCommentary(seriesId, matchId, inningsNumber) {
+  try {
+    const comments = await callEspnApi('comments', {
+      seriesId,
+      matchId,
+      inningNumber: inningsNumber,
+      commentType: 'ALL',
+      fromInningOver: -1
+    });
+    return { success: true, data: comments };
+  } catch (error) {
+    console.error(`Commentary fetch error for innings ${inningsNumber}:`, error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Parse overs data from ESPN API response
+ * 
+ * The ESPN overs/details API returns data in this structure:
+ * {
+ *   inningOvers: [
+ *     {
+ *       inningNumber: 1,
+ *       stats: [
+ *         {
+ *           overNumber: 1,
+ *           overRuns: 5,
+ *           balls: [
+ *             { ballNumber: 1, batsmanRuns: 1, ... },
+ *             { ballNumber: 2, batsmanRuns: 4, ... },
+ *           ]
+ *         }
+ *       ]
+ *     }
+ *   ]
+ * }
  */
 function parseOversData(oversData) {
   const result = { innings: [], matchInfo: null };
@@ -268,7 +285,8 @@ function parseOversData(oversData) {
     };
   }
 
-  // Handle inningOvers format (from overs/details API)
+  // Handle inningOvers format - this is the actual ESPN API format
+  // Balls are inside inningOvers[].stats[].balls[]
   if (oversData.inningOvers) {
     for (const inning of oversData.inningOvers) {
       const parsedInnings = {
@@ -281,6 +299,7 @@ function parseOversData(oversData) {
       for (const stat of (inning.stats || [])) {
         const overNumber = stat.overNumber;
         
+        // Extract over summary
         parsedInnings.overs.push({
           overNumber,
           overRuns: stat.overRuns || 0,
@@ -292,6 +311,69 @@ function parseOversData(oversData) {
           overRunRate: stat.overRunRate || 0,
           bowlers: stat.bowlers || []
         });
+
+        // Extract individual balls from stats.balls[] - THIS IS THE KEY!
+        if (stat.balls && Array.isArray(stat.balls)) {
+          for (const ball of stat.balls) {
+            parsedInnings.balls.push({
+              // Ball identification
+              inningsNumber: inning.inningNumber,
+              overNumber: ball.overNumber || overNumber,
+              ballInOver: ball.ballNumber,
+              oversActual: ball.oversActual,
+              oversUnique: ball.oversUnique,
+              
+              // Player IDs (ESPN uses numeric IDs)
+              batsmanId: ball.batsmanPlayerId,
+              bowlerId: ball.bowlerPlayerId,
+              nonStrikerId: ball.nonStrikerPlayerId,
+              dismissedBatsmanId: ball.outPlayerId || null,
+              
+              // Runs
+              runs: ball.batsmanRuns || 0,
+              totalRuns: ball.totalRuns || 0,
+              extraRuns: (ball.totalRuns || 0) - (ball.batsmanRuns || 0),
+              
+              // Extras breakdown
+              wides: ball.wides || 0,
+              noBalls: ball.noballs || 0,
+              byes: ball.byes || 0,
+              legByes: ball.legbyes || 0,
+              penalties: ball.penalties || 0,
+              
+              // Extra flags
+              isExtra: (ball.wides > 0) || (ball.noballs > 0) || (ball.byes > 0) || (ball.legbyes > 0),
+              extraType: ball.wides > 0 ? 'wide' : ball.noballs > 0 ? 'no-ball' : ball.byes > 0 ? 'bye' : ball.legbyes > 0 ? 'leg-bye' : null,
+              isLegal: !(ball.wides > 0) && !(ball.noballs > 0),
+              
+              // Scoring flags
+              isFour: ball.isFour || false,
+              isSix: ball.isSix || false,
+              isWicket: ball.isWicket || false,
+              wicketType: ball.dismissalType || null,
+              
+              // Running totals
+              totalInningRuns: ball.totalInningRuns,
+              totalInningWickets: ball.totalInningWickets,
+              
+              // Timing
+              timestamp: ball.timestamp,
+              
+              // Wagon wheel / pitch map data
+              wagonX: ball.wagonX,
+              wagonY: ball.wagonY,
+              wagonZone: ball.wagonZone,
+              pitchLine: ball.pitchLine,
+              pitchLength: ball.pitchLength,
+              shotType: ball.shotType,
+              shotControl: ball.shotControl,
+              
+              // Text descriptions
+              batsmanStatText: ball.batsmanStatText,
+              bowlerStatText: ball.bowlerStatText
+            });
+          }
+        }
       }
 
       result.innings.push(parsedInnings);
@@ -316,7 +398,6 @@ function transformData(capturedData) {
   };
 
   try {
-    // Process match details
     if (capturedData.matchDetails) {
       const match = capturedData.matchDetails.match || capturedData.matchDetails;
       result.matchStatus = match.statusText || match.status;
@@ -334,7 +415,6 @@ function transformData(capturedData) {
       }
     }
 
-    // Process scorecard
     if (capturedData.scorecard) {
       const scorecard = capturedData.scorecard.content || capturedData.scorecard;
       
@@ -400,7 +480,6 @@ function transformData(capturedData) {
       }
     }
 
-    // Process overs details
     if (capturedData.oversDetails) {
       result.ballByBall = parseOversData(capturedData.oversDetails);
     }
@@ -419,6 +498,7 @@ module.exports = {
   callEspnApi,
   fetchMatchData,
   fetchOversData,
+  fetchCommentary,
   transformData,
   parseOversData,
   extractMatchIds,

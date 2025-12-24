@@ -34,6 +34,50 @@ const { getOversDisplay, getBallDisplay } = require('../services/scoringEngine')
 const router = express.Router();
 
 /**
+ * Map ESPN numeric dismissal types to our string enum values
+ * ESPN dismissal type codes (from their API):
+ * 1 = bowled, 2 = caught, 3 = lbw, 4 = run out, 5 = stumped, 6 = hit wicket, etc.
+ */
+const ESPN_DISMISSAL_MAP = {
+  1: 'bowled',
+  2: 'caught',
+  3: 'lbw',
+  4: 'run-out',
+  5: 'stumped',
+  6: 'hit-wicket',
+  7: 'caught', // caught and bowled
+  8: 'run-out', // run out (sub)
+  9: 'stumped', // stumped (sub)
+  // String versions (in case ESPN returns strings sometimes)
+  'bowled': 'bowled',
+  'caught': 'caught',
+  'lbw': 'lbw',
+  'run out': 'run-out',
+  'run-out': 'run-out',
+  'stumped': 'stumped',
+  'hit wicket': 'hit-wicket',
+  'hit-wicket': 'hit-wicket',
+  'caught and bowled': 'caught',
+  'c&b': 'caught'
+};
+
+/**
+ * Convert ESPN dismissal type to our enum value
+ */
+function mapDismissalType(espnType) {
+  if (!espnType) return null;
+  
+  // Handle numeric types
+  if (typeof espnType === 'number') {
+    return ESPN_DISMISSAL_MAP[espnType] || null;
+  }
+  
+  // Handle string types (case insensitive)
+  const normalized = String(espnType).toLowerCase().trim();
+  return ESPN_DISMISSAL_MAP[normalized] || null;
+}
+
+/**
  * POST /api/espn/fetch-match
  * Fetch live match data from ESPN Cricinfo URL
  */
@@ -1264,11 +1308,56 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
         // Use the direct token fetcher which bypasses Akamai
         const fetchResult = await espnTokenFetcher.fetchOversData(match.espnUrl);
         if (fetchResult.success && fetchResult.data && fetchResult.data.oversDetails) {
+          // Debug: log the structure of the overs data
+          const oversData = fetchResult.data.oversDetails;
+          console.log('Overs data structure keys:', Object.keys(oversData));
+          if (oversData.content) {
+            console.log('  content keys:', Object.keys(oversData.content));
+            if (oversData.content.innings) {
+              console.log('  innings keys:', Object.keys(oversData.content.innings));
+              // Check first innings structure
+              const firstInningsKey = Object.keys(oversData.content.innings)[0];
+              if (firstInningsKey) {
+                const firstInnings = oversData.content.innings[firstInningsKey];
+                console.log('  first innings keys:', Object.keys(firstInnings));
+                if (firstInnings.overs && firstInnings.overs[0]) {
+                  console.log('  first over keys:', Object.keys(firstInnings.overs[0]));
+                  if (firstInnings.overs[0].balls) {
+                    console.log('  HAS BALLS! Count:', firstInnings.overs[0].balls.length);
+                    console.log('  first ball keys:', Object.keys(firstInnings.overs[0].balls[0]));
+                  }
+                }
+              }
+            }
+          }
+          if (oversData.inningOvers) {
+            console.log('  inningOvers found, count:', oversData.inningOvers.length);
+            if (oversData.inningOvers[0]) {
+              console.log('  inningOvers[0] keys:', Object.keys(oversData.inningOvers[0]));
+              if (oversData.inningOvers[0].stats) {
+                console.log('  stats count:', oversData.inningOvers[0].stats.length);
+              }
+            }
+          }
+          
           // Parse the overs data
           const parsedData = espnTokenFetcher.parseOversData(fetchResult.data.oversDetails);
+          console.log('Parsed data innings count:', parsedData.innings?.length);
+          if (parsedData.innings && parsedData.innings[0]) {
+            console.log('  innings[0] balls count:', parsedData.innings[0].balls?.length);
+            console.log('  innings[0] overs count:', parsedData.innings[0].overs?.length);
+          }
+          
           if (parsedData && parsedData.innings && parsedData.innings.length > 0) {
-            espnBallData = { innings: parsedData.innings };
-            console.log(`✓ Fetched ${parsedData.innings.length} innings of ball-by-ball data via direct token`);
+            // Check if we actually have ball-level data
+            const hasBalls = parsedData.innings.some(inn => inn.balls && inn.balls.length > 0);
+            if (hasBalls) {
+              espnBallData = { innings: parsedData.innings };
+              const totalBalls = parsedData.innings.reduce((sum, inn) => sum + (inn.balls?.length || 0), 0);
+              console.log(`✓ Fetched ${parsedData.innings.length} innings with ${totalBalls} balls via direct token`);
+            } else {
+              console.log('Overs data fetched but no individual balls (only over summaries)');
+            }
           } else {
             console.log('Overs data fetched but could not be parsed');
           }
@@ -1533,11 +1622,15 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
           const dismissedBatsmanId = espnBall.dismissedBatsmanName ? playerNameToId.get(espnBall.dismissedBatsmanName.toLowerCase()) : null;
           const fielderId = espnBall.fielderName ? playerNameToId.get(espnBall.fielderName.toLowerCase()) : null;
 
+          // ballInOver can be > 6 if there are extras in the over
+          // We cap ballNumber at 6 for the schema validation, but use sequence for ordering
+          const cappedBallNumber = Math.min(Math.max(ballInOver || 1, 1), 6);
+          
           const ballDoc = new Ball({
             match: matchId,
             inningsNumber: inningsNumber,
             overNumber: overNumber,
-            ballNumber: ballInOver || 1,
+            ballNumber: cappedBallNumber,
             sequence: sequence,
             bowler: bowlerId || null,
             batsman: batsmanId || null,
@@ -1551,7 +1644,7 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
             isSix: espnBall.isSix || false,
             isWicket: espnBall.isWicket || false,
             wicket: espnBall.isWicket ? {
-              type: espnBall.wicketType || 'bowled',
+              type: mapDismissalType(espnBall.wicketType) || 'bowled',
               dismissedPlayer: dismissedBatsmanId || null,
               fielder: fielderId || null
             } : undefined,
