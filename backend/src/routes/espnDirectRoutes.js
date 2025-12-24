@@ -193,13 +193,15 @@ function addDirectFetchRoutes(router, auth, Match, matchEspnTeamsToLocal, matchP
                   economy: b.economy || 0,
                   dotBalls: b.dots || 0
                 })),
-                extras: inn.extras ? {
-                  total: inn.extras.total || 0,
-                  byes: inn.extras.byes || 0,
-                  legByes: inn.extras.legbyes || 0,
-                  wides: inn.extras.wides || 0,
-                  noBalls: inn.extras.noballs || 0
-                } : null,
+                // Extras - in ESPN data, individual extras (byes, legbyes, wides, noballs) 
+                // are at the top level of innings, not nested under 'extras'
+                extras: {
+                  total: inn.extras || 0,  // 'extras' is just the total number
+                  byes: inn.byes || 0,
+                  legByes: inn.legbyes || 0,
+                  wides: inn.wides || 0,
+                  noBalls: inn.noballs || 0
+                },
                 total: inn.runs !== undefined ? { runs: inn.runs, wickets: inn.wickets || 0 } : null,
                 overs: inn.overs || null
               });

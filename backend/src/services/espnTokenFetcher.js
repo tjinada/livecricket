@@ -461,15 +461,15 @@ function transformData(capturedData) {
             }
           }
 
-          if (innings.extras) {
-            inningsData.extras = {
-              total: innings.extras.total || 0,
-              byes: innings.extras.byes || 0,
-              legByes: innings.extras.legbyes || 0,
-              wides: innings.extras.wides || 0,
-              noBalls: innings.extras.noballs || 0
-            };
-          }
+          // Extras - in ESPN data, individual extras (byes, legbyes, wides, noballs) 
+          // are at the top level of innings, not nested under 'extras'
+          inningsData.extras = {
+            total: innings.extras || 0,  // 'extras' is just the total number
+            byes: innings.byes || 0,
+            legByes: innings.legbyes || 0,
+            wides: innings.wides || 0,
+            noBalls: innings.noballs || 0
+          };
 
           if (innings.runs !== undefined) {
             inningsData.total = { runs: innings.runs, wickets: innings.wickets || 0 };
