@@ -252,25 +252,6 @@ async function fetchCommentary(seriesId, matchId, inningsNumber) {
 
 /**
  * Parse overs data from ESPN API response
- * 
- * The ESPN overs/details API returns data in this structure:
- * {
- *   inningOvers: [
- *     {
- *       inningNumber: 1,
- *       stats: [
- *         {
- *           overNumber: 1,
- *           overRuns: 5,
- *           balls: [
- *             { ballNumber: 1, batsmanRuns: 1, ... },
- *             { ballNumber: 2, batsmanRuns: 4, ... },
- *           ]
- *         }
- *       ]
- *     }
- *   ]
- * }
  */
 function parseOversData(oversData) {
   const result = { innings: [], matchInfo: null };
@@ -285,8 +266,6 @@ function parseOversData(oversData) {
     };
   }
 
-  // Handle inningOvers format - this is the actual ESPN API format
-  // Balls are inside inningOvers[].stats[].balls[]
   if (oversData.inningOvers) {
     for (const inning of oversData.inningOvers) {
       const parsedInnings = {
@@ -299,7 +278,6 @@ function parseOversData(oversData) {
       for (const stat of (inning.stats || [])) {
         const overNumber = stat.overNumber;
         
-        // Extract over summary
         parsedInnings.overs.push({
           overNumber,
           overRuns: stat.overRuns || 0,
@@ -312,54 +290,36 @@ function parseOversData(oversData) {
           bowlers: stat.bowlers || []
         });
 
-        // Extract individual balls from stats.balls[] - THIS IS THE KEY!
         if (stat.balls && Array.isArray(stat.balls)) {
           for (const ball of stat.balls) {
             parsedInnings.balls.push({
-              // Ball identification
               inningsNumber: inning.inningNumber,
               overNumber: ball.overNumber || overNumber,
               ballInOver: ball.ballNumber,
               oversActual: ball.oversActual,
               oversUnique: ball.oversUnique,
-              
-              // Player IDs (ESPN uses numeric IDs)
               batsmanId: ball.batsmanPlayerId,
               bowlerId: ball.bowlerPlayerId,
               nonStrikerId: ball.nonStrikerPlayerId,
               dismissedBatsmanId: ball.outPlayerId || null,
-              
-              // Runs
               runs: ball.batsmanRuns || 0,
               totalRuns: ball.totalRuns || 0,
               extraRuns: (ball.totalRuns || 0) - (ball.batsmanRuns || 0),
-              
-              // Extras breakdown
               wides: ball.wides || 0,
               noBalls: ball.noballs || 0,
               byes: ball.byes || 0,
               legByes: ball.legbyes || 0,
               penalties: ball.penalties || 0,
-              
-              // Extra flags
               isExtra: (ball.wides > 0) || (ball.noballs > 0) || (ball.byes > 0) || (ball.legbyes > 0),
               extraType: ball.wides > 0 ? 'wide' : ball.noballs > 0 ? 'no-ball' : ball.byes > 0 ? 'bye' : ball.legbyes > 0 ? 'leg-bye' : null,
               isLegal: !(ball.wides > 0) && !(ball.noballs > 0),
-              
-              // Scoring flags
               isFour: ball.isFour || false,
               isSix: ball.isSix || false,
               isWicket: ball.isWicket || false,
               wicketType: ball.dismissalType || null,
-              
-              // Running totals
               totalInningRuns: ball.totalInningRuns,
               totalInningWickets: ball.totalInningWickets,
-              
-              // Timing
               timestamp: ball.timestamp,
-              
-              // Wagon wheel / pitch map data
               wagonX: ball.wagonX,
               wagonY: ball.wagonY,
               wagonZone: ball.wagonZone,
@@ -367,8 +327,6 @@ function parseOversData(oversData) {
               pitchLength: ball.pitchLength,
               shotType: ball.shotType,
               shotControl: ball.shotControl,
-              
-              // Text descriptions
               batsmanStatText: ball.batsmanStatText,
               bowlerStatText: ball.bowlerStatText
             });
@@ -461,10 +419,8 @@ function transformData(capturedData) {
             }
           }
 
-          // Extras - in ESPN data, individual extras (byes, legbyes, wides, noballs) 
-          // are at the top level of innings, not nested under 'extras'
           inningsData.extras = {
-            total: innings.extras || 0,  // 'extras' is just the total number
+            total: innings.extras || 0,
             byes: innings.byes || 0,
             legByes: innings.legbyes || 0,
             wides: innings.wides || 0,
@@ -492,14 +448,188 @@ function transformData(capturedData) {
   return result;
 }
 
+/**
+ * Fetch squad/team list data for a match
+ * 
+ * ESPN API endpoint: /v1/pages/match/squad-players
+ * Returns: match info + content.matchPlayers.teamPlayers[] with full squad info
+ */
+async function fetchSquadsData(url) {
+  try {
+    const ids = extractMatchIds(url);
+    if (!ids) {
+      return { success: false, error: 'Could not extract match/series IDs from URL' };
+    }
+
+    console.log(`\n=== ESPN Direct Squads Fetch ===`);
+    console.log(`Series: ${ids.seriesId}, Match: ${ids.matchId}\n`);
+
+    // Use the correct endpoint: squad-players (with hyphen)
+    let squadsData = null;
+    try {
+      console.log('Fetching squad-players data...');
+      squadsData = await callEspnApi('squad-players', {
+        seriesId: ids.seriesId,
+        matchId: ids.matchId
+      });
+      console.log('  ✓ Squad-players data fetched\n');
+    } catch (e) {
+      console.log('  ✗ Squad-players fetch failed:', e.message);
+    }
+
+    console.log('=== Squads Fetch Complete ===');
+
+    return {
+      success: true,
+      data: {
+        squads: squadsData
+      },
+      matchIds: ids
+    };
+
+  } catch (error) {
+    console.error('Squads fetch error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Transform squads data to a usable format
+ * 
+ * ESPN squad-players API returns:
+ * {
+ *   match: { title, teams[], series, ground, format, ... },
+ *   content: {
+ *     matchPlayers: {
+ *       teamPlayers: [
+ *         { team: {...}, players: [{player: {...}, playerRoleType: 'C'|'VC'|'WK'|'P', ...}] }
+ *       ]
+ *     }
+ *   }
+ * }
+ */
+function transformSquadsData(capturedData) {
+  const result = {
+    matchInfo: {
+      title: null,
+      seriesName: null,
+      date: null,
+      venue: null,
+      format: null,
+      gender: null,
+      matchNumber: null
+    },
+    teams: []
+  };
+
+  try {
+    const squadsResponse = capturedData.squads;
+    if (!squadsResponse) {
+      console.log('  No squads data available');
+      return result;
+    }
+
+    // Extract match info from the match object
+    const match = squadsResponse.match;
+    if (match) {
+      result.matchInfo.title = match.title || match.slug || null;
+      result.matchInfo.seriesName = match.series?.longName || match.series?.name || null;
+      result.matchInfo.date = match.startDate || match.startTime || null;
+      result.matchInfo.venue = match.ground?.longName || match.ground?.name || null;
+      result.matchInfo.format = match.format?.toLowerCase() || null;
+      
+      // Detect gender from series name or team names
+      const seriesName = (match.series?.longName || match.series?.name || '').toLowerCase();
+      const title = (match.title || '').toLowerCase();
+      if (seriesName.includes('women') || title.includes('women')) {
+        result.matchInfo.gender = 'women';
+      } else {
+        result.matchInfo.gender = 'men';
+      }
+      
+      // Extract match number from title (e.g., "3rd T20I")
+      const matchNumMatch = (match.title || '').match(/(\d+)(?:st|nd|rd|th)\s*(T20I?|ODI|Test)/i);
+      if (matchNumMatch) {
+        result.matchInfo.matchNumber = parseInt(matchNumMatch[1]);
+      }
+
+      // Extract teams from match.teams for basic info
+      if (match.teams && Array.isArray(match.teams)) {
+        for (const teamData of match.teams) {
+          const team = teamData.team || teamData;
+          result.teams.push({
+            espnId: team.id || team.objectId,
+            name: team.longName || team.name,
+            shortName: team.abbreviation || team.name?.substring(0, 3).toUpperCase(),
+            players: []
+          });
+        }
+      }
+    }
+
+    // Extract players from content.matchPlayers.teamPlayers
+    const content = squadsResponse.content;
+    if (content?.matchPlayers?.teamPlayers && Array.isArray(content.matchPlayers.teamPlayers)) {
+      console.log(`  Found ${content.matchPlayers.teamPlayers.length} teams in teamPlayers`);
+      
+      for (const teamData of content.matchPlayers.teamPlayers) {
+        const teamId = teamData.team?.id || teamData.team?.objectId;
+        const teamName = teamData.team?.longName || teamData.team?.name;
+        
+        // Find existing team or create new one
+        let teamIndex = result.teams.findIndex(t => t.espnId === teamId);
+        if (teamIndex < 0 && teamName) {
+          // Try matching by name
+          teamIndex = result.teams.findIndex(t => 
+            t.name.toLowerCase().includes(teamName.toLowerCase().replace(' women', '').replace(' men', '')) ||
+            teamName.toLowerCase().includes(t.name.toLowerCase().replace(' women', '').replace(' men', ''))
+          );
+        }
+        if (teamIndex < 0 && teamName) {
+          result.teams.push({
+            espnId: teamId,
+            name: teamName,
+            shortName: teamData.team?.abbreviation || teamName?.substring(0, 3).toUpperCase(),
+            players: []
+          });
+          teamIndex = result.teams.length - 1;
+        }
+        
+        if (teamIndex >= 0 && teamData.players && Array.isArray(teamData.players)) {
+          result.teams[teamIndex].players = teamData.players.map(p => {
+            const player = p.player || p;
+            const roleType = p.playerRoleType || '';
+            return {
+              espnId: player.id || player.objectId,
+              name: player.longName || player.name,
+              role: player.playingRoles?.[0] || player.battingStyles?.[0] || null,
+              isCaptain: roleType === 'C',
+              isViceCaptain: roleType === 'VC',
+              isKeeper: roleType === 'WK' || roleType.includes('WK')
+            };
+          });
+          console.log(`    Team ${result.teams[teamIndex].name}: ${result.teams[teamIndex].players.length} players`);
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error('Error transforming squads data:', error);
+  }
+
+  return result;
+}
+
 module.exports = {
   generateToken,
   escapeEarly,
   callEspnApi,
   fetchMatchData,
   fetchOversData,
+  fetchSquadsData,
   fetchCommentary,
   transformData,
+  transformSquadsData,
   parseOversData,
   extractMatchIds,
   AKAMAI_CONFIG

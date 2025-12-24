@@ -5,7 +5,9 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { Router } from '@angular/router';
 import { MatchService, Match } from '../../../core/services/match.service';
 import { CountryService, PlayerService } from '../../../core/services';
+import { EspnService, EspnMatchCreationPreview, EspnTeamPreview, EspnPlayerPreview, UnmatchedPlayer } from '../../../core/services/espn.service';
 import { Country, Player, PlayerGender } from '../../../core/models';
+import { EspnMatchImportComponent } from '../../components/espn-match-import/espn-match-import.component';
 
 type MatchStep = 'list' | 'create' | 'squad' | 'toss' | 'start';
 
@@ -21,7 +23,7 @@ const MIN_SQUAD_SIZE = 11;
 @Component({
   selector: 'app-matches',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule],
+  imports: [CommonModule, FormsModule, DragDropModule, EspnMatchImportComponent],
   styles: [`
     .cdk-drag-preview {
       box-sizing: border-box;
@@ -271,6 +273,12 @@ const MIN_SQUAD_SIZE = 11;
             </button>
             <h2 class="text-2xl font-bold text-gray-800">Create New Match</h2>
           </div>
+
+          <!-- ESPN Import Component -->
+          <app-espn-match-import 
+            [countries]="countries" 
+            (importApplied)="applyEspnImport($event)"
+          ></app-espn-match-import>
 
           <div class="bg-white rounded-lg shadow p-6">
             <form (ngSubmit)="createMatch()">
@@ -974,6 +982,13 @@ export class MatchesComponent implements OnInit {
   deleting = false;
   deleteError = '';
 
+  // ESPN Import data - stored to auto-populate squads after match creation
+  pendingEspnSquads: {
+    team1Squad: { playerId: string; espnName: string }[];
+    team2Squad: { playerId: string; espnName: string }[];
+    espnUrl?: string;
+  } | null = null;
+
   constructor(
     private matchService: MatchService,
     private countryService: CountryService,
@@ -1091,7 +1106,7 @@ export class MatchesComponent implements OnInit {
         if (response.success) {
           this.team1Players = response.data;
           // Populate existing squad with player data (both Playing XI and Reserves)
-          if (match.squads?.team1) {
+          if (match.squads?.team1 && match.squads.team1.length > 0) {
             this.squadForm.team1 = match.squads.team1
               .map(p => {
                 const playerId = p.player._id || p.player;
@@ -1107,6 +1122,10 @@ export class MatchesComponent implements OnInit {
             // Reassign batting orders to be sequential
             this.reorderPlayingXI('team1');
             this.reorderReserves('team1');
+          } else if (this.pendingEspnSquads?.team1Squad?.length) {
+            // Auto-populate from ESPN import data
+            console.log('Auto-populating Team 1 squad from ESPN data...');
+            this.autoPopulateSquadFromEspn('team1', this.pendingEspnSquads.team1Squad);
           }
         }
       }
@@ -1117,7 +1136,7 @@ export class MatchesComponent implements OnInit {
         if (response.success) {
           this.team2Players = response.data;
           // Populate existing squad with player data (both Playing XI and Reserves)
-          if (match.squads?.team2) {
+          if (match.squads?.team2 && match.squads.team2.length > 0) {
             this.squadForm.team2 = match.squads.team2
               .map(p => {
                 const playerId = p.player._id || p.player;
@@ -1133,12 +1152,46 @@ export class MatchesComponent implements OnInit {
             // Reassign batting orders to be sequential
             this.reorderPlayingXI('team2');
             this.reorderReserves('team2');
+          } else if (this.pendingEspnSquads?.team2Squad?.length) {
+            // Auto-populate from ESPN import data
+            console.log('Auto-populating Team 2 squad from ESPN data...');
+            this.autoPopulateSquadFromEspn('team2', this.pendingEspnSquads.team2Squad);
           }
         }
       }
     });
 
     this.currentStep = 'squad';
+  }
+
+  /**
+   * Auto-populate squad from ESPN import data
+   * Matches ESPN players to local players by ID
+   */
+  private autoPopulateSquadFromEspn(
+    team: 'team1' | 'team2', 
+    espnSquad: { playerId: string; espnName: string }[]
+  ): void {
+    const players = team === 'team1' ? this.team1Players : this.team2Players;
+    let battingOrder = 1;
+    
+    for (const espnPlayer of espnSquad) {
+      // Find player by ID
+      const localPlayer = players.find(p => p._id === espnPlayer.playerId);
+      
+      if (localPlayer) {
+        this.squadForm[team].push({
+          player: localPlayer._id,
+          playerData: localPlayer,
+          isPlayingXI: true,
+          battingOrder: battingOrder++
+        });
+      } else {
+        console.warn(`Could not find player with ID ${espnPlayer.playerId} (${espnPlayer.espnName})`);
+      }
+    }
+    
+    console.log(`  Auto-populated ${this.squadForm[team].length} players for ${team}`);
   }
 
   getAvailablePlayers(team: 'team1' | 'team2'): Player[] {
@@ -1558,5 +1611,29 @@ export class MatchesComponent implements OnInit {
   updateTitlePreview() {
     // This method is called when gender or format changes
     // Title preview is computed in getTitlePreview()
+  }
+
+  // ESPN Import
+  applyEspnImport(data: any): void {
+    // Apply the imported data to the form
+    this.matchForm.format = data.format;
+    this.matchForm.gender = data.gender;
+    this.matchForm.team1 = data.team1Id;
+    this.matchForm.team2 = data.team2Id;
+    this.matchForm.venue = data.venue;
+    this.matchForm.date = data.date;
+    this.matchForm.title = data.title;
+    
+    // Store squad info for auto-population when setting up squad
+    if (data.team1Squad?.length > 0 || data.team2Squad?.length > 0) {
+      this.pendingEspnSquads = {
+        team1Squad: data.team1Squad || [],
+        team2Squad: data.team2Squad || [],
+        espnUrl: data.espnUrl
+      };
+      console.log('ESPN squads stored for auto-population');
+      console.log('  Team 1:', this.pendingEspnSquads.team1Squad.length, 'players');
+      console.log('  Team 2:', this.pendingEspnSquads.team2Squad.length, 'players');
+    }
   }
 }

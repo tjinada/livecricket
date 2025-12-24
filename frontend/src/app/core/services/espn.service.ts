@@ -333,6 +333,107 @@ export interface ParsedOversData {
 }
 
 // ============================================
+// MATCH CREATION FROM ESPN TYPES
+// ============================================
+
+export interface EspnSquadPlayer {
+  espnId: string | null;
+  name: string;
+  role: string | null;
+  isCaptain: boolean;
+  isViceCaptain?: boolean;
+  isKeeper: boolean;
+}
+
+export interface EspnTeamSquad {
+  espnId: string | null;
+  name: string;
+  shortName: string;
+  players: EspnSquadPlayer[];
+}
+
+export interface EspnMatchInfo {
+  title: string | null;
+  seriesName: string | null;
+  date: string | null;
+  venue: string | null;
+  format: string | null;
+  gender: 'men' | 'women' | null;
+  matchNumber: number | null;
+}
+
+export interface EspnSquadsData {
+  matchInfo: EspnMatchInfo;
+  teams: EspnTeamSquad[];
+}
+
+export interface LocalTeamCandidate {
+  country: {
+    _id: string;
+    name: string;
+    shortName?: string;
+    code?: string;
+    flagUrl?: string;
+  };
+  score: number;
+}
+
+export interface LocalPlayerCandidate {
+  player: {
+    _id: string;
+    name: string;
+    role?: string;
+  };
+  score: number;
+  matchType: string;
+}
+
+export interface EspnPlayerPreview {
+  espnPlayer: {
+    id: string | null;
+    name: string;
+    isCaptain: boolean;
+    isViceCaptain?: boolean;
+    isKeeper: boolean;
+    role?: string;
+  };
+  localPlayer: { _id: string; name: string; role?: string } | null;
+  localPlayerCandidates: LocalPlayerCandidate[];
+  needsCreation: boolean;
+}
+
+export interface EspnTeamPreview {
+  espnTeam: {
+    id: string | null;
+    name: string;
+    shortName: string;
+  };
+  localTeam: LocalTeamCandidate['country'] | null;
+  localTeamCandidates: LocalTeamCandidate[];
+  players: EspnPlayerPreview[];
+}
+
+export interface UnmatchedPlayer {
+  espnName: string;
+  espnId: string | null;
+  teamEspnId: string | null;
+  teamName: string;
+  localTeamId: string;
+  isCaptain: boolean;
+  isViceCaptain?: boolean;
+  isKeeper: boolean;
+  role?: string;
+}
+
+export interface EspnMatchCreationPreview {
+  matchInfo: EspnMatchInfo;
+  espnUrl: string;
+  scorecardUrl: string;
+  teamMapping: EspnTeamPreview[];
+  unmatchedPlayers: UnmatchedPlayer[];
+}
+
+// ============================================
 // SERVICE
 // ============================================
 
@@ -483,5 +584,40 @@ export class EspnService {
       `${this.apiUrl}/match/${matchId}/direct-preview`,
       { espnUrl }
     );
+  }
+
+  // ============================================
+  // MATCH CREATION FROM ESPN
+  // ============================================
+
+  /**
+   * Fetch squads data from ESPN for match creation
+   * Returns match info and both team squads with player names
+   */
+  fetchSquads(url: string): Observable<ApiResponse<EspnSquadsData>> {
+    return this.http.post<ApiResponse<EspnSquadsData>>(`${this.apiUrl}/fetch-squads`, { url });
+  }
+
+  /**
+   * Preview match creation from ESPN data
+   * Matches ESPN teams to local countries and ESPN players to local players
+   */
+  previewMatchCreation(url: string): Observable<ApiResponse<EspnMatchCreationPreview>> {
+    return this.http.post<ApiResponse<EspnMatchCreationPreview>>(`${this.apiUrl}/preview-match-creation`, { url });
+  }
+
+  /**
+   * Create a new player from ESPN data during match import
+   */
+  createPlayer(data: {
+    name: string;
+    countryId: string;
+    gender?: 'M' | 'F';
+    espnId?: string;
+    role?: string;
+    battingStyle?: string;
+    bowlingStyle?: string;
+  }): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/create-player`, data);
   }
 }
