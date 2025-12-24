@@ -1664,7 +1664,7 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
               const overRuns = currentOverBalls.reduce((sum, b) => sum + (b.runs || 0), 0);
               const overWickets = currentOverBalls.filter(b => b.isWicket).length;
               matchInnings.overs.push({
-                overNumber: currentOverNumber + 1,
+                overNumber: currentOverNumber,  // ESPN overNumber is already 1-based
                 bowler: currentOverBalls[0]?.bowler || null,
                 balls: currentOverBalls,
                 runs: overRuns,
@@ -1704,7 +1704,7 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
             const overRuns = currentOverBalls.reduce((sum, b) => sum + (b.runs || 0), 0);
             const overWickets = currentOverBalls.filter(b => b.isWicket).length;
             matchInnings.overs.push({
-              overNumber: currentOverNumber + 1,
+              overNumber: currentOverNumber,  // ESPN overNumber is already 1-based
               bowler: currentOverBalls[0]?.bowler || null,
               balls: currentOverBalls,
               runs: overRuns,

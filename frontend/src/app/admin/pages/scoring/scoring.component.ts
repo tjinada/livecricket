@@ -4935,8 +4935,10 @@ export class ScoringComponent implements OnInit, OnDestroy {
     const innings = this.match.innings[this.selectedCompletedInningsIndex];
     const overs = innings.overs || [];
     
+    // Map overs, using 1-based index as overNumber (idx + 1)
+    // This ensures consistent numbering regardless of stored overNumber values
     return overs.map((over: any, idx: number) => ({
-      overNumber: over.overNumber || idx + 1,
+      overNumber: idx + 1,  // Always use 1-based index for display
       runs: over.runs || over.balls?.reduce((sum: number, b: any) => sum + (b.totalRuns || b.runs || 0), 0) || 0,
       wickets: over.wickets || over.balls?.filter((b: any) => b.isWicket).length || 0,
       balls: (over.balls || []).map((b: any) => ({
