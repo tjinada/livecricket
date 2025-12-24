@@ -13,7 +13,9 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const espnScraper = require('../services/espnScraper');
 const Match = require('../models/Match');
+const Ball = require('../models/Ball');
 const Country = require('../models/Country');
+const { getOversDisplay, getBallDisplay } = require('../services/scoringEngine');
 
 const router = express.Router();
 
@@ -52,6 +54,101 @@ router.post('/fetch-match', auth, async (req, res, next) => {
     res.json({
       success: true,
       data: result.data
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/espn/fetch-ball-by-ball
+ * Fetch ball-by-ball commentary data from ESPN API
+ */
+router.post('/fetch-ball-by-ball', auth, async (req, res, next) => {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: 'ESPN Cricinfo URL is required'
+      });
+    }
+
+    if (!url.includes('espncricinfo.com') && !url.includes('cricinfo.com')) {
+      return res.status(400).json({
+        success: false,
+        message: 'URL must be from espncricinfo.com'
+      });
+    }
+
+    const result = await espnScraper.fetchBallByBallData(url);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.data
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/espn/parse-ball-by-ball-json
+ * Parse ball-by-ball commentary JSON that was manually copied from browser DevTools
+ * Admin captures the response from: https://hs-consumer-api.espncricinfo.com/v1/pages/match/comments?...
+ */
+router.post('/parse-ball-by-ball-json', auth, async (req, res, next) => {
+  try {
+    let { json, inningsNumber } = req.body;
+
+    if (!json) {
+      return res.status(400).json({
+        success: false,
+        message: 'JSON data is required'
+      });
+    }
+
+    if (typeof json === 'string') {
+      try {
+        json = JSON.parse(json);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid JSON format'
+        });
+      }
+    }
+
+    // Parse the comments into our ball format
+    const comments = json.comments || [];
+    
+    if (comments.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No ball commentary found in the JSON'
+      });
+    }
+
+    const balls = espnScraper.parseCommentaryToBalls(comments, inningsNumber || 1);
+
+    res.json({
+      success: true,
+      data: {
+        inningsNumber: inningsNumber || 1,
+        balls,
+        totalBalls: balls.filter(b => b.isLegal).length,
+        rawCommentCount: comments.length
+      }
     });
 
   } catch (error) {
@@ -566,11 +663,508 @@ router.get('/test', async (req, res) => {
     message: 'ESPN data service is available',
     endpoints: {
       'POST /api/espn/fetch-match': 'Fetch data from ESPN URL',
+      'POST /api/espn/fetch-ball-by-ball': 'Fetch ball-by-ball commentary from ESPN API',
       'GET /api/espn/match/:matchId/preview': 'Preview ESPN sync for a match',
-      'POST /api/espn/match/:matchId/sync': 'Apply ESPN data to match',
+      'POST /api/espn/match/:matchId/sync': 'Apply ESPN data to match (stats only)',
+      'POST /api/espn/match/:matchId/full-sync': 'Complete replace from ESPN (stats + ball-by-ball)',
       'PATCH /api/espn/match/:matchId/url': 'Set ESPN URL for match'
     }
   });
+});
+
+/**
+ * POST /api/espn/match/:matchId/full-sync
+ * COMPLETE REPLACE: Fetch ESPN data and completely replace all match data including ball-by-ball history
+ * This is the "one button to do it all" - syncs everything from ESPN
+ */
+router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
+  try {
+    const { matchId } = req.params;
+    const { playerMappings, inningsData } = req.body;
+
+    // playerMappings: { espnName: { playerId, teamId }, ... } - manual mappings from admin
+    // inningsData: array of innings data with matched players from preview
+
+    const match = await Match.findById(matchId)
+      .populate('team1', 'name')
+      .populate('team2', 'name')
+      .populate('squads.team1.player', 'name')
+      .populate('squads.team2.player', 'name');
+
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+
+    // Save any new manual player mappings
+    if (playerMappings && Object.keys(playerMappings).length > 0) {
+      for (const [espnName, mapping] of Object.entries(playerMappings)) {
+        const existingIndex = match.espnPlayerMappings.findIndex(
+          m => m.espnName === espnName
+        );
+
+        if (existingIndex >= 0) {
+          match.espnPlayerMappings[existingIndex].player = mapping.playerId;
+          match.espnPlayerMappings[existingIndex].team = mapping.teamId;
+        } else {
+          match.espnPlayerMappings.push({
+            espnName,
+            player: mapping.playerId,
+            team: mapping.teamId
+          });
+        }
+      }
+    }
+
+    // ============================================
+    // STEP 0: FETCH BALL-BY-BALL DATA FROM ESPN
+    // ============================================
+    let espnBallData = null;
+    if (match.espnUrl) {
+      console.log('Attempting to fetch ball-by-ball data from ESPN...');
+      try {
+        const ballResult = await espnScraper.fetchBallByBallData(match.espnUrl);
+        if (ballResult.success && ballResult.data && ballResult.data.innings && ballResult.data.innings.length > 0) {
+          espnBallData = ballResult.data;
+          console.log(`✓ Fetched ${espnBallData.innings.length} innings of ball-by-ball data`);
+        } else {
+          console.log('Ball-by-ball data not available (ESPN API blocked or no data)');
+        }
+      } catch (e) {
+        console.log('Ball-by-ball fetch failed:', e.message);
+      }
+    }
+
+    // Build a player name to ID mapping for ball-by-ball data
+    // This maps ESPN player names to local player IDs
+    const playerNameToId = new Map();
+    
+    // From manual mappings
+    if (playerMappings) {
+      for (const [espnName, mapping] of Object.entries(playerMappings)) {
+        playerNameToId.set(espnName.toLowerCase(), mapping.playerId);
+      }
+    }
+    
+    // From existing player mappings in match
+    if (match.espnPlayerMappings) {
+      for (const mapping of match.espnPlayerMappings) {
+        playerNameToId.set(mapping.espnName.toLowerCase(), mapping.player.toString());
+      }
+    }
+    
+    // From innings data batting/bowling
+    for (const innings of inningsData) {
+      for (const bat of (innings.batting || [])) {
+        if (bat.playerId && bat.espnName) {
+          playerNameToId.set(bat.espnName.toLowerCase(), bat.playerId);
+        }
+      }
+      for (const bowl of (innings.bowling || [])) {
+        if (bowl.playerId && bowl.espnName) {
+          playerNameToId.set(bowl.espnName.toLowerCase(), bowl.playerId);
+        }
+      }
+    }
+
+    // ============================================
+    // STEP 1: DELETE ALL EXISTING BALL RECORDS
+    // ============================================
+    const deletedBalls = await Ball.deleteMany({ match: matchId });
+    console.log(`Deleted ${deletedBalls.deletedCount} existing ball records for match ${matchId}`);
+
+    // ============================================
+    // STEP 2: CLEAR AND REBUILD INNINGS DATA
+    // ============================================
+    
+    // Track stats for response
+    const syncStats = {
+      ballsDeleted: deletedBalls.deletedCount,
+      ballsCreated: 0,
+      inningsSynced: 0,
+      oversBuilt: 0,
+      ballByBallAvailable: !!espnBallData
+    };
+
+    // Process each innings from the preview data
+    for (let inningsIdx = 0; inningsIdx < inningsData.length; inningsIdx++) {
+      const syncInnings = inningsData[inningsIdx];
+      const { localTeamId, batting, bowling, total, overs, extras, striker, nonStriker, currentBowler } = syncInnings;
+      const inningsNumber = inningsIdx + 1;
+
+      // Find or create matching innings in our match
+      let matchInnings = match.innings.find(
+        inn => inn.battingTeam.toString() === localTeamId
+      );
+
+      if (!matchInnings) {
+        // Create new innings
+        const battingTeamIsTeam1 = match.team1._id.toString() === localTeamId;
+        matchInnings = {
+          battingTeam: localTeamId,
+          bowlingTeam: battingTeamIsTeam1 ? match.team2._id : match.team1._id,
+          inningsNumber: inningsNumber,
+          totalRuns: 0,
+          totalWickets: 0,
+          totalBalls: 0,
+          extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0 },
+          status: 'not-started',
+          currentBatsmen: { striker: null, nonStriker: null },
+          currentBowler: null,
+          lastBowler: null,
+          battingStats: [],
+          bowlingStats: [],
+          currentOver: [],
+          overs: [],
+          fallOfWickets: [],
+          partnership: { runs: 0, balls: 0, batsman1: null, batsman2: null }
+        };
+        match.innings.push(matchInnings);
+        matchInnings = match.innings[match.innings.length - 1];
+      } else {
+        // COMPLETE REPLACE: Clear existing stats
+        matchInnings.battingStats = [];
+        matchInnings.bowlingStats = [];
+        matchInnings.currentOver = [];
+        matchInnings.overs = [];
+        matchInnings.fallOfWickets = [];
+        matchInnings.partnership = { runs: 0, balls: 0, batsman1: null, batsman2: null };
+      }
+
+      // ============================================
+      // STEP 2a: UPDATE INNINGS TOTALS FROM ESPN
+      // ============================================
+      if (total) {
+        matchInnings.totalRuns = total.runs;
+        matchInnings.totalWickets = total.wickets;
+      }
+
+      // Calculate total balls from overs
+      if (overs) {
+        const oversMatch = String(overs).match(/(\d+)(?:\.(\d))?/);
+        if (oversMatch) {
+          const fullOvers = parseInt(oversMatch[1], 10) || 0;
+          const partialBalls = parseInt(oversMatch[2], 10) || 0;
+          matchInnings.totalBalls = (fullOvers * 6) + partialBalls;
+        }
+      }
+
+      // Update extras
+      if (extras) {
+        if (extras.breakdown) {
+          const parsed = espnScraper.parseExtras(extras.breakdown);
+          matchInnings.extras.wides = parsed.wides;
+          matchInnings.extras.noBalls = parsed.noBalls;
+          matchInnings.extras.byes = parsed.byes;
+          matchInnings.extras.legByes = parsed.legByes;
+        } else if (typeof extras === 'object') {
+          matchInnings.extras.wides = extras.wides || 0;
+          matchInnings.extras.noBalls = extras.noBalls || 0;
+          matchInnings.extras.byes = extras.byes || 0;
+          matchInnings.extras.legByes = extras.legByes || 0;
+        }
+      }
+
+      // ============================================
+      // STEP 2b: REBUILD BATTING STATS
+      // ============================================
+      for (const batSync of batting) {
+        if (!batSync.playerId) continue;
+
+        matchInnings.battingStats.push({
+          player: batSync.playerId,
+          runs: batSync.runs || 0,
+          balls: batSync.balls || 0,
+          fours: batSync.fours || 0,
+          sixes: batSync.sixes || 0,
+          isOut: !batSync.isNotOut,
+          isNotOut: batSync.isNotOut || false,
+          dismissal: batSync.dismissal ? {
+            type: batSync.dismissal.type || null,
+            bowler: batSync.dismissal.bowlerId || null,
+            fielder: batSync.dismissal.fielderId || null
+          } : { type: null, bowler: null, fielder: null },
+          position: matchInnings.battingStats.length + 1
+        });
+
+        // Build fall of wickets for dismissed batsmen
+        if (!batSync.isNotOut && batSync.runs !== undefined) {
+          matchInnings.fallOfWickets.push({
+            wicketNumber: matchInnings.fallOfWickets.length + 1,
+            runs: matchInnings.totalRuns, // Approximation
+            balls: matchInnings.totalBalls,
+            player: batSync.playerId,
+            overs: getOversDisplay(matchInnings.totalBalls)
+          });
+        }
+      }
+
+      // ============================================
+      // STEP 2c: REBUILD BOWLING STATS
+      // ============================================
+      for (const bowlSync of bowling) {
+        if (!bowlSync.playerId) continue;
+
+        const oversValue = bowlSync.overs;
+        let fullOvers, partialBalls;
+        
+        if (Number.isInteger(oversValue)) {
+          fullOvers = oversValue;
+          partialBalls = 0;
+        } else {
+          const oversFloat = parseFloat(oversValue) || 0;
+          fullOvers = Math.floor(oversFloat);
+          partialBalls = Math.round((oversFloat - fullOvers) * 10);
+          if (partialBalls > 5) partialBalls = 5;
+        }
+
+        matchInnings.bowlingStats.push({
+          player: bowlSync.playerId,
+          overs: fullOvers,
+          balls: partialBalls,
+          runs: bowlSync.runs || 0,
+          wickets: bowlSync.wickets || 0,
+          wides: bowlSync.wides || 0,
+          noBalls: bowlSync.noBalls || 0,
+          maidens: bowlSync.maidens || 0,
+          dotBalls: bowlSync.dotBalls || 0
+        });
+      }
+
+      // ============================================
+      // STEP 2d: SET CURRENT PLAYERS (for live matches)
+      // ============================================
+      if (striker && striker.playerId) {
+        matchInnings.currentBatsmen.striker = striker.playerId;
+      }
+      if (nonStriker && nonStriker.playerId) {
+        matchInnings.currentBatsmen.nonStriker = nonStriker.playerId;
+      }
+      if (currentBowler && currentBowler.playerId) {
+        matchInnings.currentBowler = currentBowler.playerId;
+      }
+
+      // Set partnership for current batsmen
+      if (matchInnings.currentBatsmen.striker && matchInnings.currentBatsmen.nonStriker) {
+        matchInnings.partnership = {
+          runs: 0,
+          balls: 0,
+          batsman1: matchInnings.currentBatsmen.striker,
+          batsman2: matchInnings.currentBatsmen.nonStriker
+        };
+      }
+
+      // ============================================
+      // STEP 2e: CREATE BALL RECORDS FROM ESPN DATA
+      // ============================================
+      // Get ball-by-ball data for this innings from ESPN
+      const espnInningsBalls = espnBallData?.innings?.find(i => i.inningsNumber === inningsNumber);
+      
+      if (espnInningsBalls && espnInningsBalls.balls && espnInningsBalls.balls.length > 0) {
+        console.log(`Processing ${espnInningsBalls.balls.length} balls for innings ${inningsNumber}`);
+        
+        const ballDocuments = [];
+        let sequence = 0;
+        let currentOverNumber = -1;
+        let currentOverBalls = [];
+        let runningScore = 0;
+        let runningWickets = 0;
+
+        for (const espnBall of espnInningsBalls.balls) {
+          sequence++;
+          
+          // Update running totals
+          runningScore += espnBall.totalRuns || 0;
+          if (espnBall.isWicket) runningWickets++;
+          
+          // Parse overs (e.g., 15.3 = over 15, ball 3)
+          const overNumber = espnBall.overNumber !== undefined ? espnBall.overNumber : Math.floor(espnBall.oversActual || 0);
+          const ballInOver = espnBall.ballInOver !== undefined ? espnBall.ballInOver : Math.round(((espnBall.oversActual || 0) - overNumber) * 10);
+          
+          // Map ESPN player names to local player IDs
+          const batsmanId = espnBall.batsmanName ? playerNameToId.get(espnBall.batsmanName.toLowerCase()) : null;
+          const bowlerId = espnBall.bowlerName ? playerNameToId.get(espnBall.bowlerName.toLowerCase()) : null;
+          const nonStrikerId = espnBall.nonStrikerName ? playerNameToId.get(espnBall.nonStrikerName.toLowerCase()) : null;
+          const dismissedBatsmanId = espnBall.dismissedBatsmanName ? playerNameToId.get(espnBall.dismissedBatsmanName.toLowerCase()) : null;
+          const fielderId = espnBall.fielderName ? playerNameToId.get(espnBall.fielderName.toLowerCase()) : null;
+
+          const ballDoc = new Ball({
+            match: matchId,
+            inningsNumber: inningsNumber,
+            overNumber: overNumber,
+            ballNumber: ballInOver || 1,
+            sequence: sequence,
+            bowler: bowlerId || null,
+            batsman: batsmanId || null,
+            nonStriker: nonStrikerId || null,
+            runs: espnBall.runs || 0,
+            isExtra: espnBall.isExtra || false,
+            extraType: espnBall.extraType || null,
+            extraRuns: espnBall.extraRuns || 0,
+            totalRuns: espnBall.totalRuns || espnBall.runs || 0,
+            isFour: espnBall.isFour || false,
+            isSix: espnBall.isSix || false,
+            isWicket: espnBall.isWicket || false,
+            wicket: espnBall.isWicket ? {
+              type: espnBall.wicketType || 'bowled',
+              dismissedPlayer: dismissedBatsmanId || null,
+              fielder: fielderId || null
+            } : undefined,
+            scoreAfter: {
+              runs: runningScore,
+              wickets: runningWickets,
+              overs: getOversDisplay(sequence)
+            }
+          });
+
+          ballDocuments.push(ballDoc);
+
+          // Build over summary for display
+          if (overNumber !== currentOverNumber) {
+            // Save previous over if exists
+            if (currentOverBalls.length > 0 && currentOverNumber >= 0) {
+              const overRuns = currentOverBalls.reduce((sum, b) => sum + (b.runs || 0), 0);
+              const overWickets = currentOverBalls.filter(b => b.isWicket).length;
+              matchInnings.overs.push({
+                overNumber: currentOverNumber + 1,
+                bowler: currentOverBalls[0]?.bowler || null,
+                balls: currentOverBalls,
+                runs: overRuns,
+                wickets: overWickets
+              });
+              syncStats.oversBuilt++;
+            }
+            currentOverNumber = overNumber;
+            currentOverBalls = [];
+          }
+
+          // Add to current over
+          currentOverBalls.push({
+            ballNumber: espnBall.isLegal !== false ? ballInOver : null,
+            runs: espnBall.totalRuns || espnBall.runs || 0,
+            isExtra: espnBall.isExtra || false,
+            extraType: espnBall.extraType || null,
+            isWicket: espnBall.isWicket || false,
+            display: getBallDisplay({
+              runs: espnBall.runs || 0,
+              extraType: espnBall.extraType,
+              extraRuns: espnBall.extraRuns || 0,
+              totalRuns: espnBall.totalRuns || espnBall.runs || 0,
+              isWicket: espnBall.isWicket || false
+            }),
+            batsman: batsmanId,
+            bowler: bowlerId
+          });
+        }
+
+        // Save final over
+        if (currentOverBalls.length > 0) {
+          const legalBalls = currentOverBalls.filter(b => b.ballNumber !== null).length;
+          const isCompleteOver = legalBalls >= 6;
+          
+          if (isCompleteOver) {
+            const overRuns = currentOverBalls.reduce((sum, b) => sum + (b.runs || 0), 0);
+            const overWickets = currentOverBalls.filter(b => b.isWicket).length;
+            matchInnings.overs.push({
+              overNumber: currentOverNumber + 1,
+              bowler: currentOverBalls[0]?.bowler || null,
+              balls: currentOverBalls,
+              runs: overRuns,
+              wickets: overWickets
+            });
+            syncStats.oversBuilt++;
+          } else {
+            // Current over in progress
+            matchInnings.currentOver = currentOverBalls;
+          }
+        }
+
+        // Bulk insert ball documents
+        if (ballDocuments.length > 0) {
+          await Ball.insertMany(ballDocuments);
+          syncStats.ballsCreated += ballDocuments.length;
+          console.log(`Created ${ballDocuments.length} ball records for innings ${inningsNumber}`);
+        }
+      } else {
+        console.log(`No ball-by-ball data available for innings ${inningsNumber}`);
+      }
+
+      // Update innings status
+      if (matchInnings.totalWickets >= 10 || syncInnings.isComplete) {
+        matchInnings.status = 'completed';
+      } else if (matchInnings.totalBalls > 0) {
+        matchInnings.status = 'in-progress';
+      }
+
+      syncStats.inningsSynced++;
+    }
+
+    // ============================================
+    // STEP 3: UPDATE MATCH STATUS
+    // ============================================
+    if (match.innings.some(inn => inn.status === 'in-progress')) {
+      match.status = 'live';
+    } else if (match.innings.length === 2 && match.innings.every(inn => inn.status === 'completed')) {
+      match.status = 'completed';
+      
+      // Calculate result
+      const firstInningsRuns = match.innings[0].totalRuns;
+      const secondInningsRuns = match.innings[1].totalRuns;
+
+      if (secondInningsRuns > firstInningsRuns) {
+        match.result = {
+          winner: match.innings[1].battingTeam,
+          winMargin: `${10 - match.innings[1].totalWickets} wickets`,
+          winType: 'wickets'
+        };
+      } else if (firstInningsRuns > secondInningsRuns) {
+        match.result = {
+          winner: match.innings[0].battingTeam,
+          winMargin: `${firstInningsRuns - secondInningsRuns} runs`,
+          winType: 'runs'
+        };
+      } else {
+        match.result = {
+          winner: null,
+          winMargin: 'Match Tied',
+          winType: 'tie'
+        };
+      }
+    }
+
+    // Update last sync timestamp
+    match.lastEspnSync = new Date();
+
+    await match.save();
+
+    res.json({
+      success: true,
+      message: 'Match completely replaced from ESPN data',
+      data: {
+        matchId: match._id,
+        lastEspnSync: match.lastEspnSync,
+        stats: syncStats,
+        innings: match.innings.map(inn => ({
+          inningsNumber: inn.inningsNumber,
+          battingTeam: inn.battingTeam,
+          totalRuns: inn.totalRuns,
+          totalWickets: inn.totalWickets,
+          totalBalls: inn.totalBalls,
+          overs: getOversDisplay(inn.totalBalls),
+          status: inn.status,
+          battingStatsCount: inn.battingStats.length,
+          bowlingStatsCount: inn.bowlingStats.length,
+          completedOvers: inn.overs?.length || 0
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Full sync error:', error);
+    next(error);
+  }
 });
 
 // ============================================

@@ -33,17 +33,17 @@ const ballSchema = new mongoose.Schema({
   bowler: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Player',
-    required: true
+    default: null
   },
   batsman: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Player',
-    required: true
+    default: null
   },
   nonStriker: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Player',
-    required: true
+    default: null
   },
   
   // Runs

@@ -2,11 +2,297 @@
  * ESPN Cricinfo Scraper Service
  * 
  * Fetches live match data from ESPN Cricinfo using cheerio.
- * Admin can trigger this to populate match scores.
+ * Also fetches ball-by-ball commentary data for complete match history.
+ * Admin can trigger this to populate match scores and over history.
  */
 
 const axios = require('axios');
 const cheerio = require('cheerio');
+
+// ESPN Consumer API base URL
+const ESPN_API_BASE = 'https://hs-consumer-api.espncricinfo.com/v1/pages/match';
+
+// Common headers for ESPN API requests - mimicking Chrome browser
+const ESPN_API_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Accept': '*/*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br, zstd',
+  'Origin': 'https://www.espncricinfo.com',
+  'Referer': 'https://www.espncricinfo.com/',
+  'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"Windows"',
+  'Sec-Fetch-Dest': 'empty',
+  'Sec-Fetch-Mode': 'cors',
+  'Sec-Fetch-Site': 'same-site',
+  'Priority': 'u=1, i'
+};
+
+/**
+ * Extract match ID and series ID from ESPN Cricinfo URL
+ * @param {string} url - ESPN Cricinfo match URL
+ * @returns {Object|null} Object with matchId and seriesId, or null if not found
+ */
+function extractMatchIds(url) {
+  // URL formats:
+  // https://www.espncricinfo.com/series/icc-cricket-world-cup-2023-24-1367856/india-vs-australia-final-1384432/full-scorecard
+  // https://www.espncricinfo.com/live-cricket-score/india-vs-australia-1384432
+  // https://www.espncricinfo.com/series/1367856/scorecard/1384432/india-vs-australia
+  
+  try {
+    // Try to extract match ID (usually the last number in the URL path)
+    const matchIdMatch = url.match(/(\d{6,8})(?:\/[^\/]*)?$/);
+    const matchId = matchIdMatch ? matchIdMatch[1] : null;
+    
+    // Try to extract series ID
+    const seriesIdMatch = url.match(/series\/[^\/]*?(\d{6,8})/);
+    const seriesId = seriesIdMatch ? seriesIdMatch[1] : null;
+    
+    if (matchId) {
+      return { matchId, seriesId };
+    }
+    
+    return null;
+  } catch (e) {
+    console.error('Error extracting match IDs from URL:', e.message);
+    return null;
+  }
+}
+
+/**
+ * Fetch ball-by-ball commentary data from ESPN API
+ * @param {string} matchId - ESPN match ID
+ * @param {string} seriesId - ESPN series ID
+ * @param {number} inningsNumber - Innings number (1 or 2)
+ * @returns {Promise<Array>} Array of ball commentary objects
+ */
+async function fetchBallByBallCommentary(matchId, seriesId, inningsNumber) {
+  const allComments = [];
+  let fromInningOver = -1; // Start from beginning
+  let hasMore = true;
+  let attempts = 0;
+  const maxAttempts = 50; // Safety limit to prevent infinite loops
+  
+  while (hasMore && attempts < maxAttempts) {
+    attempts++;
+    
+    try {
+      const url = `${ESPN_API_BASE}/comments?seriesId=${seriesId}&matchId=${matchId}&inningNumber=${inningsNumber}&commentType=ALL&fromInningOver=${fromInningOver}`;
+      
+      console.log(`Fetching ball-by-ball: ${url}`);
+      
+      const response = await axios.get(url, {
+        headers: ESPN_API_HEADERS,
+        timeout: 15000
+      });
+      
+      if (response.status !== 200 || !response.data) {
+        console.log(`Unexpected response status: ${response.status}`);
+        break;
+      }
+      
+      const data = response.data;
+      const comments = data.comments || [];
+      
+      console.log(`Received ${comments.length} comments for innings ${inningsNumber}, page ${attempts}`);
+      
+      if (comments.length === 0) {
+        break;
+      }
+      
+      // Add comments to our collection
+      allComments.push(...comments);
+      
+      // Check if there's more data
+      if (data.nextInningOver !== undefined && data.nextInningOver !== null) {
+        fromInningOver = data.nextInningOver;
+      } else {
+        hasMore = false;
+      }
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+    } catch (error) {
+      console.error(`Error fetching commentary for innings ${inningsNumber}, attempt ${attempts}:`, error.message);
+      if (error.response) {
+        console.error(`  Status: ${error.response.status}`);
+        console.error(`  Headers: ${JSON.stringify(error.response.headers)}`);
+        console.error(`  Data: ${typeof error.response.data === 'string' ? error.response.data.substring(0, 200) : JSON.stringify(error.response.data).substring(0, 200)}`);
+      }
+      break;
+    }
+  }
+  
+  // Sort by oversActual to ensure correct order
+  allComments.sort((a, b) => (a.oversActual || 0) - (b.oversActual || 0));
+  
+  return allComments;
+}
+
+/**
+ * Parse ESPN ball commentary into our ball format
+ * @param {Array} comments - Array of ESPN commentary objects
+ * @param {number} inningsNumber - Innings number (1 or 2)
+ * @returns {Array} Array of parsed ball objects
+ */
+function parseCommentaryToBalls(comments, inningsNumber) {
+  const balls = [];
+  
+  for (const comment of comments) {
+    // Skip non-ball comments (like over summaries, breaks, etc.)
+    if (!comment.oversActual && comment.oversActual !== 0) {
+      continue;
+    }
+    
+    // Parse oversActual (e.g., 15.3 means over 15, ball 3)
+    // ESPN uses decimal format: 15.3 = over 15, ball 3
+    const oversActual = parseFloat(comment.oversActual) || 0;
+    const overNumber = Math.floor(oversActual);
+    const ballInOver = Math.round((oversActual - overNumber) * 10);
+    
+    // Determine extra type
+    let extraType = null;
+    let isLegal = true;
+    
+    if (comment.isWide) {
+      extraType = 'wide';
+      isLegal = false;
+    } else if (comment.isNoball) {
+      extraType = 'no-ball';
+      isLegal = false;
+    } else if (comment.isBye) {
+      extraType = 'bye';
+    } else if (comment.isLegbye) {
+      extraType = 'leg-bye';
+    }
+    
+    // Calculate runs
+    const batsmanRuns = comment.batsmanRuns || 0;
+    const totalRuns = comment.totalRuns || 0;
+    const extraRuns = totalRuns - batsmanRuns;
+    
+    const ball = {
+      inningsNumber,
+      overNumber,
+      ballInOver,
+      oversActual,
+      
+      // Players (ESPN names - will need to be mapped to local players)
+      batsmanName: comment.batsman?.name || comment.batsmanName || null,
+      batsmanId: comment.batsman?.id || comment.batsmanPlayerId || null,
+      bowlerName: comment.bowler?.name || comment.bowlerName || null,
+      bowlerId: comment.bowler?.id || comment.bowlerPlayerId || null,
+      nonStrikerName: comment.otherBatsman?.name || null,
+      nonStrikerId: comment.otherBatsman?.id || null,
+      
+      // Runs
+      runs: batsmanRuns,
+      totalRuns,
+      extraRuns,
+      
+      // Extras
+      isExtra: !!extraType,
+      extraType,
+      isLegal,
+      
+      // Boundaries
+      isFour: !!comment.isFour,
+      isSix: !!comment.isSix,
+      
+      // Wicket
+      isWicket: !!comment.isWicket,
+      wicketType: comment.dismissalType || null,
+      dismissedBatsmanName: comment.dismissedBatsman?.name || null,
+      dismissedBatsmanId: comment.dismissedBatsman?.id || null,
+      fielderName: comment.fielders?.[0]?.name || null,
+      fielderId: comment.fielders?.[0]?.id || null,
+      
+      // Commentary text (for reference)
+      title: comment.title || '',
+      commentary: comment.text || comment.shortText || ''
+    };
+    
+    balls.push(ball);
+  }
+  
+  return balls;
+}
+
+/**
+ * Fetch complete ball-by-ball data for a match
+ * @param {string} url - ESPN Cricinfo match URL
+ * @returns {Promise<Object>} Object with innings and their ball-by-ball data
+ */
+async function fetchBallByBallData(url) {
+  const ids = extractMatchIds(url);
+  
+  if (!ids || !ids.matchId) {
+    return {
+      success: false,
+      error: 'Could not extract match ID from URL'
+    };
+  }
+  
+  // If we don't have series ID, try to get it from match details
+  let { matchId, seriesId } = ids;
+  
+  if (!seriesId) {
+    try {
+      // Try to fetch match details to get series ID
+      const detailsUrl = `${ESPN_API_BASE}/details?matchId=${matchId}&latest=true`;
+      const detailsResponse = await axios.get(detailsUrl, {
+        headers: ESPN_API_HEADERS,
+        timeout: 15000
+      });
+      
+      if (detailsResponse.data?.match?.series?.objectId) {
+        seriesId = detailsResponse.data.match.series.objectId;
+      }
+    } catch (e) {
+      console.error('Error fetching match details for series ID:', e.message);
+    }
+  }
+  
+  if (!seriesId) {
+    return {
+      success: false,
+      error: 'Could not determine series ID. Please provide a URL with the series ID included.'
+    };
+  }
+  
+  const result = {
+    matchId,
+    seriesId,
+    innings: []
+  };
+  
+  // Fetch ball-by-ball for both innings
+  for (const inningsNum of [1, 2]) {
+    try {
+      const comments = await fetchBallByBallCommentary(matchId, seriesId, inningsNum);
+      
+      if (comments.length > 0) {
+        const balls = parseCommentaryToBalls(comments, inningsNum);
+        
+        result.innings.push({
+          inningsNumber: inningsNum,
+          balls,
+          totalBalls: balls.filter(b => b.isLegal).length,
+          rawCommentCount: comments.length
+        });
+      }
+    } catch (e) {
+      console.error(`Error processing innings ${inningsNum}:`, e.message);
+    }
+  }
+  
+  return {
+    success: true,
+    data: result
+  };
+}
 
 /**
  * Fetch and parse live match data from ESPN Cricinfo URL
@@ -67,6 +353,7 @@ async function fetchLiveMatchData(url) {
         isBreak: false
       },
       recentOvers: null,
+      espnIds: extractMatchIds(url), // Include ESPN IDs for ball-by-ball fetching
       debug: {} // Debug info
     };
 
@@ -158,6 +445,18 @@ async function fetchLiveMatchData(url) {
       if (!scriptContent.includes('"longName"')) return;
       
       try {
+        // Extract match and series IDs from JSON if not already found
+        if (!result.espnIds) {
+          const matchIdMatch = scriptContent.match(/"objectId"\s*:\s*(\d+)/);
+          const seriesIdMatch = scriptContent.match(/"series"\s*:\s*\{[^}]*"objectId"\s*:\s*(\d+)/);
+          if (matchIdMatch || seriesIdMatch) {
+            result.espnIds = {
+              matchId: matchIdMatch ? matchIdMatch[1] : null,
+              seriesId: seriesIdMatch ? seriesIdMatch[1] : null
+            };
+          }
+        }
+        
         // Extract team names
         if (matchTeams.length < 2) {
           const longNamePattern = /"longName"\s*:\s*"([^"]+)"/g;
@@ -218,7 +517,8 @@ async function fetchLiveMatchData(url) {
               let currentBatsmen = [];
               
               // Look for inningBatsmen array in this block
-              const batsmenBlockMatch = block.match(/"inningBatsmen"\s*:\s*\[([\s\S]*?)\]/);              if (batsmenBlockMatch) {
+              const batsmenBlockMatch = block.match(/"inningBatsmen"\s*:\s*\[([\s\S]*?)\]/);
+              if (batsmenBlockMatch) {
                 const batsmenBlock = batsmenBlockMatch[1];
                 // Split by player objects
                 const playerMatches = batsmenBlock.matchAll(/"player"\s*:\s*\{[^}]*"longName"\s*:\s*"([^"]+)"[^}]*\}[\s\S]*?"runs"\s*:\s*(\d+)[\s\S]*?"balls"\s*:\s*(\d+)[\s\S]*?"isOnStrike"\s*:\s*(true|false)/g);
@@ -627,6 +927,10 @@ function parseExtras(extrasText) {
 
 module.exports = {
   fetchLiveMatchData,
+  fetchBallByBallData,
+  fetchBallByBallCommentary,
+  parseCommentaryToBalls,
+  extractMatchIds,
   parseScore,
   parseOvers,
   parseExtras
