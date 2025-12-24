@@ -993,6 +993,7 @@ export class MatchesComponent implements OnInit {
     private matchService: MatchService,
     private countryService: CountryService,
     private playerService: PlayerService,
+    private espnService: EspnService,
     private router: Router
   ) {}
 
@@ -1070,6 +1071,13 @@ export class MatchesComponent implements OnInit {
     }).subscribe({
       next: (response) => {
         if (response.success) {
+          const createdMatch = response.data;
+          
+          // If we have a pending ESPN URL from import, set it on the match
+          if (this.pendingEspnSquads?.espnUrl && createdMatch?._id) {
+            this.setEspnUrlOnMatch(createdMatch._id);
+          }
+          
           this.loadMatches();
           this.currentStep = 'list';
         } else {
@@ -1624,16 +1632,46 @@ export class MatchesComponent implements OnInit {
     this.matchForm.date = data.date;
     this.matchForm.title = data.title;
     
-    // Store squad info for auto-population when setting up squad
-    if (data.team1Squad?.length > 0 || data.team2Squad?.length > 0) {
+    // Store squad info and ESPN URL for auto-population
+    // Convert squad URL to scorecard URL: replace /match-squads with /full-scorecard
+    let scorecardUrl = data.espnUrl || '';
+    if (scorecardUrl.includes('/match-squads')) {
+      scorecardUrl = scorecardUrl.replace('/match-squads', '/full-scorecard');
+    } else if (!scorecardUrl.includes('/full-scorecard') && scorecardUrl.includes('/live-cricket-score')) {
+      // Already a live score URL, convert to full scorecard
+      scorecardUrl = scorecardUrl.replace('/live-cricket-score', '/full-scorecard');
+    }
+    
+    if (data.team1Squad?.length > 0 || data.team2Squad?.length > 0 || scorecardUrl) {
       this.pendingEspnSquads = {
         team1Squad: data.team1Squad || [],
         team2Squad: data.team2Squad || [],
-        espnUrl: data.espnUrl
+        espnUrl: scorecardUrl
       };
-      console.log('ESPN squads stored for auto-population');
+      console.log('ESPN data stored for auto-population');
       console.log('  Team 1:', this.pendingEspnSquads.team1Squad.length, 'players');
       console.log('  Team 2:', this.pendingEspnSquads.team2Squad.length, 'players');
+      console.log('  Scorecard URL:', scorecardUrl);
     }
+  }
+
+  /**
+   * Set the ESPN URL on a newly created match
+   */
+  private setEspnUrlOnMatch(matchId: string): void {
+    if (!this.pendingEspnSquads?.espnUrl) return;
+    
+    this.espnService.setMatchEspnUrl(matchId, this.pendingEspnSquads.espnUrl).subscribe({
+      next: (response) => {
+        if (response.success) {
+          console.log('ESPN URL set on match:', this.pendingEspnSquads?.espnUrl);
+        } else {
+          console.warn('Failed to set ESPN URL:', response.message);
+        }
+      },
+      error: (err) => {
+        console.warn('Error setting ESPN URL:', err);
+      }
+    });
   }
 }
