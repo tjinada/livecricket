@@ -298,6 +298,41 @@ export interface FullSyncResponse {
 }
 
 // ============================================
+// BROWSER-BASED FETCH TYPES
+// ============================================
+
+export interface BrowserFetchOptions {
+  url: string;
+  headless?: boolean;
+  timeout?: number;
+}
+
+export interface BrowserFetchResponse {
+  teams: { [key: string]: any };
+  innings: any[];
+  matchStatus: string | null;
+  matchState: EspnMatchState;
+  target: number | null;
+  ballByBall?: any;
+  debug?: any;
+}
+
+export interface BrowserStatusResponse {
+  browserFetchAvailable: boolean;
+  message: string;
+}
+
+export interface ParsedOversData {
+  innings: {
+    inningsNumber: number;
+    team: string;
+    overs: any[];
+    balls: any[];
+  }[];
+  matchInfo: any;
+}
+
+// ============================================
 // SERVICE
 // ============================================
 
@@ -368,5 +403,85 @@ export class EspnService {
    */
   testService(): Observable<ApiResponse<any>> {
     return this.http.get<ApiResponse<any>>(`${this.apiUrl}/test`);
+  }
+
+  // ============================================
+  // BROWSER-BASED FETCHING (Puppeteer)
+  // ============================================
+
+  /**
+   * Check if browser-based fetching is available (Puppeteer installed)
+   */
+  getBrowserStatus(): Observable<ApiResponse<BrowserStatusResponse>> {
+    return this.http.get<ApiResponse<BrowserStatusResponse>>(`${this.apiUrl}/browser-status`);
+  }
+
+  /**
+   * Fetch match data using browser automation (bypasses 403)
+   * Loads the ESPN page in a real browser and intercepts API responses
+   */
+  browserFetchMatch(options: BrowserFetchOptions): Observable<ApiResponse<BrowserFetchResponse>> {
+    return this.http.post<ApiResponse<BrowserFetchResponse>>(`${this.apiUrl}/browser-fetch`, options);
+  }
+
+  /**
+   * Fetch overs/ball-by-ball data using browser automation
+   * Navigates to ESPN page, clicks Overs tab, captures API response
+   */
+  browserFetchOvers(options: BrowserFetchOptions): Observable<ApiResponse<ParsedOversData>> {
+    return this.http.post<ApiResponse<ParsedOversData>>(`${this.apiUrl}/browser-fetch-overs`, options);
+  }
+
+  /**
+   * Parse overs JSON manually copied from browser DevTools
+   */
+  parseOversJson(json: any): Observable<ApiResponse<ParsedOversData>> {
+    return this.http.post<ApiResponse<ParsedOversData>>(`${this.apiUrl}/parse-overs-json`, { json });
+  }
+
+  /**
+   * Get sync preview using browser-based fetching
+   * Falls back to regular preview if browser fetch fails
+   * @deprecated Use getDirectSyncPreview instead - it's faster and doesn't need Puppeteer
+   */
+  getBrowserSyncPreview(matchId: string, espnUrl: string, options?: { headless?: boolean; timeout?: number }): Observable<ApiResponse<EspnSyncPreview>> {
+    return this.http.post<ApiResponse<EspnSyncPreview>>(
+      `${this.apiUrl}/match/${matchId}/browser-preview`,
+      { 
+        espnUrl,
+        headless: options?.headless ?? true,
+        timeout: options?.timeout ?? 45000
+      }
+    );
+  }
+
+  // ============================================
+  // DIRECT TOKEN FETCHING (No Browser Needed!)
+  // ============================================
+
+  /**
+   * Fetch match data directly using token generation
+   * NO BROWSER NEEDED - fastest and most reliable method!
+   */
+  directFetchMatch(url: string, captureOvers = true): Observable<ApiResponse<BrowserFetchResponse>> {
+    return this.http.post<ApiResponse<BrowserFetchResponse>>(`${this.apiUrl}/direct-fetch`, { url, captureOvers });
+  }
+
+  /**
+   * Fetch only overs/ball-by-ball data using direct token generation
+   */
+  directFetchOvers(url: string): Observable<ApiResponse<ParsedOversData>> {
+    return this.http.post<ApiResponse<ParsedOversData>>(`${this.apiUrl}/direct-fetch-overs`, { url });
+  }
+
+  /**
+   * Get sync preview using direct token generation
+   * This is the PREFERRED method - fast, reliable, no browser needed!
+   */
+  getDirectSyncPreview(matchId: string, espnUrl: string): Observable<ApiResponse<EspnSyncPreview>> {
+    return this.http.post<ApiResponse<EspnSyncPreview>>(
+      `${this.apiUrl}/match/${matchId}/direct-preview`,
+      { espnUrl }
+    );
   }
 }

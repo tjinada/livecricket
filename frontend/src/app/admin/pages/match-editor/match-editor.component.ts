@@ -718,6 +718,7 @@ interface InningsEdit {
       @if (showEspnSyncModal) {
         <app-espn-sync-modal
           [matchId]="matchId"
+          [espnUrl]="match?.espnUrl || undefined"
           (onClose)="closeEspnSyncModal()"
           (onSyncComplete)="onEspnSyncComplete()"
         />

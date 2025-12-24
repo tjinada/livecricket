@@ -12,6 +12,20 @@
 const express = require('express');
 const auth = require('../middleware/auth');
 const espnScraper = require('../services/espnScraper');
+
+// Browser-based fetcher (uses Puppeteer) - LEGACY, kept as fallback
+let espnBrowserFetcher = null;
+try {
+  espnBrowserFetcher = require('../services/espnBrowserFetcher');
+  console.log('✓ ESPN Browser Fetcher loaded (Puppeteer available)');
+} catch (e) {
+  console.log('⚠ ESPN Browser Fetcher not available - install puppeteer for browser-based fetching');
+}
+
+// Direct token fetcher (no browser needed!) - PREFERRED METHOD
+const espnTokenFetcher = require('../services/espnTokenFetcher');
+const { addDirectFetchRoutes } = require('./espnDirectRoutes');
+console.log('✓ ESPN Direct Token Fetcher loaded (no browser needed!)');
 const Match = require('../models/Match');
 const Ball = require('../models/Ball');
 const Country = require('../models/Country');
@@ -95,6 +109,527 @@ router.post('/fetch-ball-by-ball', auth, async (req, res, next) => {
     res.json({
       success: true,
       data: result.data
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/espn/browser-fetch
+ * Fetch match data using browser automation (Puppeteer)
+ * This bypasses the 403 error by loading the page in a real browser
+ */
+router.post('/browser-fetch', auth, async (req, res, next) => {
+  try {
+    if (!espnBrowserFetcher) {
+      return res.status(503).json({
+        success: false,
+        message: 'Browser-based fetching not available. Please install puppeteer: npm install puppeteer',
+        suggestion: 'Run: npm install puppeteer --save'
+      });
+    }
+
+    const { url, headless = true, timeout = 30000 } = req.body;
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: 'ESPN Cricinfo URL is required'
+      });
+    }
+
+    if (!url.includes('espncricinfo.com') && !url.includes('cricinfo.com')) {
+      return res.status(400).json({
+        success: false,
+        message: 'URL must be from espncricinfo.com'
+      });
+    }
+
+    console.log(`Browser fetch requested for: ${url}`);
+    
+    const result = await espnBrowserFetcher.fetchMatchDataViaBrowser(url, {
+      headless,
+      timeout
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error,
+        suggestion: 'Try with headless: false to see browser behavior'
+      });
+    }
+
+    // Transform the captured data to our standard format
+    const transformedData = espnBrowserFetcher.transformBrowserData(result.data);
+
+    res.json({
+      success: true,
+      data: transformedData,
+      rawData: result.data, // Include raw data for debugging
+      apiRequestsCount: result.apiRequestsCount
+    });
+
+  } catch (error) {
+    console.error('Browser fetch error:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/espn/browser-fetch-overs
+ * Fetch ball-by-ball/overs data using browser automation
+ * Navigates to ESPN page, clicks on Overs tab, then captures the API response
+ */
+router.post('/browser-fetch-overs', auth, async (req, res, next) => {
+  try {
+    if (!espnBrowserFetcher) {
+      return res.status(503).json({
+        success: false,
+        message: 'Browser-based fetching not available. Please install puppeteer: npm install puppeteer',
+        suggestion: 'Run: npm install puppeteer --save'
+      });
+    }
+
+    const { url, headless = true, timeout = 60000 } = req.body;
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: 'ESPN Cricinfo URL is required'
+      });
+    }
+
+    console.log(`Browser fetch overs requested for: ${url}`);
+    
+    const result = await espnBrowserFetcher.fetchOversDataViaBrowser(url, {
+      headless,
+      timeout
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+    // Parse the overs data if we got it
+    let parsedData = null;
+    if (result.data.oversDetails) {
+      parsedData = espnBrowserFetcher.parseOversData(result.data.oversDetails);
+    }
+
+    res.json({
+      success: true,
+      data: parsedData || result.data,
+      rawData: result.data
+    });
+
+  } catch (error) {
+    console.error('Browser fetch overs error:', error);
+    next(error);
+  }
+});
+
+/**
+ * GET /api/espn/browser-status
+ * Check if browser-based fetching is available
+ */
+router.get('/browser-status', async (req, res) => {
+  const available = !!espnBrowserFetcher;
+  
+  res.json({
+    success: true,
+    browserFetchAvailable: available,
+    message: available 
+      ? 'Browser-based fetching is available (Puppeteer installed)' 
+      : 'Browser-based fetching not available. Install puppeteer with: npm install puppeteer'
+  });
+});
+
+/**
+ * POST /api/espn/match/:matchId/browser-preview
+ * Fetch ESPN data using browser automation and return preview with player matching
+ * This bypasses the 403 error by loading ESPN page in a real browser
+ */
+router.post('/match/:matchId/browser-preview', auth, async (req, res, next) => {
+  try {
+    if (!espnBrowserFetcher) {
+      return res.status(503).json({
+        success: false,
+        message: 'Browser-based fetching not available. Please install puppeteer.',
+        suggestion: 'Run: cd backend && npm install puppeteer'
+      });
+    }
+
+    const { matchId } = req.params;
+    const { espnUrl, headless = true, timeout = 45000 } = req.body;
+
+    // Get the match with populated teams and squads
+    const match = await Match.findById(matchId)
+      .populate('team1', 'name shortName code')
+      .populate('team2', 'name shortName code')
+      .populate('squads.team1.player', 'name')
+      .populate('squads.team2.player', 'name');
+
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+
+    // Use provided URL or fall back to match's stored ESPN URL
+    const urlToFetch = espnUrl || match.espnUrl;
+
+    if (!urlToFetch) {
+      return res.status(400).json({
+        success: false,
+        message: 'ESPN URL not provided and not set for this match'
+      });
+    }
+
+    console.log(`Browser-based preview requested for match ${matchId}`);
+    console.log(`Fetching from: ${urlToFetch}`);
+
+    // Fetch ESPN data using browser automation
+    const browserResult = await espnBrowserFetcher.fetchMatchDataViaBrowser(urlToFetch, {
+      headless,
+      timeout,
+      captureOvers: true
+    });
+
+    if (!browserResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: browserResult.error || 'Failed to fetch ESPN data via browser',
+        suggestion: 'Try with headless: false to see browser behavior, or use manual JSON paste method'
+      });
+    }
+
+    // Transform browser data to our format
+    const transformedData = espnBrowserFetcher.transformBrowserData(browserResult.data);
+
+    // Check if we got any useful data
+    if (!transformedData.innings || transformedData.innings.length === 0) {
+      // Try to extract from scorecard raw data
+      if (browserResult.data.scorecard && browserResult.data.scorecard.content) {
+        const scorecard = browserResult.data.scorecard.content;
+        transformedData.innings = [];
+        
+        if (scorecard.innings) {
+          for (const inn of scorecard.innings) {
+            transformedData.innings.push({
+              team: inn.team?.longName || inn.team?.name || 'Unknown',
+              batting: (inn.inningBatsmen || []).map(b => ({
+                name: b.player?.longName || b.player?.name,
+                runs: b.runs || 0,
+                balls: b.balls || 0,
+                fours: b.fours || 0,
+                sixes: b.sixes || 0,
+                strikeRate: b.strikerate || 0,
+                isNotOut: !b.isOut,
+                dismissal: b.outDescription || null
+              })),
+              bowling: (inn.inningBowlers || []).map(b => ({
+                name: b.player?.longName || b.player?.name,
+                overs: b.overs || 0,
+                maidens: b.maidens || 0,
+                runs: b.conceded || b.runs || 0,
+                wickets: b.wickets || 0,
+                economy: b.economy || 0,
+                dotBalls: b.dots || 0
+              })),
+              extras: inn.extras ? {
+                total: inn.extras.total || 0,
+                byes: inn.extras.byes || 0,
+                legByes: inn.extras.legbyes || 0,
+                wides: inn.extras.wides || 0,
+                noBalls: inn.extras.noballs || 0
+              } : null,
+              total: inn.runs !== undefined ? { runs: inn.runs, wickets: inn.wickets || 0 } : null,
+              overs: inn.overs || null
+            });
+          }
+        }
+      }
+    }
+
+    if (!transformedData.innings || transformedData.innings.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Could not extract innings data from ESPN. The page might not have loaded completely.',
+        suggestion: 'Try increasing timeout or use headless: false to debug',
+        debug: {
+          capturedApis: Object.keys(browserResult.data).filter(k => browserResult.data[k] !== null),
+          apiRequestsCount: browserResult.apiRequestsCount
+        }
+      });
+    }
+
+    // Match ESPN teams to local teams
+    const espnData = {
+      teams: transformedData.teams || {},
+      innings: transformedData.innings,
+      matchStatus: transformedData.matchStatus,
+      target: transformedData.target
+    };
+
+    // Build teams object if empty
+    if (Object.keys(espnData.teams).length === 0 && espnData.innings.length > 0) {
+      for (const inn of espnData.innings) {
+        if (inn.team) {
+          espnData.teams[inn.team] = { score: inn.total, overs: inn.overs };
+        }
+      }
+    }
+
+    const teamMapping = matchEspnTeamsToLocal(espnData, match);
+
+    if (!teamMapping.matched) {
+      return res.status(400).json({
+        success: false,
+        message: `Could not match ESPN teams to local teams. ESPN teams: ${Object.keys(espnData.teams).join(', ')}. Local teams: ${match.team1.name}, ${match.team2.name}`,
+        espnTeams: Object.keys(espnData.teams),
+        localTeams: [match.team1.name, match.team2.name]
+      });
+    }
+
+    // Build preview with player matching (same logic as regular preview)
+    const preview = {
+      matchId: match._id,
+      espnUrl: urlToFetch,
+      matchStatus: espnData.matchStatus,
+      target: espnData.target,
+      teamMapping: teamMapping,
+      innings: []
+    };
+
+    // Process each ESPN innings
+    for (const espnInnings of espnData.innings) {
+      const localTeamInfo = teamMapping.mapping[espnInnings.team];
+      
+      if (!localTeamInfo) {
+        console.warn(`Could not find local team for ESPN team: ${espnInnings.team}`);
+        continue;
+      }
+
+      const localTeam = localTeamInfo.team;
+      const squadKey = localTeamInfo.squadKey;
+      const squad = match.squads[squadKey];
+      const opposingSquadKey = squadKey === 'team1' ? 'team2' : 'team1';
+      const opposingSquad = match.squads[opposingSquadKey];
+
+      const inningsPreview = {
+        espnTeam: espnInnings.team,
+        localTeam: {
+          _id: localTeam._id,
+          name: localTeam.name
+        },
+        total: espnInnings.total,
+        overs: espnInnings.overs,
+        extras: espnInnings.extras,
+        isCurrent: espnInnings.isCurrent || false,
+        striker: null,
+        nonStriker: null,
+        currentBowler: null,
+        batting: [],
+        bowling: []
+      };
+
+      // Match batsmen
+      for (const espnBatsman of (espnInnings.batting || [])) {
+        const playerMatch = matchPlayer(
+          espnBatsman.name,
+          squad,
+          match.espnPlayerMappings,
+          localTeam._id
+        );
+
+        inningsPreview.batting.push({
+          espnName: espnBatsman.name,
+          espnStats: {
+            runs: espnBatsman.runs,
+            balls: espnBatsman.balls,
+            fours: espnBatsman.fours,
+            sixes: espnBatsman.sixes,
+            strikeRate: espnBatsman.strikeRate,
+            isNotOut: espnBatsman.isNotOut,
+            dismissal: espnBatsman.dismissal
+          },
+          matchedPlayer: playerMatch.player,
+          matchType: playerMatch.type,
+          confidence: playerMatch.confidence,
+          candidates: playerMatch.candidates
+        });
+      }
+
+      // Match bowlers (from opposing team)
+      for (const espnBowler of (espnInnings.bowling || [])) {
+        const playerMatch = matchPlayer(
+          espnBowler.name,
+          opposingSquad,
+          match.espnPlayerMappings,
+          localTeamInfo.opposingTeamId
+        );
+
+        inningsPreview.bowling.push({
+          espnName: espnBowler.name,
+          espnStats: {
+            overs: espnBowler.overs,
+            maidens: espnBowler.maidens,
+            runs: espnBowler.runs,
+            wickets: espnBowler.wickets,
+            economy: espnBowler.economy,
+            dotBalls: espnBowler.dotBalls
+          },
+          matchedPlayer: playerMatch.player,
+          matchType: playerMatch.type,
+          confidence: playerMatch.confidence,
+          candidates: playerMatch.candidates
+        });
+      }
+
+      preview.innings.push(inningsPreview);
+    }
+
+    // Store ball-by-ball data if available for later sync
+    if (transformedData.ballByBall) {
+      preview.ballByBallAvailable = true;
+    }
+
+    console.log(`Browser preview complete: ${preview.innings.length} innings found`);
+
+    res.json({
+      success: true,
+      data: preview,
+      fetchMethod: 'browser',
+      apiRequestsCount: browserResult.apiRequestsCount
+    });
+
+  } catch (error) {
+    console.error('Browser preview error:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/espn/parse-overs-json
+ * Parse the overs/details JSON that was manually copied from browser DevTools
+ * Admin captures the response from: https://hs-consumer-api.espncricinfo.com/v1/pages/match/overs/details?...
+ */
+router.post('/parse-overs-json', auth, async (req, res, next) => {
+  try {
+    let { json } = req.body;
+
+    if (!json) {
+      return res.status(400).json({
+        success: false,
+        message: 'JSON data is required. Paste the response from ESPN overs/details API.'
+      });
+    }
+
+    if (typeof json === 'string') {
+      try {
+        json = JSON.parse(json);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid JSON format'
+        });
+      }
+    }
+
+    // Parse the overs data
+    const result = {
+      innings: [],
+      matchInfo: null
+    };
+
+    // Extract match info if available
+    if (json.match) {
+      result.matchInfo = {
+        id: json.match.objectId,
+        status: json.match.status,
+        statusText: json.match.statusText,
+        state: json.match.state
+      };
+    }
+
+    // Process innings data from the content.innings object
+    if (json.content && json.content.innings) {
+      for (const [inningsNum, inningsData] of Object.entries(json.content.innings)) {
+        const parsedInnings = {
+          inningsNumber: parseInt(inningsNum),
+          team: inningsData.team?.longName || inningsData.team?.name || `Innings ${inningsNum}`,
+          overs: [],
+          balls: []
+        };
+
+        // Process overs
+        if (inningsData.overs) {
+          for (const over of inningsData.overs) {
+            parsedInnings.overs.push({
+              overNumber: over.overNumber,
+              oversUnique: over.oversUnique,
+              balls: (over.balls || []).map(ball => ({
+                ballNumber: ball.ballNumber,
+                totalRuns: ball.totalRuns,
+                batsmanRuns: ball.batsmanRuns,
+                isFour: ball.isFour,
+                isSix: ball.isSix,
+                isWicket: ball.isWicket,
+                isWide: ball.isWide,
+                isNoball: ball.isNoBall,
+                isBye: ball.isBye,
+                isLegBye: ball.isLegBye,
+                batsmanName: ball.batsman?.longName || ball.batsman?.name,
+                batsmanId: ball.batsman?.id,
+                bowlerName: ball.bowler?.longName || ball.bowler?.name,
+                bowlerId: ball.bowler?.id,
+                title: ball.title,
+                text: ball.text
+              }))
+            });
+
+            // Flatten balls for easy processing
+            for (const ball of (over.balls || [])) {
+              parsedInnings.balls.push({
+                inningsNumber: parseInt(inningsNum),
+                overNumber: over.overNumber,
+                ballNumber: ball.ballNumber,
+                oversActual: ball.overs,
+                batsmanName: ball.batsman?.longName || ball.batsman?.name,
+                batsmanId: ball.batsman?.id,
+                bowlerName: ball.bowler?.longName || ball.bowler?.name,
+                bowlerId: ball.bowler?.id,
+                runs: ball.batsmanRuns || 0,
+                totalRuns: ball.totalRuns || 0,
+                isExtra: ball.isWide || ball.isNoBall || ball.isBye || ball.isLegBye,
+                extraType: ball.isWide ? 'wide' : ball.isNoBall ? 'no-ball' : ball.isBye ? 'bye' : ball.isLegBye ? 'leg-bye' : null,
+                isLegal: !ball.isWide && !ball.isNoBall,
+                isFour: ball.isFour || false,
+                isSix: ball.isSix || false,
+                isWicket: ball.isWicket || false,
+                wicketType: ball.dismissal?.type || null,
+                dismissedBatsmanName: ball.dismissal?.batsman?.longName || null,
+                title: ball.title || '',
+                commentary: ball.text || ''
+              });
+            }
+          }
+        }
+
+        result.innings.push(parsedInnings);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: result
     });
 
   } catch (error) {
@@ -720,17 +1255,25 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
 
     // ============================================
     // STEP 0: FETCH BALL-BY-BALL DATA FROM ESPN
+    // Using direct token fetcher (no browser needed!)
     // ============================================
     let espnBallData = null;
     if (match.espnUrl) {
-      console.log('Attempting to fetch ball-by-ball data from ESPN...');
+      console.log('Fetching ball-by-ball data from ESPN using direct token...');
       try {
-        const ballResult = await espnScraper.fetchBallByBallData(match.espnUrl);
-        if (ballResult.success && ballResult.data && ballResult.data.innings && ballResult.data.innings.length > 0) {
-          espnBallData = ballResult.data;
-          console.log(`✓ Fetched ${espnBallData.innings.length} innings of ball-by-ball data`);
+        // Use the direct token fetcher which bypasses Akamai
+        const fetchResult = await espnTokenFetcher.fetchOversData(match.espnUrl);
+        if (fetchResult.success && fetchResult.data && fetchResult.data.oversDetails) {
+          // Parse the overs data
+          const parsedData = espnTokenFetcher.parseOversData(fetchResult.data.oversDetails);
+          if (parsedData && parsedData.innings && parsedData.innings.length > 0) {
+            espnBallData = { innings: parsedData.innings };
+            console.log(`✓ Fetched ${parsedData.innings.length} innings of ball-by-ball data via direct token`);
+          } else {
+            console.log('Overs data fetched but could not be parsed');
+          }
         } else {
-          console.log('Ball-by-ball data not available (ESPN API blocked or no data)');
+          console.log('Ball-by-ball data not available:', fetchResult.error || 'No data');
         }
       } catch (e) {
         console.log('Ball-by-ball fetch failed:', e.message);
@@ -1478,6 +2021,65 @@ function levenshteinDistance(str1, str2) {
 }
 
 /**
+ * GET /api/espn/test
+ * Check ESPN service status and list available endpoints
+ */
+router.get('/test', async (req, res) => {
+  res.json({
+    success: true,
+    message: 'ESPN data service is available',
+    browserFetchAvailable: !!espnBrowserFetcher,
+    endpoints: {
+      // HTML Scraping endpoints (may get 403)
+      'POST /api/espn/fetch-match': 'Fetch data from ESPN URL via HTML scraping',
+      'POST /api/espn/fetch-ball-by-ball': 'Fetch ball-by-ball commentary via API (may get 403)',
+      
+      // Browser-based endpoints (Puppeteer - bypasses 403)
+      'POST /api/espn/browser-fetch': 'Fetch match data using browser automation (Puppeteer)',
+      'POST /api/espn/browser-fetch-overs': 'Fetch ball-by-ball data using browser automation',
+      'GET /api/espn/browser-status': 'Check if browser-based fetching is available',
+      
+      // JSON parsing endpoints (for manual DevTools capture)
+      'POST /api/espn/parse-json': 'Parse ESPN JSON pasted from DevTools',
+      'POST /api/espn/parse-overs-json': 'Parse overs/details JSON from DevTools',
+      'POST /api/espn/parse-ball-by-ball-json': 'Parse comments JSON from DevTools',
+      
+      // Match sync endpoints
+      'GET /api/espn/match/:matchId/preview': 'Preview ESPN sync for a match',
+      'POST /api/espn/match/:matchId/sync': 'Apply ESPN data to match (stats only)',
+      'POST /api/espn/match/:matchId/full-sync': 'Complete replace from ESPN (stats + ball-by-ball)',
+      'PATCH /api/espn/match/:matchId/url': 'Set ESPN URL for match'
+    },
+    usage: {
+      browserFetch: {
+        description: 'Use browser automation to bypass 403 errors',
+        example: {
+          url: 'https://www.espncricinfo.com/series/1513733/scorecard/1513736/...',
+          headless: true,
+          timeout: 30000
+        },
+        requirements: 'npm install puppeteer'
+      },
+      parseOversJson: {
+        description: 'Manually capture ESPN API response from DevTools and paste here',
+        steps: [
+          '1. Open ESPN match page in browser',
+          '2. Open DevTools (F12) > Network tab',
+          '3. Filter by "overs" or "hs-consumer-api"',
+          '4. Find the overs/details API response',
+          '5. Right-click > Copy > Copy Response',
+          '6. POST to /api/espn/parse-overs-json with { json: <pasted-json> }'
+        ]
+      }
+    }
+  });
+});
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
  * Parse various ESPN JSON response formats
  */
 function parseEspnJson(json) {
@@ -1551,5 +2153,8 @@ function parseEspnJson(json) {
 
   return result;
 }
+
+// Add direct fetch routes (no browser needed - fastest method!)
+addDirectFetchRoutes(router, auth, Match, matchEspnTeamsToLocal, matchPlayer);
 
 module.exports = router;

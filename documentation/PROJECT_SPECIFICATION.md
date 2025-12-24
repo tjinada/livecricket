@@ -2088,18 +2088,35 @@ docker-compose down -v
 
 ### Overview
 
-The application includes a feature to fetch live match data from ESPN Cricinfo. This allows administrators to quickly import scores and player statistics from external matches.
+The application includes multiple methods for fetching live match data from ESPN Cricinfo:
 
-### API Endpoints
+1. **Browser-based fetching** (Recommended) - Uses Puppeteer to load ESPN pages in a real browser and intercept API responses
+2. **HTML Scraping** - Direct HTTP requests with browser-like headers (may get 403 errors)
+3. **Manual JSON Import** - Admin copies API responses from browser DevTools
 
-#### POST /api/espn/fetch-match
+### The 403 Problem
 
-Fetch live match data from an ESPN Cricinfo URL.
+ESPN's API endpoints (e.g., `hs-consumer-api.espncricinfo.com`) return 403 Forbidden errors when accessed directly due to bot detection. The browser-based solution bypasses this by loading the actual ESPN page, which triggers the API calls internally, and intercepting the responses.
+
+### Browser-Based Fetching (Puppeteer)
+
+#### Installation
+
+```bash
+cd backend
+npm install puppeteer
+```
+
+#### POST /api/espn/browser-fetch
+
+Fetch match data using browser automation.
 
 **Request Body:**
 ```json
 {
-  "url": "https://www.espncricinfo.com/live-cricket-score/..."
+  "url": "https://www.espncricinfo.com/series/1513733/scorecard/1513736/...",
+  "headless": true,
+  "timeout": 30000
 }
 ```
 
@@ -2108,77 +2125,142 @@ Fetch live match data from an ESPN Cricinfo URL.
 {
   "success": true,
   "data": {
-    "teams": {
-      "India": { "score": "245/6", "overs": "40.2" },
-      "Australia": { "score": "178", "overs": "" }
-    },
-    "battingTeam": "India",
-    "battingTeamOvers": "40.2 ov (target 179)",
-    "target": 179,
-    "matchStatus": "India need 34 runs from 58 balls",
-    "matchState": {
-      "isStarted": true,
-      "isLive": true,
-      "isComplete": false,
-      "isBreak": false
-    },
-    "batting": [
+    "teams": {},
+    "innings": [...],
+    "matchStatus": "...",
+    "ballByBall": [...]
+  },
+  "rawData": { ... },
+  "apiRequestsCount": 5
+}
+```
+
+#### POST /api/espn/browser-fetch-overs
+
+Fetch ball-by-ball data using browser automation.
+
+**Request Body:**
+```json
+{
+  "url": "https://www.espncricinfo.com/series/1513733/scorecard/1513736/...",
+  "headless": true,
+  "timeout": 60000
+}
+```
+
+#### GET /api/espn/browser-status
+
+Check if browser-based fetching is available.
+
+**Response:**
+```json
+{
+  "success": true,
+  "browserFetchAvailable": true,
+  "message": "Browser-based fetching is available (Puppeteer installed)"
+}
+```
+
+### Manual JSON Import (DevTools Method)
+
+When automated fetching fails, administrators can manually capture API responses:
+
+#### Steps to Capture Overs Data:
+
+1. Open ESPN match page in browser
+2. Open DevTools (F12) → Network tab
+3. Filter requests by "overs" or "hs-consumer-api"
+4. Look for request to: `hs-consumer-api.espncricinfo.com/v1/pages/match/overs/details?...`
+5. Click the request → Response tab
+6. Right-click → Copy Response
+7. Use `POST /api/espn/parse-overs-json` with the copied JSON
+
+#### POST /api/espn/parse-overs-json
+
+Parse manually captured overs/details JSON.
+
+**Request Body:**
+```json
+{
+  "json": { ... } // Paste the copied JSON response here
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "innings": [
       {
-        "name": "Virat Kohli",
-        "dismissal": "not out",
-        "runs": 67,
-        "balls": 45,
-        "fours": 6,
-        "sixes": 2,
-        "strikeRate": 148.89,
-        "isNotOut": true
+        "inningsNumber": 1,
+        "team": "Sri Lanka Women",
+        "overs": [...],
+        "balls": [...]
       }
     ],
-    "bowling": [
-      {
-        "name": "Mitchell Starc",
-        "overs": 8,
-        "maidens": 0,
-        "runs": 48,
-        "wickets": 2,
-        "economy": 6.0,
-        "dotBalls": 24
-      }
-    ],
-    "extras": {
-      "total": 12,
-      "breakdown": "b 4, lb 2, w 5, nb 1"
+    "matchInfo": {
+      "id": "1513736",
+      "status": "..."
     }
   }
 }
 ```
 
-#### POST /api/espn/preview
+### HTML Scraping (Fallback)
 
-Preview extracted data with formatted summary before importing.
+#### POST /api/espn/fetch-match
 
-### Usage Flow
+Fetch live match data via HTML scraping. May return 403 errors.
 
-1. Admin navigates to **ESPN Import** page
-2. Pastes ESPN Cricinfo match URL
-3. Clicks **Fetch Data** to retrieve match information
-4. Reviews batting and bowling cards
-5. Copies data or uses it to manually update local match
+**Request Body:**
+```json
+{
+  "url": "https://www.espncricinfo.com/live-cricket-score/..."
+}
+```
+
+### Match Sync Endpoints
+
+#### GET /api/espn/match/:matchId/preview
+
+Preview ESPN data with player matching for a specific match.
+
+#### POST /api/espn/match/:matchId/sync
+
+Apply ESPN data to match (updates stats only).
+
+#### POST /api/espn/match/:matchId/full-sync
+
+Complete replace from ESPN (stats + ball-by-ball history).
+
+#### PATCH /api/espn/match/:matchId/url
+
+Set the ESPN URL for a match.
 
 ### Technical Implementation
 
+**Browser-based (espnBrowserFetcher.js):**
+- Uses **Puppeteer** for browser automation
+- Masks automation indicators (webdriver property, etc.)
+- Intercepts network responses from ESPN's internal APIs
+- Captures match details, scorecard, overs, and comments data
+
+**HTML Scraping (espnScraper.js):**
 - Uses **axios** for HTTP requests with browser-like headers
 - Uses **cheerio** for HTML parsing
 - Extracts team scores, batting cards, bowling cards, extras
-- Handles various ESPN page layouts
+- Parses embedded JSON data from script tags
 
 ### Notes
 
-- ESPN Cricinfo page structures may change over time
-- Some scorecard elements may not be parseable depending on match state
-- Data is for reference; administrators manually map to local players
+- Browser-based fetching requires Puppeteer: `npm install puppeteer`
+- First browser fetch may be slower as Chromium downloads
+- ESPN page structures may change - update parsers as needed
+- Rate limit requests to avoid detection (add delays between fetches)
+- The `headless: false` option can be used for debugging
 
 ---
 
-*Document Version: 1.1*
-*Last Updated: December 22, 2024*
+*Document Version: 1.2*
+*Last Updated: December 23, 2024*

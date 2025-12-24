@@ -421,18 +421,26 @@ export class EspnSyncModalComponent implements OnInit {
   // Track manual mappings for save: { espnName: { playerId, teamId } }
   manualMappings: Map<string, { playerId: string; teamId: string }> = new Map();
 
+  // Input to optionally pass ESPN URL
+  @Input() espnUrl?: string;
+
   constructor(private espnService: EspnService) {}
 
   ngOnInit(): void {
     this.loadPreview();
   }
 
+  /**
+   * Load preview using direct token generation
+   * This is fast and reliable - no browser needed!
+   */
   loadPreview(): void {
     this.loading = true;
-    this.loadingMessage = 'Fetching ESPN data and matching players...';
+    this.loadingMessage = 'Fetching ESPN data...';
     this.error = null;
 
-    this.espnService.getSyncPreview(this.matchId).subscribe({
+    // Use direct fetch which is fast and reliable (no Puppeteer needed)
+    this.espnService.getDirectSyncPreview(this.matchId, this.espnUrl || '').subscribe({
       next: (response) => {
         if (response.success) {
           this.preview = response.data;
@@ -443,8 +451,11 @@ export class EspnSyncModalComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        this.error = err.error?.message || 'Failed to fetch ESPN data';
-        this.errorSuggestion = err.error?.suggestion;
+        const errorMsg = err.error?.message || 'Failed to fetch ESPN data';
+        const suggestion = err.error?.suggestion;
+        
+        this.error = errorMsg;
+        this.errorSuggestion = suggestion;
         this.loading = false;
       }
     });
