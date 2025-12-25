@@ -60,205 +60,701 @@ interface InningsEdit {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, DragDropModule, EspnSyncModalComponent],
   template: `
-    <div class="min-h-screen bg-gray-100">
-      <!-- Header -->
-      <div class="bg-white shadow sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div class="flex items-center gap-4">
-            <a routerLink="/admin/matches" class="text-gray-500 hover:text-gray-700">
+    <div class="h-screen bg-slate-100 flex flex-col overflow-hidden">
+      <!-- Compact Header -->
+      <div class="bg-white border-b border-slate-200 flex-shrink-0">
+        <div class="px-4 py-2 flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <a routerLink="/admin/matches" class="text-slate-400 hover:text-slate-600 text-sm">
               ← Back
             </a>
-            <h1 class="text-lg font-bold text-gray-800">📝 Match Editor</h1>
-          </div>
-          <div class="flex items-center gap-3">
+            <div class="h-4 w-px bg-slate-200"></div>
+            <h1 class="text-sm font-semibold text-slate-700">Match Editor</h1>
             @if (match?.status === 'live') {
-              <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-medium">
-                🔴 Live
+              <span class="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium animate-pulse">
+                LIVE
               </span>
             }
-            <a 
-              [routerLink]="['/admin/scoring', matchId]"
-              class="text-sm text-green-600 hover:text-green-800"
-            >
-              Go to Scoring →
-            </a>
           </div>
+          <a 
+            [routerLink]="['/admin/scoring', matchId]"
+            class="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            Go to Scoring →
+          </a>
         </div>
       </div>
 
       @if (loading) {
-        <div class="flex items-center justify-center h-64">
-          <p class="text-gray-500">Loading match...</p>
+        <div class="flex-1 flex items-center justify-center">
+          <div class="text-slate-400">Loading match...</div>
         </div>
       } @else if (!match) {
-        <div class="flex items-center justify-center h-64">
-          <p class="text-gray-500">Match not found</p>
+        <div class="flex-1 flex items-center justify-center">
+          <div class="text-slate-400">Match not found</div>
         </div>
       } @else {
-        <div class="max-w-7xl mx-auto px-4 py-6">
-          <!-- Match Info -->
-          <div class="bg-white rounded-lg shadow p-4 mb-6">
-            <div class="flex justify-between items-center">
-              <div>
-                <h2 class="text-xl font-bold text-gray-800">
-                  {{ match.team1?.name }} vs {{ match.team2?.name }}
-                </h2>
-                <p class="text-gray-500 text-sm">{{ match.format }} • {{ match.venue }}</p>
-              </div>
-              <div class="text-right text-sm text-gray-500">
-                Last updated: {{ lastUpdateTime | date:'HH:mm:ss' }}
-              </div>
+        <!-- Main Content - Two Column Layout -->
+        <div class="flex-1 flex overflow-hidden">
+          
+          <!-- Left Sidebar - Match Info, Score, ESPN -->
+          <div class="w-80 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col overflow-y-auto">
+            
+            <!-- Match Info Card -->
+            <div class="p-4 border-b border-slate-100">
+              <h2 class="text-lg font-bold text-slate-800 leading-tight">
+                {{ match.team1?.name }} vs {{ match.team2?.name }}
+              </h2>
+              <p class="text-xs text-slate-500 mt-1">{{ match.format }} • {{ match.venue }}</p>
             </div>
-          </div>
 
-          <!-- ESPN Sync Section -->
-          <div class="bg-white rounded-lg shadow p-4 mb-6">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="text-lg">📡</span>
-                <h3 class="font-semibold text-gray-800">ESPN Sync</h3>
-                @if (validatingSquad) {
-                  <span class="text-xs text-blue-500 animate-pulse">Validating squad...</span>
-                } @else if (squadValidation) {
-                  @if (squadValidation.isValid) {
-                    <span class="text-xs text-green-600">✓ Squad OK</span>
-                  } @else {
-                    <span class="text-xs text-red-600">⚠ {{ squadValidation.mismatches.length }} issue(s)</span>
+            <!-- Live Score Display -->
+            @if (inningsEdit) {
+              <div class="p-4 bg-gradient-to-br from-slate-800 to-slate-900 text-white">
+                <div class="flex items-baseline justify-between">
+                  <div>
+                    <div class="text-3xl font-bold tracking-tight">
+                      {{ inningsEdit.totalRuns }}/{{ inningsEdit.totalWickets }}
+                    </div>
+                    <div class="text-slate-400 text-sm">
+                      {{ getOversDisplay(inningsEdit.totalBalls) }} overs
+                    </div>
+                  </div>
+                  <button 
+                    (click)="showTotalsModal = true"
+                    class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-xs transition-colors"
+                  >
+                    Edit Totals
+                  </button>
+                </div>
+                
+                <!-- Extras Summary -->
+                <div class="mt-3 pt-3 border-t border-white/10 text-xs text-slate-400">
+                  <span class="mr-3">Wd: {{ inningsEdit.extras.wides }}</span>
+                  <span class="mr-3">NB: {{ inningsEdit.extras.noBalls }}</span>
+                  <span class="mr-3">B: {{ inningsEdit.extras.byes }}</span>
+                  <span>LB: {{ inningsEdit.extras.legByes }}</span>
+                </div>
+
+                <!-- Current Players -->
+                <div class="mt-3 pt-3 border-t border-white/10 text-xs">
+                  <div class="text-slate-400 mb-1">At Crease</div>
+                  <div class="text-white">{{ getStrikerName() }}* / {{ getNonStrikerName() }}</div>
+                </div>
+              </div>
+
+              <!-- Innings Selector -->
+              <div class="p-3 border-b border-slate-100">
+                <select 
+                  [(ngModel)]="selectedInningsIndex"
+                  (change)="loadInningsData()"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                  @for (innings of match.innings; track $index) {
+                    <option [value]="$index">
+                      {{ $index === 0 ? '1st' : '2nd' }} Inn - {{ getTeamNameById(innings.battingTeam) }}
+                    </option>
                   }
+                </select>
+              </div>
+            }
+
+            <!-- ESPN Sync Section -->
+            <div class="p-4 border-b border-slate-100">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-base">📡</span>
+                  <span class="font-semibold text-slate-700 text-sm">ESPN Sync</span>
+                </div>
+                @if (match.lastEspnSync) {
+                  <span class="text-xs text-slate-400">
+                    {{ match.lastEspnSync | date:'HH:mm' }}
+                  </span>
                 }
               </div>
-              @if (match.lastEspnSync) {
-                <span class="text-xs text-gray-500">
-                  Last sync: {{ match.lastEspnSync | date:'MMM d, HH:mm' }}
-                </span>
-              }
-            </div>
-            <div class="flex gap-3 flex-wrap">
+              
               <input 
                 type="text"
                 [(ngModel)]="espnUrl"
-                placeholder="https://www.espncricinfo.com/.../full-scorecard"
-                class="flex-1 min-w-[200px] px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="ESPN scorecard URL..."
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg mb-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               />
+              
+              <div class="flex gap-2">
+                <button 
+                  (click)="saveEspnUrl()"
+                  [disabled]="!espnUrl || espnUrl === match.espnUrl || savingEspnUrl"
+                  class="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {{ savingEspnUrl ? 'Saving...' : 'Save URL' }}
+                </button>
+                <button 
+                  (click)="openEspnSyncModal()"
+                  [disabled]="!match.espnUrl"
+                  class="flex-1 px-3 py-2 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  🔄 Sync Now
+                </button>
+              </div>
+
+              <!-- Validation Status -->
+              @if (validatingSquad) {
+                <div class="mt-2 text-xs text-blue-500 animate-pulse">Validating squad...</div>
+              } @else if (squadValidation) {
+                @if (squadValidation.isValid) {
+                  <div class="mt-2 text-xs text-emerald-600">✓ Squad matches ESPN</div>
+                } @else {
+                  <button 
+                    (click)="showSquadValidationModal = true"
+                    class="mt-2 text-xs text-amber-600 hover:text-amber-700"
+                  >
+                    ⚠ {{ squadValidation.mismatches.length }} squad issue(s) - View
+                  </button>
+                }
+              }
+            </div>
+
+            <!-- Squad Management (Collapsed) -->
+            <div class="p-4 border-b border-slate-100">
               <button 
-                (click)="saveEspnUrl()"
-                [disabled]="!espnUrl || espnUrl === match.espnUrl || savingEspnUrl"
-                class="px-3 py-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                (click)="showSquadManagement = !showSquadManagement"
+                class="w-full flex items-center justify-between text-sm"
               >
-                {{ savingEspnUrl ? 'Saving...' : 'Save URL' }}
-              </button>
-              <button 
-                (click)="validateSquad()"
-                [disabled]="!match.espnUrl || validatingSquad"
-                class="px-3 py-2 text-sm text-amber-600 hover:text-amber-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Check squad matches ESPN data"
-              >
-                {{ validatingSquad ? 'Checking...' : '🔍 Validate' }}
-              </button>
-              <button 
-                (click)="openEspnSyncModal()"
-                [disabled]="!match.espnUrl"
-                class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <span>🔄</span>
-                <span>Refresh from ESPN</span>
+                <div class="flex items-center gap-2">
+                  <span>👥</span>
+                  <span class="font-semibold text-slate-700">Squad Management</span>
+                </div>
+                <span class="text-slate-400 text-xs">
+                  {{ showSquadManagement ? '▼' : '▶' }}
+                </span>
               </button>
             </div>
-            @if (!match.espnUrl) {
-              <p class="text-xs text-gray-500 mt-2">
-                Add an ESPN Cricinfo full-scorecard URL to enable syncing match data.
-              </p>
-            }
-            
-            <!-- Squad Validation Results -->
-            @if (squadValidation && !squadValidation.isValid) {
-              <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div class="flex items-center justify-between mb-2">
-                  <span class="font-medium text-red-700">⚠ Squad Validation Issues</span>
-                  <button (click)="dismissValidation()" class="text-red-400 hover:text-red-600 text-sm">Dismiss</button>
-                </div>
-                <div class="space-y-2 text-sm">
-                  @for (mismatch of squadValidation.mismatches; track mismatch.espnName) {
-                    <div class="p-2 bg-white rounded border border-red-100">
-                      <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-gray-600">ESPN:</span>
-                        <span class="font-medium">{{ mismatch.espnName }}</span>
-                        <span class="text-gray-400">→</span>
-                        @if (mismatch.matchedTo) {
-                          <span class="text-amber-600">Matched:</span>
-                          <span class="font-medium text-amber-700">{{ mismatch.matchedTo }}</span>
-                          <span class="text-xs text-gray-400">({{ mismatch.matchScore }}% {{ mismatch.matchType }})</span>
-                        } @else {
-                          <span class="text-red-600">Not found in squad</span>
-                        }
-                      </div>
-                      @if (mismatch.correctPlayer) {
-                        <div class="text-xs text-green-600 mt-1">
-                          💡 Suggestion: Add "{{ mismatch.correctPlayer.name }}" to squad
-                        </div>
-                      }
-                      @if (mismatch.issue === 'fuzzy_match') {
-                        <div class="text-xs text-amber-600 mt-1">
-                          ⚠ Fuzzy match - verify this is correct before syncing
-                        </div>
-                      }
-                    </div>
+
+            <!-- Quick Validation -->
+            @if (inningsEdit) {
+              <div class="p-4 flex-1">
+                <div class="text-xs font-medium text-slate-500 mb-2">Quick Check</div>
+                <div class="space-y-1.5 text-xs">
+                  @if (calculateBatsmanTotal() + calculateTotalExtras() === inningsEdit.totalRuns) {
+                    <div class="text-emerald-600">✓ Runs tally</div>
+                  } @else {
+                    <div class="text-red-500">✗ Runs mismatch ({{ calculateBatsmanTotal() }} + {{ calculateTotalExtras() }} ≠ {{ inningsEdit.totalRuns }})</div>
                   }
-                </div>
-                @if (squadValidation.warnings && squadValidation.warnings.length > 0) {
-                  <div class="mt-3 pt-3 border-t border-red-200">
-                    <span class="text-sm font-medium text-amber-700">Warnings:</span>
-                    <div class="space-y-1 mt-1">
-                      @for (warning of squadValidation.warnings; track warning.playerName) {
-                        <div class="text-xs text-amber-600">
-                          • {{ warning.playerName }}: {{ warning.suggestion }}
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-                <div class="mt-3 text-xs text-gray-500">
-                  Fix squad issues in "Edit Match" before syncing to avoid wrong player assignments.
+                  @if (countDismissedBatsmen() === inningsEdit.totalWickets) {
+                    <div class="text-emerald-600">✓ Wickets tally</div>
+                  } @else {
+                    <div class="text-amber-500">⚠ Wickets: {{ countDismissedBatsmen() }} out ≠ {{ inningsEdit.totalWickets }}</div>
+                  }
+                  @if (hasStrikerAndNonStriker()) {
+                    <div class="text-emerald-600">✓ Batsmen set</div>
+                  } @else {
+                    <div class="text-amber-500">⚠ Set striker/non-striker</div>
+                  }
                 </div>
               </div>
             }
+
+            <!-- Last Updated -->
+            <div class="p-3 border-t border-slate-100 mt-auto">
+              <div class="text-xs text-slate-400 text-center">
+                Updated: {{ lastUpdateTime | date:'HH:mm:ss' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Content Area - Tabs for Batting/Bowling -->
+          <div class="flex-1 flex flex-col overflow-hidden">
             
-            @if (squadValidation && squadValidation.isValid && squadValidation.summary) {
-              <div class="mt-2 text-xs text-green-600">
-                ✓ All {{ squadValidation.summary.totalEspnPlayers }} ESPN players matched ({{ squadValidation.summary.exactMatches }} exact)
+            @if (inningsEdit) {
+              <!-- Tab Bar -->
+              <div class="bg-white border-b border-slate-200 px-4 flex items-center justify-between flex-shrink-0">
+                <div class="flex">
+                  <button 
+                    (click)="activeTab = 'batting'"
+                    [class]="activeTab === 'batting' 
+                      ? 'px-4 py-3 text-sm font-medium border-b-2 border-emerald-500 text-emerald-600' 
+                      : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'"
+                  >
+                    🏏 Batting
+                  </button>
+                  <button 
+                    (click)="activeTab = 'bowling'"
+                    [class]="activeTab === 'bowling' 
+                      ? 'px-4 py-3 text-sm font-medium border-b-2 border-blue-500 text-blue-600' 
+                      : 'px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-700'"
+                  >
+                    🎯 Bowling
+                  </button>
+                </div>
+
+                <!-- Save Actions -->
+                <div class="flex items-center gap-3">
+                  @if (isDirty) {
+                    <span class="text-xs text-amber-600 font-medium">Unsaved changes</span>
+                  }
+                  <button 
+                    (click)="discardChanges()"
+                    [disabled]="!isDirty || saving"
+                    class="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Discard
+                  </button>
+                  <button 
+                    (click)="saveAllChanges()"
+                    [disabled]="!isDirty || saving"
+                    class="px-4 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {{ saving ? 'Saving...' : '💾 Save' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Tab Content -->
+              <div class="flex-1 overflow-auto p-4">
+                
+                <!-- Batting Tab -->
+                @if (activeTab === 'batting') {
+                  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-sm">
+                      <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th class="px-4 py-3 text-left font-medium text-slate-600">Batsman</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-16">R</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-16">B</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-14">4s</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-14">6s</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-16">Out</th>
+                          <th class="px-3 py-3 text-left font-medium text-slate-600 w-44">Dismissal</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-24">Strike</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-100">
+                        @for (bat of inningsEdit.battingStats; track bat.playerId) {
+                          @if (!bat.toRemove) {
+                            <tr 
+                              [class]="getBattingRowClass(bat)"
+                              class="hover:bg-slate-50/50 transition-colors"
+                            >
+                              <td class="px-4 py-2">
+                                <div class="flex items-center gap-2">
+                                  <span 
+                                    class="font-medium"
+                                    [class.text-slate-400]="bat.isNew && bat.runs === 0 && bat.balls === 0 && !bat.isStriker && !bat.isNonStriker"
+                                  >
+                                    {{ bat.playerName }}
+                                  </span>
+                                  @if (bat.isStriker) {
+                                    <span class="text-emerald-500 text-xs font-bold">*</span>
+                                  }
+                                  @if (bat.isNew && bat.runs === 0 && bat.balls === 0 && !bat.isStriker && !bat.isNonStriker) {
+                                    <span class="text-xs text-slate-400">(DNB)</span>
+                                  }
+                                </div>
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="number" 
+                                  [(ngModel)]="bat.runs"
+                                  (change)="markDirty()"
+                                  class="w-14 px-2 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                                  min="0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="number" 
+                                  [(ngModel)]="bat.balls"
+                                  (change)="markDirty()"
+                                  class="w-14 px-2 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                                  min="0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="number" 
+                                  [(ngModel)]="bat.fours"
+                                  (change)="markDirty()"
+                                  class="w-12 px-1 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                                  min="0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="number" 
+                                  [(ngModel)]="bat.sixes"
+                                  (change)="markDirty()"
+                                  class="w-12 px-1 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                                  min="0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="checkbox" 
+                                  [(ngModel)]="bat.isOut"
+                                  (change)="onOutStatusChange(bat)"
+                                  class="w-4 h-4 text-red-500 rounded border-slate-300 focus:ring-red-500"
+                                />
+                              </td>
+                              <td class="px-3 py-2">
+                                @if (bat.isOut) {
+                                  <div class="flex items-center gap-1">
+                                    <select 
+                                      [(ngModel)]="bat.dismissalType"
+                                      (change)="markDirty()"
+                                      class="text-xs px-2 py-1.5 border border-slate-200 rounded-lg w-24 focus:ring-2 focus:ring-emerald-500"
+                                    >
+                                      <option value="bowled">Bowled</option>
+                                      <option value="caught">Caught</option>
+                                      <option value="lbw">LBW</option>
+                                      <option value="run-out">Run Out</option>
+                                      <option value="stumped">Stumped</option>
+                                      <option value="hit-wicket">Hit Wicket</option>
+                                    </select>
+                                    <button 
+                                      (click)="openDismissalEditor(bat)"
+                                      class="p-1 text-slate-400 hover:text-slate-600 rounded"
+                                      title="Edit details"
+                                    >
+                                      ✏️
+                                    </button>
+                                  </div>
+                                } @else {
+                                  <span class="text-slate-300">—</span>
+                                }
+                              </td>
+                              <td class="px-3 py-2">
+                                <div class="flex justify-center gap-3">
+                                  <label class="flex items-center gap-1 cursor-pointer" title="Striker">
+                                    <input 
+                                      type="radio" 
+                                      name="striker"
+                                      [checked]="bat.isStriker"
+                                      (change)="setStriker(bat.playerId)"
+                                      class="text-emerald-500 focus:ring-emerald-500"
+                                      [disabled]="bat.isOut"
+                                    />
+                                    <span class="text-xs text-slate-500" [class.text-slate-300]="bat.isOut">*</span>
+                                  </label>
+                                  <label class="flex items-center gap-1 cursor-pointer" title="Non-Striker">
+                                    <input 
+                                      type="radio" 
+                                      name="nonStriker"
+                                      [checked]="bat.isNonStriker"
+                                      (change)="setNonStriker(bat.playerId)"
+                                      class="text-blue-500 focus:ring-blue-500"
+                                      [disabled]="bat.isOut"
+                                    />
+                                    <span class="text-xs text-slate-500" [class.text-slate-300]="bat.isOut">○</span>
+                                  </label>
+                                </div>
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                @if (!bat.isNew || bat.runs > 0 || bat.balls > 0 || bat.isOut) {
+                                  <button 
+                                    (click)="markBatsmanForRemoval(bat)"
+                                    [disabled]="bat.isStriker || bat.isNonStriker"
+                                    class="text-slate-300 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    title="Remove"
+                                  >
+                                    🗑️
+                                  </button>
+                                }
+                              </td>
+                            </tr>
+                          }
+                        }
+                      </tbody>
+                      <tfoot class="bg-slate-50 border-t border-slate-200">
+                        <tr>
+                          <td class="px-4 py-2 font-medium text-slate-600">Total</td>
+                          <td class="px-3 py-2 text-center font-bold text-slate-800">{{ calculateBatsmanTotal() }}</td>
+                          <td colspan="7"></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                }
+
+                <!-- Bowling Tab -->
+                @if (activeTab === 'bowling') {
+                  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-sm">
+                      <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th class="px-4 py-3 text-left font-medium text-slate-600">Bowler</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-20">O</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-14">M</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-16">R</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-14">W</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-14">Wd</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-14">NB</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-20">Bowling</th>
+                          <th class="px-3 py-3 text-center font-medium text-slate-600 w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-100">
+                        @for (bowl of inningsEdit.bowlingStats; track bowl.playerId) {
+                          @if (!bowl.toRemove) {
+                            <tr 
+                              [class]="bowl.isBowling ? 'bg-blue-50/50' : (bowl.isNew && bowl.overs === '0.0' && !bowl.isBowling ? 'bg-slate-50/50' : '')"
+                              class="hover:bg-slate-50/50 transition-colors"
+                            >
+                              <td class="px-4 py-2">
+                                <div class="flex items-center gap-2">
+                                  <span 
+                                    class="font-medium"
+                                    [class.text-slate-400]="bowl.isNew && bowl.overs === '0.0' && !bowl.isBowling"
+                                  >
+                                    {{ bowl.playerName }}
+                                  </span>
+                                  @if (bowl.isBowling) {
+                                    <span class="text-blue-500 text-xs font-bold">●</span>
+                                  }
+                                  @if (bowl.isNew && bowl.overs === '0.0' && !bowl.isBowling) {
+                                    <span class="text-xs text-slate-400">(DNB)</span>
+                                  }
+                                </div>
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="text" 
+                                  [(ngModel)]="bowl.overs"
+                                  (change)="markDirty()"
+                                  class="w-16 px-2 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  placeholder="0.0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="number" 
+                                  [(ngModel)]="bowl.maidens"
+                                  (change)="markDirty()"
+                                  class="w-12 px-1 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  min="0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="number" 
+                                  [(ngModel)]="bowl.runs"
+                                  (change)="markDirty()"
+                                  class="w-14 px-2 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  min="0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="number" 
+                                  [(ngModel)]="bowl.wickets"
+                                  (change)="markDirty()"
+                                  class="w-12 px-1 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  min="0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="number" 
+                                  [(ngModel)]="bowl.wides"
+                                  (change)="markDirty()"
+                                  class="w-12 px-1 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  min="0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="number" 
+                                  [(ngModel)]="bowl.noBalls"
+                                  (change)="markDirty()"
+                                  class="w-12 px-1 py-1.5 text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  min="0"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                <input 
+                                  type="radio" 
+                                  name="currentBowler"
+                                  [checked]="bowl.isBowling"
+                                  (change)="setCurrentBowler(bowl.playerId)"
+                                  class="text-blue-500 focus:ring-blue-500"
+                                />
+                              </td>
+                              <td class="px-3 py-2 text-center">
+                                @if (!bowl.isNew || bowl.overs !== '0.0' || bowl.runs > 0 || bowl.wickets > 0) {
+                                  <button 
+                                    (click)="markBowlerForRemoval(bowl)"
+                                    [disabled]="bowl.isBowling"
+                                    class="text-slate-300 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    title="Remove"
+                                  >
+                                    🗑️
+                                  </button>
+                                }
+                              </td>
+                            </tr>
+                          }
+                        }
+                      </tbody>
+                      <tfoot class="bg-slate-50 border-t border-slate-200">
+                        <tr>
+                          <td class="px-4 py-2 font-medium text-slate-600">Total</td>
+                          <td class="px-3 py-2 text-center font-bold text-slate-800">{{ calculateBowlerOversTotal() }}</td>
+                          <td class="px-3 py-2 text-center font-bold text-slate-800">{{ calculateBowlerMaidensTotal() }}</td>
+                          <td class="px-3 py-2 text-center font-bold text-slate-800">{{ calculateBowlerRunsTotal() }}</td>
+                          <td class="px-3 py-2 text-center font-bold text-slate-800">{{ calculateBowlerWicketsTotal() }}</td>
+                          <td colspan="4"></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="flex-1 flex items-center justify-center text-slate-400">
+                Select an innings to edit
               </div>
             }
           </div>
+        </div>
+      }
 
-          <!-- Squad Management Section -->
-          <div class="bg-white rounded-lg shadow p-4 mb-6">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="text-lg">👥</span>
-                <h3 class="font-semibold text-gray-800">Squad Management</h3>
-                <span class="text-xs text-gray-500">(drag to reorder)</span>
+      <!-- Toast Notifications -->
+      @if (toastMessage) {
+        <div class="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm flex items-center gap-2 animate-pulse z-50">
+          <span>{{ toastMessage }}</span>
+        </div>
+      }
+
+      <!-- Error Display -->
+      @if (error) {
+        <div class="fixed bottom-4 left-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm max-w-md z-50">
+          {{ error }}
+          <button (click)="error = ''" class="ml-2 font-bold hover:opacity-75">×</button>
+        </div>
+      }
+
+      <!-- Edit Totals Modal -->
+      @if (showTotalsModal && inningsEdit) {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+              <h3 class="text-lg font-semibold text-slate-800">Edit Innings Totals</h3>
+              <button (click)="showTotalsModal = false" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+            </div>
+            <div class="p-4 space-y-4">
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-slate-600 mb-1">Total Runs</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="inningsEdit.totalRuns"
+                    (change)="markDirty()"
+                    class="w-full px-3 py-2 border border-slate-200 rounded-lg text-lg font-bold focus:ring-2 focus:ring-emerald-500"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-600 mb-1">Wickets</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="inningsEdit.totalWickets"
+                    (change)="markDirty()"
+                    class="w-full px-3 py-2 border border-slate-200 rounded-lg text-lg font-bold focus:ring-2 focus:ring-emerald-500"
+                    min="0" max="10"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-600 mb-1">Balls</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="inningsEdit.totalBalls"
+                    (change)="markDirty()"
+                    class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    min="0"
+                  />
+                  <span class="text-xs text-slate-500">({{ getOversDisplay(inningsEdit.totalBalls) }} ov)</span>
+                </div>
               </div>
+              
+              <div class="border-t border-slate-200 pt-4">
+                <label class="block text-sm font-medium text-slate-600 mb-2">Extras</label>
+                <div class="grid grid-cols-4 gap-3">
+                  <div>
+                    <label class="block text-xs text-slate-500 mb-1">Wides</label>
+                    <input 
+                      type="number" 
+                      [(ngModel)]="inningsEdit.extras.wides"
+                      (change)="markDirty()"
+                      class="w-full px-2 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 mb-1">No Balls</label>
+                    <input 
+                      type="number" 
+                      [(ngModel)]="inningsEdit.extras.noBalls"
+                      (change)="markDirty()"
+                      class="w-full px-2 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 mb-1">Byes</label>
+                    <input 
+                      type="number" 
+                      [(ngModel)]="inningsEdit.extras.byes"
+                      (change)="markDirty()"
+                      class="w-full px-2 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-slate-500 mb-1">Leg Byes</label>
+                    <input 
+                      type="number" 
+                      [(ngModel)]="inningsEdit.extras.legByes"
+                      (change)="markDirty()"
+                      class="w-full px-2 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="p-4 border-t border-slate-200 flex justify-end">
               <button 
-                (click)="showSquadManagement = !showSquadManagement"
-                class="text-sm text-blue-600 hover:text-blue-800"
+                (click)="showTotalsModal = false"
+                class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
               >
-                {{ showSquadManagement ? 'Hide' : 'Show' }}
+                Done
               </button>
             </div>
-            
-            @if (showSquadManagement) {
+          </div>
+        </div>
+      }
+
+      <!-- Squad Management Modal -->
+      @if (showSquadManagement) {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
+              <h3 class="text-lg font-semibold text-slate-800">Squad Management</h3>
+              <button (click)="showSquadManagement = false" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+            </div>
+            <div class="flex-1 overflow-auto p-4">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Team 1 Squad Column -->
-                <div class="border rounded-lg overflow-hidden flex flex-col">
-                  <div class="p-3 bg-gradient-to-r from-green-50 to-green-100 border-b flex items-center justify-between">
+                <!-- Team 1 Squad -->
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                  <div class="p-3 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                      <span class="font-semibold text-green-800">{{ match.team1?.name }}</span>
-                      <span class="text-xs px-2 py-0.5 bg-green-200 text-green-800 rounded-full">{{ team1SquadList.length }}/30</span>
+                      <span class="font-semibold text-emerald-800">{{ match?.team1?.name }}</span>
+                      <span class="text-xs px-2 py-0.5 bg-emerald-200 text-emerald-800 rounded-full">{{ team1SquadList.length }}/30</span>
                     </div>
                     <button 
                       (click)="openAddToSquadModal('team1')"
                       [disabled]="team1SquadList.length >= 30"
-                      class="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      class="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
                     >
                       + Add
                     </button>
@@ -268,45 +764,41 @@ interface InningsEdit {
                     #team1List="cdkDropList"
                     [cdkDropListData]="team1SquadList"
                     (cdkDropListDropped)="onSquadDrop($event, 'team1')"
-                    class="flex-1 overflow-y-auto p-2 space-y-1 min-h-[200px] max-h-[400px] bg-gray-50"
+                    class="p-2 space-y-1 min-h-[200px] max-h-[300px] overflow-y-auto bg-slate-50"
                   >
                     @for (player of team1SquadList; track player.playerId; let i = $index) {
                       <div 
                         cdkDrag
-                        class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:border-green-300 transition-all group"
+                        class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-slate-200 cursor-grab active:cursor-grabbing hover:border-emerald-300 transition-all group"
                       >
-                        <span class="text-xs text-gray-400 font-mono w-5">#{{ i + 1 }}</span>
+                        <span class="text-xs text-slate-400 font-mono w-5">#{{ i + 1 }}</span>
                         <span class="flex-1 text-sm font-medium truncate">{{ player.name }}</span>
                         <button 
                           (click)="removeFromSquad('team1', player.playerId); $event.stopPropagation()"
                           [disabled]="squadUpdating"
-                          class="text-gray-300 hover:text-red-500 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                          title="Remove from squad"
+                          class="text-slate-300 hover:text-red-500 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                          </svg>
+                          ×
                         </button>
-                        <div *cdkDragPlaceholder class="h-10 bg-green-100 rounded-lg border-2 border-dashed border-green-300"></div>
                       </div>
                     }
                     @if (team1SquadList.length === 0) {
-                      <div class="text-gray-400 text-sm text-center py-8">No players in squad.<br>Click "+ Add" to start.</div>
+                      <div class="text-slate-400 text-sm text-center py-8">No players in squad</div>
                     }
                   </div>
                 </div>
                 
-                <!-- Team 2 Squad Column -->
-                <div class="border rounded-lg overflow-hidden flex flex-col">
-                  <div class="p-3 bg-gradient-to-r from-blue-50 to-blue-100 border-b flex items-center justify-between">
+                <!-- Team 2 Squad -->
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                  <div class="p-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                      <span class="font-semibold text-blue-800">{{ match.team2?.name }}</span>
+                      <span class="font-semibold text-blue-800">{{ match?.team2?.name }}</span>
                       <span class="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full">{{ team2SquadList.length }}/30</span>
                     </div>
                     <button 
                       (click)="openAddToSquadModal('team2')"
                       [disabled]="team2SquadList.length >= 30"
-                      class="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      class="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
                       + Add
                     </button>
@@ -316,589 +808,67 @@ interface InningsEdit {
                     #team2List="cdkDropList"
                     [cdkDropListData]="team2SquadList"
                     (cdkDropListDropped)="onSquadDrop($event, 'team2')"
-                    class="flex-1 overflow-y-auto p-2 space-y-1 min-h-[200px] max-h-[400px] bg-gray-50"
+                    class="p-2 space-y-1 min-h-[200px] max-h-[300px] overflow-y-auto bg-slate-50"
                   >
                     @for (player of team2SquadList; track player.playerId; let i = $index) {
                       <div 
                         cdkDrag
-                        class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:border-blue-300 transition-all group"
+                        class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-slate-200 cursor-grab active:cursor-grabbing hover:border-blue-300 transition-all group"
                       >
-                        <span class="text-xs text-gray-400 font-mono w-5">#{{ i + 1 }}</span>
+                        <span class="text-xs text-slate-400 font-mono w-5">#{{ i + 1 }}</span>
                         <span class="flex-1 text-sm font-medium truncate">{{ player.name }}</span>
                         <button 
                           (click)="removeFromSquad('team2', player.playerId); $event.stopPropagation()"
                           [disabled]="squadUpdating"
-                          class="text-gray-300 hover:text-red-500 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                          title="Remove from squad"
+                          class="text-slate-300 hover:text-red-500 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                          </svg>
+                          ×
                         </button>
-                        <div *cdkDragPlaceholder class="h-10 bg-blue-100 rounded-lg border-2 border-dashed border-blue-300"></div>
                       </div>
                     }
                     @if (team2SquadList.length === 0) {
-                      <div class="text-gray-400 text-sm text-center py-8">No players in squad.<br>Click "+ Add" to start.</div>
+                      <div class="text-slate-400 text-sm text-center py-8">No players in squad</div>
                     }
                   </div>
                 </div>
               </div>
-              
-              <p class="text-xs text-gray-500 mt-3">
-                💡 Drag players to reorder batting position. Any player in the squad can bat or bowl.
+              <p class="text-xs text-slate-500 mt-4 text-center">
+                💡 Drag players to reorder batting position
               </p>
-            }
-          </div>
-
-          <!-- Innings Selector -->
-          <div class="bg-white rounded-lg shadow p-4 mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Select Innings</label>
-            <select 
-              [(ngModel)]="selectedInningsIndex"
-              (change)="loadInningsData()"
-              class="w-full md:w-auto px-4 py-2 border rounded-lg text-lg font-medium"
-            >
-              @for (innings of match.innings; track $index) {
-                <option [value]="$index">
-                  {{ $index === 0 ? '1st' : '2nd' }} Innings - {{ getTeamNameById(innings.battingTeam) }} Batting
-                </option>
-              }
-            </select>
-          </div>
-
-          @if (inningsEdit) {
-            <!-- Innings Totals (moved to top) -->
-            <div class="bg-white rounded-lg shadow mb-6 p-4">
-              <div class="flex justify-between items-center mb-4">
-                <h3 class="font-semibold text-gray-800">📊 Innings Totals</h3>
-                <div class="text-2xl font-bold text-gray-800">
-                  {{ inningsEdit.totalRuns }}/{{ inningsEdit.totalWickets }} ({{ getOversDisplay(inningsEdit.totalBalls) }})
-                </div>
-              </div>
-              <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">Total Runs</label>
-                  <input 
-                    type="number" 
-                    [(ngModel)]="inningsEdit.totalRuns"
-                    (change)="markDirty()"
-                    class="w-full px-3 py-2 border rounded-lg text-lg font-bold focus:ring-2 focus:ring-green-500"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">Wickets</label>
-                  <input 
-                    type="number" 
-                    [(ngModel)]="inningsEdit.totalWickets"
-                    (change)="markDirty()"
-                    class="w-full px-3 py-2 border rounded-lg text-lg font-bold focus:ring-2 focus:ring-green-500"
-                    min="0"
-                    max="10"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">Balls</label>
-                  <input 
-                    type="number" 
-                    [(ngModel)]="inningsEdit.totalBalls"
-                    (change)="markDirty()"
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                    min="0"
-                  />
-                  <span class="text-xs text-gray-500">({{ getOversDisplay(inningsEdit.totalBalls) }} ov)</span>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">Wides</label>
-                  <input 
-                    type="number" 
-                    [(ngModel)]="inningsEdit.extras.wides"
-                    (change)="markDirty()"
-                    class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-500"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">No Balls</label>
-                  <input 
-                    type="number" 
-                    [(ngModel)]="inningsEdit.extras.noBalls"
-                    (change)="markDirty()"
-                    class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-green-500"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">Byes / LB</label>
-                  <div class="flex gap-1">
-                    <input 
-                      type="number" 
-                      [(ngModel)]="inningsEdit.extras.byes"
-                      (change)="markDirty()"
-                      class="w-1/2 px-2 py-2 border rounded focus:ring-2 focus:ring-green-500 text-sm"
-                      min="0"
-                      placeholder="B"
-                    />
-                    <input 
-                      type="number" 
-                      [(ngModel)]="inningsEdit.extras.legByes"
-                      (change)="markDirty()"
-                      class="w-1/2 px-2 py-2 border rounded focus:ring-2 focus:ring-green-500 text-sm"
-                      min="0"
-                      placeholder="LB"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div class="text-sm text-gray-600">
-                Extras: {{ calculateTotalExtras() }} (Wd {{ inningsEdit.extras.wides }}, NB {{ inningsEdit.extras.noBalls }}, B {{ inningsEdit.extras.byes }}, LB {{ inningsEdit.extras.legByes }})
-              </div>
-            </div>
-
-            <!-- Batting Stats -->
-            <div class="bg-white rounded-lg shadow mb-6 overflow-hidden">
-              <div class="p-4 border-b flex justify-between items-center bg-green-50">
-                <h3 class="font-semibold text-gray-800">🏏 Batting (Full Playing XI)</h3>
-                <div class="flex items-center gap-4">
-                  <span class="text-sm text-gray-600">
-                    Current: {{ getStrikerName() }}* / {{ getNonStrikerName() }}
-                  </span>
-                </div>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead class="bg-gray-50">
-                    <tr>
-                      <th class="px-3 py-2 text-left font-medium text-gray-600">Player</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-16">Runs</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-16">Balls</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-14">4s</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-14">6s</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-14">Out</th>
-                      <th class="px-3 py-2 text-left font-medium text-gray-600 w-40">Dismissal</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-20">Strike</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-16">🗑</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y">
-                    @for (bat of inningsEdit.battingStats; track bat.playerId) {
-                      @if (!bat.toRemove) {
-                        <tr 
-                          [class.bg-green-50]="bat.isStriker || bat.isNonStriker"
-                          [class.bg-red-50]="bat.isOut"
-                          [class.bg-gray-50]="bat.isNew && !bat.isOut && !bat.isStriker && !bat.isNonStriker"
-                        >
-                          <td class="px-3 py-2 font-medium" [class.text-gray-400]="bat.isNew && bat.runs === 0 && bat.balls === 0 && !bat.isStriker && !bat.isNonStriker">
-                            {{ bat.playerName }}
-                            @if (bat.isNew && bat.runs === 0 && bat.balls === 0 && !bat.isStriker && !bat.isNonStriker) {
-                              <span class="text-xs text-gray-400 ml-1">(DNB)</span>
-                            }
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="number" 
-                              [(ngModel)]="bat.runs"
-                              (change)="markDirty()"
-                              class="w-14 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                              min="0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="number" 
-                              [(ngModel)]="bat.balls"
-                              (change)="markDirty()"
-                              class="w-14 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                              min="0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="number" 
-                              [(ngModel)]="bat.fours"
-                              (change)="markDirty()"
-                              class="w-12 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                              min="0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="number" 
-                              [(ngModel)]="bat.sixes"
-                              (change)="markDirty()"
-                              class="w-12 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                              min="0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="checkbox" 
-                              [(ngModel)]="bat.isOut"
-                              (change)="onOutStatusChange(bat)"
-                              class="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-                            />
-                          </td>
-                          <td class="px-3 py-2">
-                            @if (bat.isOut) {
-                              <div class="flex items-center gap-1">
-                                <select 
-                                  [(ngModel)]="bat.dismissalType"
-                                  (change)="markDirty()"
-                                  class="text-xs px-1 py-1 border rounded w-24"
-                                >
-                                  <option value="bowled">Bowled</option>
-                                  <option value="caught">Caught</option>
-                                  <option value="lbw">LBW</option>
-                                  <option value="run-out">Run Out</option>
-                                  <option value="stumped">Stumped</option>
-                                  <option value="hit-wicket">Hit Wicket</option>
-                                </select>
-                                <button 
-                                  (click)="openDismissalEditor(bat)"
-                                  class="text-gray-400 hover:text-gray-600"
-                                  title="Edit dismissal details"
-                                >
-                                  ✎
-                                </button>
-                              </div>
-                            } @else {
-                              <span class="text-gray-400">-</span>
-                            }
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <div class="flex justify-center gap-2">
-                              <label class="flex items-center gap-1 cursor-pointer" title="Striker">
-                                <input 
-                                  type="radio" 
-                                  [name]="'striker'"
-                                  [checked]="bat.isStriker"
-                                  (change)="setStriker(bat.playerId)"
-                                  class="text-green-600"
-                                  [disabled]="bat.isOut"
-                                />
-                                <span class="text-xs" [class.text-gray-300]="bat.isOut">*</span>
-                              </label>
-                              <label class="flex items-center gap-1 cursor-pointer" title="Non-Striker">
-                                <input 
-                                  type="radio" 
-                                  [name]="'nonStriker'"
-                                  [checked]="bat.isNonStriker"
-                                  (change)="setNonStriker(bat.playerId)"
-                                  class="text-blue-600"
-                                  [disabled]="bat.isOut"
-                                />
-                                <span class="text-xs" [class.text-gray-300]="bat.isOut">○</span>
-                              </label>
-                            </div>
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            @if (!bat.isNew || bat.runs > 0 || bat.balls > 0 || bat.isOut) {
-                              <button 
-                                (click)="markBatsmanForRemoval(bat)"
-                                [disabled]="bat.isStriker || bat.isNonStriker"
-                                class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                                title="Remove batsman"
-                              >
-                                🗑
-                              </button>
-                            }
-                          </td>
-                        </tr>
-                      }
-                    }
-                  </tbody>
-                  <tfoot class="bg-gray-50">
-                    <tr>
-                      <td class="px-3 py-2 font-medium text-gray-600">Batsman Total</td>
-                      <td class="px-3 py-2 text-center font-bold">{{ calculateBatsmanTotal() }}</td>
-                      <td colspan="7"></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-
-            <!-- Bowling Stats -->
-            <div class="bg-white rounded-lg shadow mb-6 overflow-hidden">
-              <div class="p-4 border-b flex justify-between items-center bg-blue-50">
-                <h3 class="font-semibold text-gray-800">🎯 Bowling (Full Playing XI)</h3>
-                <div class="flex items-center gap-4">
-                  <span class="text-sm text-gray-600">
-                    Current: {{ getCurrentBowlerName() }}
-                  </span>
-                </div>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead class="bg-gray-50">
-                    <tr>
-                      <th class="px-3 py-2 text-left font-medium text-gray-600">Player</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-20">Overs</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-14">M</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-16">Runs</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-14">W</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-14">Wd</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-14">NB</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-24">Bowling</th>
-                      <th class="px-3 py-2 text-center font-medium text-gray-600 w-16">🗑</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y">
-                    @for (bowl of inningsEdit.bowlingStats; track bowl.playerId) {
-                      @if (!bowl.toRemove) {
-                        <tr 
-                          [class.bg-blue-50]="bowl.isBowling"
-                          [class.bg-gray-50]="bowl.isNew && !bowl.isBowling"
-                        >
-                          <td class="px-3 py-2 font-medium" [class.text-gray-400]="bowl.isNew && bowl.overs === '0.0' && !bowl.isBowling">
-                            {{ bowl.playerName }}
-                            @if (bowl.isNew && bowl.overs === '0.0' && !bowl.isBowling) {
-                              <span class="text-xs text-gray-400 ml-1">(DNB)</span>
-                            }
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="text" 
-                              [(ngModel)]="bowl.overs"
-                              (change)="markDirty()"
-                              class="w-16 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="0.0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="number" 
-                              [(ngModel)]="bowl.maidens"
-                              (change)="markDirty()"
-                              class="w-12 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              min="0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="number" 
-                              [(ngModel)]="bowl.runs"
-                              (change)="markDirty()"
-                              class="w-14 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              min="0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="number" 
-                              [(ngModel)]="bowl.wickets"
-                              (change)="markDirty()"
-                              class="w-12 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              min="0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="number" 
-                              [(ngModel)]="bowl.wides"
-                              (change)="markDirty()"
-                              class="w-12 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              min="0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="number" 
-                              [(ngModel)]="bowl.noBalls"
-                              (change)="markDirty()"
-                              class="w-12 px-2 py-1 text-center border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              min="0"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <input 
-                              type="radio" 
-                              [name]="'currentBowler'"
-                              [checked]="bowl.isBowling"
-                              (change)="setCurrentBowler(bowl.playerId)"
-                              class="text-blue-600"
-                            />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            @if (!bowl.isNew || bowl.overs !== '0.0' || bowl.runs > 0 || bowl.wickets > 0) {
-                              <button 
-                                (click)="markBowlerForRemoval(bowl)"
-                                [disabled]="bowl.isBowling"
-                                class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                                title="Remove bowler"
-                              >
-                                🗑
-                              </button>
-                            }
-                          </td>
-                        </tr>
-                      }
-                    }
-                  </tbody>
-                  <tfoot class="bg-gray-50">
-                    <tr>
-                      <td class="px-3 py-2 font-medium text-gray-600">Bowler Total</td>
-                      <td class="px-3 py-2 text-center font-bold">{{ calculateBowlerOversTotal() }}</td>
-                      <td class="px-3 py-2 text-center font-bold">{{ calculateBowlerMaidensTotal() }}</td>
-                      <td class="px-3 py-2 text-center font-bold">{{ calculateBowlerRunsTotal() }}</td>
-                      <td class="px-3 py-2 text-center font-bold">{{ calculateBowlerWicketsTotal() }}</td>
-                      <td colspan="4"></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-
-            <!-- Validation -->
-            <div class="bg-white rounded-lg shadow mb-6 p-4">
-              <h3 class="font-semibold text-gray-800 mb-3">✓ Quick Check</h3>
-              <div class="space-y-2 text-sm">
-                @if (calculateBatsmanTotal() + calculateTotalExtras() === inningsEdit.totalRuns) {
-                  <div class="text-green-600">
-                    ✓ Batsman ({{ calculateBatsmanTotal() }}) + Extras ({{ calculateTotalExtras() }}) = {{ inningsEdit.totalRuns }}
-                  </div>
-                } @else {
-                  <div class="text-red-600">
-                    ✗ Batsman ({{ calculateBatsmanTotal() }}) + Extras ({{ calculateTotalExtras() }}) = {{ calculateBatsmanTotal() + calculateTotalExtras() }} ≠ Total ({{ inningsEdit.totalRuns }})
-                  </div>
-                }
-
-                @if (countDismissedBatsmen() === inningsEdit.totalWickets) {
-                  <div class="text-green-600">
-                    ✓ Dismissed batsmen ({{ countDismissedBatsmen() }}) = Wickets ({{ inningsEdit.totalWickets }})
-                  </div>
-                } @else {
-                  <div class="text-amber-600">
-                    ⚠ Dismissed batsmen ({{ countDismissedBatsmen() }}) ≠ Wickets ({{ inningsEdit.totalWickets }})
-                  </div>
-                }
-
-                @if (hasStrikerAndNonStriker()) {
-                  <div class="text-green-600">
-                    ✓ Striker and Non-Striker are set
-                  </div>
-                } @else {
-                  <div class="text-amber-600">
-                    ⚠ Striker or Non-Striker not set
-                  </div>
-                }
-              </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="bg-white rounded-lg shadow p-4 sticky bottom-4">
-              <div class="flex justify-between items-center">
-                <div>
-                  @if (isDirty) {
-                    <span class="text-amber-600 text-sm font-medium">
-                      ⚠ You have unsaved changes
-                    </span>
-                  }
-                </div>
-                <div class="flex gap-3">
-                  <button 
-                    (click)="discardChanges()"
-                    [disabled]="!isDirty || saving"
-                    class="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
-                  >
-                    Discard Changes
-                  </button>
-                  <button 
-                    (click)="saveAllChanges()"
-                    [disabled]="!isDirty || saving"
-                    class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
-                  >
-                    {{ saving ? 'Saving...' : '💾 Save All Changes' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          }
-
-          <!-- Error Display -->
-          @if (error) {
-            <div class="fixed bottom-20 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg max-w-md">
-              {{ error }}
-              <button (click)="error = ''" class="ml-2 font-bold">×</button>
-            </div>
-          }
-
-          <!-- Toast Notification -->
-          @if (toastMessage) {
-            <div class="fixed top-20 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
-              <span>↻</span>
-              <span>{{ toastMessage }}</span>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- Add Batsman Modal -->
-      @if (showAddBatsmanModal) {
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
-            <div class="p-4 border-b">
-              <h3 class="text-lg font-semibold">Add Batsman</h3>
-            </div>
-            <div class="p-4">
-              <p class="text-sm text-gray-500 mb-4">Select a player to add to batting stats</p>
-              <div class="space-y-2">
-                @for (player of getAvailableBatsmenToAdd(); track player.playerId) {
-                  <button 
-                    (click)="addBatsman(player.playerId, player.name)"
-                    class="w-full p-3 text-left border rounded-lg hover:bg-green-50 hover:border-green-500"
-                  >
-                    {{ player.name }}
-                  </button>
-                }
-              </div>
-              @if (getAvailableBatsmenToAdd().length === 0) {
-                <p class="text-gray-500 text-center py-4">All players already have batting stats</p>
-              }
-            </div>
-            <div class="p-4 border-t flex justify-end">
-              <button 
-                (click)="showAddBatsmanModal = false"
-                class="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
             </div>
           </div>
         </div>
       }
 
-      <!-- Add Bowler Modal -->
-      @if (showAddBowlerModal) {
+      <!-- Squad Validation Modal -->
+      @if (showSquadValidationModal && squadValidation && !squadValidation.isValid) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
-            <div class="p-4 border-b">
-              <h3 class="text-lg font-semibold">Add Bowler</h3>
+          <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
+              <h3 class="text-lg font-semibold text-amber-600">⚠ Squad Validation Issues</h3>
+              <button (click)="showSquadValidationModal = false" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
             </div>
-            <div class="p-4">
-              <p class="text-sm text-gray-500 mb-4">Select a player to add to bowling stats</p>
-              <div class="space-y-2">
-                @for (player of getAvailableBowlersToAdd(); track player.playerId) {
-                  <button 
-                    (click)="addBowler(player.playerId, player.name)"
-                    class="w-full p-3 text-left border rounded-lg hover:bg-blue-50 hover:border-blue-500"
-                  >
-                    {{ player.name }}
-                  </button>
-                }
-              </div>
-              @if (getAvailableBowlersToAdd().length === 0) {
-                <p class="text-gray-500 text-center py-4">All players already have bowling stats</p>
+            <div class="flex-1 overflow-auto p-4 space-y-3">
+              @for (mismatch of squadValidation.mismatches; track mismatch.espnName) {
+                <div class="p-3 bg-red-50 border border-red-100 rounded-lg">
+                  <div class="flex items-center gap-2 flex-wrap text-sm">
+                    <span class="text-slate-600">ESPN:</span>
+                    <span class="font-medium">{{ mismatch.espnName }}</span>
+                    <span class="text-slate-400">→</span>
+                    @if (mismatch.matchedTo) {
+                      <span class="text-amber-600">{{ mismatch.matchedTo }}</span>
+                      <span class="text-xs text-slate-400">({{ mismatch.matchScore }}%)</span>
+                    } @else {
+                      <span class="text-red-600">Not found</span>
+                    }
+                  </div>
+                </div>
               }
             </div>
-            <div class="p-4 border-t flex justify-end">
-              <button 
-                (click)="showAddBowlerModal = false"
-                class="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
+            <div class="p-4 border-t border-slate-200 bg-slate-50">
+              <p class="text-xs text-slate-500">
+                Fix squad issues before syncing to avoid wrong player assignments.
+              </p>
             </div>
           </div>
         </div>
@@ -917,16 +887,16 @@ interface InningsEdit {
       <!-- Dismissal Editor Modal -->
       @if (showDismissalModal && editingDismissal) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div class="p-4 border-b">
-              <h3 class="text-lg font-semibold">Edit Dismissal - {{ editingDismissal.playerName }}</h3>
+          <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div class="p-4 border-b border-slate-200">
+              <h3 class="text-lg font-semibold text-slate-800">Edit Dismissal - {{ editingDismissal.playerName }}</h3>
             </div>
             <div class="p-4 space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Dismissal Type</label>
+                <label class="block text-sm font-medium text-slate-600 mb-2">Dismissal Type</label>
                 <select 
                   [(ngModel)]="editingDismissal.dismissalType"
-                  class="w-full px-3 py-2 border rounded-lg"
+                  class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="bowled">Bowled</option>
                   <option value="caught">Caught</option>
@@ -939,10 +909,10 @@ interface InningsEdit {
 
               @if (needsBowlerForDismissal(editingDismissal.dismissalType)) {
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Bowler</label>
+                  <label class="block text-sm font-medium text-slate-600 mb-2">Bowler</label>
                   <select 
                     [(ngModel)]="editingDismissal.dismissalBowlerId"
-                    class="w-full px-3 py-2 border rounded-lg"
+                    class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   >
                     <option [value]="null">Select Bowler</option>
                     @for (bowl of inningsEdit?.bowlingStats || []; track bowl.playerId) {
@@ -954,10 +924,10 @@ interface InningsEdit {
 
               @if (needsFielderForDismissal(editingDismissal.dismissalType)) {
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Fielder</label>
+                  <label class="block text-sm font-medium text-slate-600 mb-2">Fielder</label>
                   <select 
                     [(ngModel)]="editingDismissal.dismissalFielderId"
-                    class="w-full px-3 py-2 border rounded-lg"
+                    class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   >
                     <option [value]="null">Select Fielder</option>
                     @for (player of getBowlingTeamPlayers(); track player.playerId) {
@@ -967,10 +937,10 @@ interface InningsEdit {
                 </div>
               }
             </div>
-            <div class="p-4 border-t flex justify-end gap-3">
+            <div class="p-4 border-t border-slate-200 flex justify-end gap-3">
               <button 
                 (click)="closeDismissalEditor()"
-                class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                class="px-4 py-2 text-slate-600 hover:text-slate-800"
               >
                 Cancel
               </button>
@@ -988,29 +958,25 @@ interface InningsEdit {
       <!-- Add to Squad Modal -->
       @if (showAddToSquadModal) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden flex flex-col">
-            <div class="p-4 border-b flex justify-between items-center">
-              <h3 class="text-lg font-semibold">Add Player to {{ addToSquadTeam === 'team1' ? match?.team1?.name : match?.team2?.name }} Squad</h3>
-              <button (click)="closeAddToSquadModal()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+          <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+              <h3 class="text-lg font-semibold text-slate-800">Add Player to {{ addToSquadTeam === 'team1' ? match?.team1?.name : match?.team2?.name }}</h3>
+              <button (click)="closeAddToSquadModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
             </div>
-            <div class="p-4 border-b">
+            <div class="p-4 border-b border-slate-100">
               <input 
                 type="text"
                 [(ngModel)]="squadPlayerSearch"
                 placeholder="Search players..."
-                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div class="flex-1 overflow-y-auto p-4">
               @if (loadingCountryPlayers) {
-                <div class="text-center text-gray-500 py-8">Loading players...</div>
+                <div class="text-center text-slate-400 py-8">Loading players...</div>
               } @else if (getFilteredCountryPlayers().length === 0) {
-                <div class="text-center text-gray-500 py-8">
-                  @if (squadPlayerSearch) {
-                    No players match "{{ squadPlayerSearch }}"
-                  } @else {
-                    No players available to add
-                  }
+                <div class="text-center text-slate-400 py-8">
+                  {{ squadPlayerSearch ? 'No players match "' + squadPlayerSearch + '"' : 'No players available' }}
                 </div>
               } @else {
                 <div class="space-y-2">
@@ -1018,24 +984,19 @@ interface InningsEdit {
                     <button 
                       (click)="addPlayerToSquad(player._id)"
                       [disabled]="squadUpdating"
-                      class="w-full p-3 text-left border rounded-lg hover:bg-blue-50 hover:border-blue-500 disabled:opacity-50 flex justify-between items-center"
+                      class="w-full p-3 text-left border border-slate-200 rounded-lg hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-50 flex justify-between items-center transition-colors"
                     >
                       <div>
-                        <span class="font-medium">{{ player.name }}</span>
+                        <span class="font-medium text-slate-800">{{ player.name }}</span>
                         @if (player.role) {
-                          <span class="text-xs text-gray-500 ml-2">({{ player.role }})</span>
+                          <span class="text-xs text-slate-500 ml-2">({{ player.role }})</span>
                         }
                       </div>
-                      <span class="text-blue-600">+ Add</span>
+                      <span class="text-emerald-600 text-sm">+ Add</span>
                     </button>
                   }
                 </div>
               }
-            </div>
-            <div class="p-4 border-t bg-gray-50">
-              <p class="text-xs text-gray-500">
-                Showing {{ getFilteredCountryPlayers().length }} player(s) not already in squad
-              </p>
             </div>
           </div>
         </div>
@@ -1053,9 +1014,14 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   
   selectedInningsIndex = 0;
   inningsEdit: InningsEdit | null = null;
-  originalInningsData: string = ''; // JSON snapshot for dirty checking
+  originalInningsData: string = '';
   isDirty = false;
   lastUpdateTime = new Date();
+  
+  // UI State
+  activeTab: 'batting' | 'bowling' = 'batting';
+  showTotalsModal = false;
+  showSquadValidationModal = false;
   
   // SSE
   private eventSource: EventSource | null = null;
@@ -1079,6 +1045,19 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   // Cache for player data
   private battingTeamPlayers: Array<{playerId: string, name: string}> = [];
   private bowlingTeamPlayers: Array<{playerId: string, name: string}> = [];
+
+  // Squad Management
+  showSquadManagement = false;
+  squadUpdating = false;
+  team1SquadList: Array<{playerId: string, name: string, battingOrder: number}> = [];
+  team2SquadList: Array<{playerId: string, name: string, battingOrder: number}> = [];
+  
+  // Add to Squad Modal
+  showAddToSquadModal = false;
+  addToSquadTeam: 'team1' | 'team2' = 'team1';
+  squadPlayerSearch = '';
+  countryPlayers: Player[] = [];
+  loadingCountryPlayers = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -1113,7 +1092,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           this.cacheTeamPlayers();
           this.loadInningsData();
           
-          // Auto-validate squad if ESPN URL exists and not yet validated
           if (this.match.espnUrl && !this.autoValidateTriggered) {
             this.autoValidateTriggered = true;
             this.validateSquad();
@@ -1145,7 +1123,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
       ? this.match.squads?.team2
       : this.match.squads?.team1;
 
-    // Include ALL players in squad (not just Playing XI)
     this.battingTeamPlayers = (battingSquad || [])
       .map((p: any) => ({
         playerId: (p.player?._id || p.player)?.toString(),
@@ -1171,7 +1148,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     const nonStrikerId = (innings.currentBatsmen?.nonStriker?._id || innings.currentBatsmen?.nonStriker)?.toString();
     const currentBowlerId = (innings.currentBowler?._id || innings.currentBowler)?.toString();
 
-    // Build batting stats edit - include ALL playing XI players
     const existingBattingStatsMap = new Map<string, any>();
     (innings.battingStats || []).forEach((bs: any) => {
       const playerId = (bs.player?._id || bs.player)?.toString();
@@ -1181,7 +1157,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     const battingStats: BattingStatEdit[] = this.battingTeamPlayers.map(player => {
       const bs = existingBattingStatsMap.get(player.playerId);
       if (bs) {
-        // Player has existing batting stats
         return {
           playerId: player.playerId,
           playerName: player.name,
@@ -1197,7 +1172,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           isNonStriker: player.playerId === nonStrikerId
         };
       } else {
-        // Player hasn't batted yet - show with zero stats
         return {
           playerId: player.playerId,
           playerName: player.name,
@@ -1211,12 +1185,11 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           dismissalFielderId: null,
           isStriker: player.playerId === strikerId,
           isNonStriker: player.playerId === nonStrikerId,
-          isNew: true  // Mark as new - will be added to batting stats on save if modified
+          isNew: true
         };
       }
     });
 
-    // Build bowling stats edit - include ALL playing XI players from bowling team
     const existingBowlingStatsMap = new Map<string, any>();
     (innings.bowlingStats || []).forEach((bs: any) => {
       const playerId = (bs.player?._id || bs.player)?.toString();
@@ -1226,7 +1199,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     const bowlingStats: BowlingStatEdit[] = this.bowlingTeamPlayers.map(player => {
       const bs = existingBowlingStatsMap.get(player.playerId);
       if (bs) {
-        // Player has existing bowling stats
         const overs = bs.overs || 0;
         const balls = bs.balls || 0;
         return {
@@ -1241,7 +1213,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           isBowling: player.playerId === currentBowlerId
         };
       } else {
-        // Player hasn't bowled yet - show with zero stats
         return {
           playerId: player.playerId,
           playerName: player.name,
@@ -1252,7 +1223,7 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           wides: 0,
           noBalls: 0,
           isBowling: player.playerId === currentBowlerId,
-          isNew: true  // Mark as new - will be added to bowling stats on save if modified
+          isNew: true
         };
       }
     });
@@ -1276,14 +1247,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     this.lastUpdateTime = new Date();
   }
 
-  private getPlayerNameById(playerId: string): string {
-    const batPlayer = this.battingTeamPlayers.find(p => p.playerId === playerId);
-    if (batPlayer) return batPlayer.name;
-    const bowlPlayer = this.bowlingTeamPlayers.find(p => p.playerId === playerId);
-    if (bowlPlayer) return bowlPlayer.name;
-    return 'Unknown';
-  }
-
   // SSE Setup
   private setupSSE(): void {
     this.closeSSE();
@@ -1292,16 +1255,13 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     
     this.eventSource.addEventListener('score-update', (event: any) => {
       const data = JSON.parse(event.data);
-      // Only show toast if we're not the ones who made the change
       if (!data.bulkUpdate) {
         this.showToast('Score updated on scoring screen');
-        // Refresh match data but don't overwrite if dirty
         this.refreshMatchData();
       }
     });
 
     this.eventSource.onerror = () => {
-      // Reconnect after 5 seconds
       setTimeout(() => this.setupSSE(), 5000);
     };
   }
@@ -1314,10 +1274,7 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   }
 
   private refreshMatchData(): void {
-    if (this.isDirty) {
-      // Don't overwrite unsaved changes
-      return;
-    }
+    if (this.isDirty) return;
     
     this.matchService.getById(this.matchId).subscribe({
       next: (response: ApiResponse<Match>) => {
@@ -1370,10 +1327,17 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     return bowler?.playerName || 'None';
   }
 
+  getBattingRowClass(bat: BattingStatEdit): string {
+    if (bat.isStriker) return 'bg-emerald-50/70';
+    if (bat.isNonStriker) return 'bg-blue-50/50';
+    if (bat.isOut) return 'bg-red-50/50';
+    if (bat.isNew && bat.runs === 0 && bat.balls === 0) return 'bg-slate-50/50';
+    return '';
+  }
+
   // Calculations
   calculateBatsmanTotal(): number {
     if (!this.inningsEdit) return 0;
-    // Sum up runs from all batsmen (including 'new' players who have runs)
     return this.inningsEdit.battingStats
       .filter(b => !b.toRemove)
       .reduce((sum, b) => sum + (b.runs || 0), 0);
@@ -1448,7 +1412,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
       bat.dismissalFielderId = null;
     }
     
-    // If marking a current batsman as out, clear their strike position
     if (bat.isOut) {
       bat.isStriker = false;
       bat.isNonStriker = false;
@@ -1461,7 +1424,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     if (!this.inningsEdit) return;
     this.inningsEdit.battingStats.forEach(b => {
       b.isStriker = b.playerId === playerId;
-      // Can't be both striker and non-striker
       if (b.isStriker && b.isNonStriker) {
         b.isNonStriker = false;
       }
@@ -1473,7 +1435,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     if (!this.inningsEdit) return;
     this.inningsEdit.battingStats.forEach(b => {
       b.isNonStriker = b.playerId === playerId;
-      // Can't be both striker and non-striker
       if (b.isNonStriker && b.isStriker) {
         b.isStriker = false;
       }
@@ -1504,70 +1465,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
       return;
     }
     bowl.toRemove = true;
-    this.markDirty();
-  }
-
-  // Add player modals
-  openAddBatsmanModal(): void {
-    this.showAddBatsmanModal = true;
-  }
-
-  openAddBowlerModal(): void {
-    this.showAddBowlerModal = true;
-  }
-
-  getAvailableBatsmenToAdd(): Array<{playerId: string, name: string}> {
-    if (!this.inningsEdit) return [];
-    const existingIds = this.inningsEdit.battingStats
-      .filter(b => !b.toRemove)
-      .map(b => b.playerId);
-    return this.battingTeamPlayers.filter(p => !existingIds.includes(p.playerId));
-  }
-
-  getAvailableBowlersToAdd(): Array<{playerId: string, name: string}> {
-    if (!this.inningsEdit) return [];
-    const existingIds = this.inningsEdit.bowlingStats
-      .filter(b => !b.toRemove)
-      .map(b => b.playerId);
-    return this.bowlingTeamPlayers.filter(p => !existingIds.includes(p.playerId));
-  }
-
-  addBatsman(playerId: string, name: string): void {
-    if (!this.inningsEdit) return;
-    this.inningsEdit.battingStats.push({
-      playerId,
-      playerName: name,
-      runs: 0,
-      balls: 0,
-      fours: 0,
-      sixes: 0,
-      isOut: false,
-      dismissalType: null,
-      dismissalBowlerId: null,
-      dismissalFielderId: null,
-      isStriker: false,
-      isNonStriker: false,
-      isNew: true
-    });
-    this.showAddBatsmanModal = false;
-    this.markDirty();
-  }
-
-  addBowler(playerId: string, name: string): void {
-    if (!this.inningsEdit) return;
-    this.inningsEdit.bowlingStats.push({
-      playerId,
-      playerName: name,
-      overs: '0.0',
-      maidens: 0,
-      runs: 0,
-      wickets: 0,
-      wides: 0,
-      noBalls: 0,
-      isBowling: false,
-      isNew: true
-    });
-    this.showAddBowlerModal = false;
     this.markDirty();
   }
 
@@ -1619,14 +1516,10 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     this.saving = true;
     this.error = '';
 
-    // Build update payload
-    // For batting stats: include existing players + new players who have been modified
     const battingStats = this.inningsEdit.battingStats
       .filter(b => !b.toRemove)
       .filter(b => {
-        // Include if not new (existing player), or if new AND has stats or is currently batting
         if (!b.isNew) return true;
-        // New players only included if they have stats, are out, or are striker/non-striker
         return b.runs > 0 || b.balls > 0 || b.isOut || b.isStriker || b.isNonStriker;
       })
       .map(b => ({
@@ -1644,13 +1537,10 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         isNew: b.isNew
       }));
 
-    // For bowling stats: include existing players + new players who have been modified
     const bowlingStats = this.inningsEdit.bowlingStats
       .filter(b => !b.toRemove)
       .filter(b => {
-        // Include if not new (existing player), or if new AND has stats or is currently bowling
         if (!b.isNew) return true;
-        // New bowlers only included if they have stats or are the current bowler
         return b.overs !== '0.0' || b.runs > 0 || b.wickets > 0 || b.wides > 0 || b.noBalls > 0 || b.isBowling;
       })
       .map(b => ({
@@ -1723,7 +1613,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         if (response.success && this.match) {
           this.match.espnUrl = this.espnUrl;
           this.showToast('ESPN URL saved');
-          // Auto-validate squad after saving URL
           this.validateSquad();
         }
         this.savingEspnUrl = false;
@@ -1735,7 +1624,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Squad Validation
   validateSquad(): void {
     if (!this.match?.espnUrl) {
       this.error = 'No ESPN URL set for this match';
@@ -1751,16 +1639,12 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           this.squadValidation = response.data;
           
           if (!response.data.isValid) {
-            // Show toast for issues
             const issues = response.data.mismatches.length;
-            const warnings = response.data.warnings.length;
             if (issues > 0) {
-              this.showToast(`⚠️ ${issues} squad issue(s) found - check below`);
-            } else if (warnings > 0) {
-              this.showToast(`⚠️ ${warnings} warning(s) found`);
+              this.showToast(`⚠️ ${issues} squad issue(s) found`);
             }
           } else {
-            this.showToast('✓ Squad validated successfully');
+            this.showToast('✓ Squad validated');
           }
         }
         this.validatingSquad = false;
@@ -1768,13 +1652,8 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Squad validation error:', err);
         this.validatingSquad = false;
-        // Don't show error toast for validation - it's a background check
       }
     });
-  }
-
-  dismissValidation(): void {
-    this.squadValidation = null;
   }
 
   openEspnSyncModal(): void {
@@ -1792,24 +1671,10 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   onEspnSyncComplete(): void {
     this.showEspnSyncModal = false;
     this.showToast('Match data synced from ESPN');
-    // Reload match data
     this.loadMatch();
   }
 
-  // Squad Management
-  showSquadManagement = false;
-  squadUpdating = false;
-  team1SquadList: Array<{playerId: string, name: string, battingOrder: number}> = [];
-  team2SquadList: Array<{playerId: string, name: string, battingOrder: number}> = [];
-  
-  // Add to Squad Modal
-  showAddToSquadModal = false;
-  addToSquadTeam: 'team1' | 'team2' = 'team1';
-  squadPlayerSearch = '';
-  countryPlayers: Player[] = [];
-  loadingCountryPlayers = false;
-
-  // Build squad lists from match data
+  // Squad Management Methods
   private buildSquadLists(): void {
     if (!this.match?.squads) return;
     
@@ -1826,15 +1691,12 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     })).sort((a: any, b: any) => a.battingOrder - b.battingOrder);
   }
 
-  // Handle drag-drop reordering
   onSquadDrop(event: CdkDragDrop<any[]>, team: 'team1' | 'team2'): void {
     const squadList = team === 'team1' ? this.team1SquadList : this.team2SquadList;
     
     if (event.previousIndex === event.currentIndex) return;
     
     moveItemInArray(squadList, event.previousIndex, event.currentIndex);
-    
-    // Update batting orders and save to backend
     this.saveSquadOrder(team, squadList);
   }
 
@@ -1843,7 +1705,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     
     this.squadUpdating = true;
     
-    // Build the reordered squad array with new batting orders
     const reorderedSquad = squadList.map((p, index) => ({
       playerId: p.playerId,
       battingOrder: index + 1
@@ -1861,7 +1722,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           this.loadInningsData();
         } else {
           this.error = response.message || 'Failed to save order';
-          // Revert on error
           this.buildSquadLists();
         }
         this.squadUpdating = false;
@@ -1882,8 +1742,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     return this.team2SquadList;
   }
 
-
-  // Add to Squad Modal Methods
   openAddToSquadModal(team: 'team1' | 'team2'): void {
     this.addToSquadTeam = team;
     this.squadPlayerSearch = '';
@@ -1906,7 +1764,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     if (!countryId) return;
 
     this.loadingCountryPlayers = true;
-    // Convert match gender format ('men'/'women') to player gender format ('M'/'F')
     const playerGender: 'M' | 'F' = this.match.gender === 'men' ? 'M' : 'F';
     this.playerService.getAll({ 
       country: countryId.toString(),
@@ -1954,7 +1811,6 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           this.buildSquadLists();
           this.cacheTeamPlayers();
           this.loadInningsData();
-          // Refresh the modal list
           this.loadCountryPlayers();
         } else {
           this.error = response.message || 'Failed to add player';
