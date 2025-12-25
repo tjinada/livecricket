@@ -639,6 +639,60 @@ export class EspnService {
       { espnUrl }
     );
   }
+
+  // ============================================
+  // PLAYER SYNC FROM ESPN
+  // ============================================
+
+  /**
+   * Preview players from ESPN for a country
+   * Shows counts and sample players before actual sync
+   */
+  previewPlayerSync(countryId: string): Observable<ApiResponse<EspnPlayerSyncPreview>> {
+    return this.http.get<ApiResponse<EspnPlayerSyncPreview>>(`${this.apiUrl}/players/${countryId}/preview`);
+  }
+
+  /**
+   * Sync players from ESPN for a country
+   * Fetches all players and imports new ones (skips existing)
+   */
+  syncPlayersFromEspn(countryId: string): Observable<ApiResponse<EspnPlayerSyncResult>> {
+    return this.http.post<ApiResponse<EspnPlayerSyncResult>>(`${this.apiUrl}/players/${countryId}/sync`, {});
+  }
+}
+
+// ============================================
+// PLAYER SYNC TYPES
+// ============================================
+
+export interface EspnPlayerSyncPreview {
+  country: {
+    _id: string;
+    name: string;
+    code: string;
+    espnTeamId: number;
+  };
+  espnData: {
+    total: number;
+    totalPages: number;
+    estimatedMen: number;
+    estimatedWomen: number;
+    samplePlayers: { name: string; gender: string }[];
+  };
+  existingPlayers: {
+    men: number;
+    women: number;
+    total: number;
+  };
+}
+
+export interface EspnPlayerSyncResult {
+  total: number;
+  created: number;
+  skipped: number;
+  menCreated: number;
+  womenCreated: number;
+  errors: { name: string; reason: string }[];
 }
 
 // ============================================

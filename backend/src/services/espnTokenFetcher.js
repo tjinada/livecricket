@@ -620,6 +620,160 @@ function transformSquadsData(capturedData) {
   return result;
 }
 
+/**
+ * Fetch players from ESPN player search API
+ * 
+ * ESPN API endpoint: /v1/pages/player/search
+ * Supports pagination (40 records per page)
+ */
+/**
+ * Fetch players for a team from ESPN player search API
+ * Uses the exact URL format that works: /v1/pages/player/search
+ */
+async function fetchPlayersForTeam(espnTeamId, options = {}) {
+  const { page = 1 } = options;
+  
+  try {
+    // Build URL with exact parameters that work
+    const url = new URL('https://hs-consumer-api.espncricinfo.com/v1/pages/player/search');
+    
+    // These exact parameters work - order matters for some APIs
+    url.searchParams.set('mode', 'BOTH');
+    url.searchParams.set('page', page.toString());
+    url.searchParams.set('records', '40');
+    url.searchParams.set('filterActive', 'true');
+    url.searchParams.set('filterTeamId', espnTeamId.toString());
+    url.searchParams.set('filterFormatLevel', 'INTERNATIONAL');
+    url.searchParams.set('sort', 'ALPHA_ASC');
+    
+    const pathWithQuery = url.pathname + url.search;
+    const token = generateToken(pathWithQuery);
+    
+    console.log(`Fetching players page ${page} for team ${espnTeamId}...`);
+    console.log(`URL: ${url.toString()}`);
+    console.log(`Token: ${token.substring(0, 40)}...`);
+    
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Origin': 'https://www.espncricinfo.com',
+        'Referer': 'https://www.espncricinfo.com/',
+        'x-hsci-auth-token': token,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+      }
+    });
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.log(`API response (${response.status}):`, text.substring(0, 500));
+      throw new Error(`API call failed: ${response.status} ${response.statusText} - ${text.substring(0, 200)}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching players for team ${espnTeamId}:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Fetch all players for a team
+ * Uses player search API with pagination
+ * Returns preview data (counts) or full data based on previewOnly flag
+ */
+async function fetchAllPlayersForTeam(espnTeamId, options = {}) {
+  const { previewOnly = false } = options;
+  const recordsPerPage = 40;
+  
+  try {
+    // Fetch first page to get total count
+    const firstResponse = await fetchPlayersForTeam(espnTeamId, { page: 1 });
+    
+    // Debug: log response structure
+    console.log('ESPN API response keys:', Object.keys(firstResponse));
+    
+    // Extract players from response - try different possible structures
+    const extractPlayers = (response) => {
+      if (response.results && Array.isArray(response.results)) {
+        return response.results;
+      } else if (response.players && Array.isArray(response.players)) {
+        return response.players;
+      } else if (response.content?.results) {
+        return response.content.results;
+      }
+      return [];
+    };
+    
+    let allPlayers = extractPlayers(firstResponse);
+    const total = firstResponse.total || allPlayers.length;
+    const totalPages = Math.ceil(total / recordsPerPage);
+    
+    console.log(`Found ${total} total players across ${totalPages} pages (first page: ${allPlayers.length})`);
+    
+    // Count by gender
+    const countGenders = (players) => {
+      const men = players.filter(p => p.gender === 'M').length;
+      const women = players.filter(p => p.gender === 'F').length;
+      return { men, women };
+    };
+    
+    if (previewOnly) {
+      const genderCounts = countGenders(allPlayers);
+      // Estimate total counts based on first page ratio
+      const ratio = total / allPlayers.length || 1;
+      return {
+        success: true,
+        preview: true,
+        total,
+        totalPages,
+        estimatedMen: Math.round(genderCounts.men * ratio),
+        estimatedWomen: Math.round(genderCounts.women * ratio),
+        samplePlayers: allPlayers.slice(0, 5).map(p => ({
+          name: p.longName || p.name || p.title,
+          gender: p.gender
+        }))
+      };
+    }
+    
+    // Fetch remaining pages
+    for (let page = 2; page <= totalPages; page++) {
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      try {
+        const pageResponse = await fetchPlayersForTeam(espnTeamId, { page });
+        const pagePlayers = extractPlayers(pageResponse);
+        allPlayers = allPlayers.concat(pagePlayers);
+        console.log(`Page ${page}/${totalPages}: ${pagePlayers.length} players (total: ${allPlayers.length})`);
+      } catch (pageError) {
+        console.warn(`Error fetching page ${page}:`, pageError.message);
+      }
+    }
+    
+    const genderCounts = countGenders(allPlayers);
+    
+    return {
+      success: true,
+      preview: false,
+      total: allPlayers.length,
+      totalPages,
+      men: genderCounts.men,
+      women: genderCounts.women,
+      players: allPlayers
+    };
+    
+  } catch (error) {
+    console.error('Error fetching all players:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 module.exports = {
   generateToken,
   escapeEarly,
@@ -632,5 +786,7 @@ module.exports = {
   transformSquadsData,
   parseOversData,
   extractMatchIds,
+  fetchPlayersForTeam,
+  fetchAllPlayersForTeam,
   AKAMAI_CONFIG
 };

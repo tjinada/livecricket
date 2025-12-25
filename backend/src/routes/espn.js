@@ -2286,6 +2286,259 @@ function parseEspnJson(json) {
   return result;
 }
 
+// ============================================
+// PLAYER SYNC ROUTES
+// ============================================
+
+const Player = require('../models/Player');
+
+/**
+ * GET /api/espn/players/:countryId/preview
+ * Preview players that would be fetched from ESPN for a country
+ */
+router.get('/players/:countryId/preview', auth, async (req, res, next) => {
+  try {
+    const { countryId } = req.params;
+    
+    // Get country with ESPN team ID
+    const country = await Country.findById(countryId);
+    if (!country) {
+      return res.status(404).json({
+        success: false,
+        message: 'Country not found'
+      });
+    }
+    
+    // Get ESPN team ID (from explicit field or code mapping)
+    const espnTeamId = Country.getEspnTeamId(country);
+    
+    if (!espnTeamId) {
+      return res.status(400).json({
+        success: false,
+        message: `No ESPN team ID mapping found for country code: ${country.code}. You can set it manually in the country settings.`,
+        supportedCodes: Object.keys(Country.ESPN_TEAM_ID_MAP)
+      });
+    }
+    
+    console.log(`Fetching ESPN players preview for ${country.name} (ESPN ID: ${espnTeamId})`);
+    
+    // Fetch preview from ESPN
+    const result = await espnTokenFetcher.fetchAllPlayersForTeam(espnTeamId, { previewOnly: true });
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error || 'Failed to fetch players from ESPN'
+      });
+    }
+    
+    // Get existing player counts for this country
+    const existingCounts = await Player.aggregate([
+      { $match: { country: country._id } },
+      { $group: { _id: '$gender', count: { $sum: 1 } } }
+    ]);
+    
+    const existingMen = existingCounts.find(c => c._id === 'M')?.count || 0;
+    const existingWomen = existingCounts.find(c => c._id === 'F')?.count || 0;
+    
+    res.json({
+      success: true,
+      data: {
+        country: {
+          _id: country._id,
+          name: country.name,
+          code: country.code,
+          espnTeamId
+        },
+        espnData: {
+          total: result.total,
+          totalPages: result.totalPages,
+          estimatedMen: result.estimatedMen,
+          estimatedWomen: result.estimatedWomen,
+          samplePlayers: result.samplePlayers
+        },
+        existingPlayers: {
+          men: existingMen,
+          women: existingWomen,
+          total: existingMen + existingWomen
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Player preview error:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/espn/players/:countryId/sync
+ * Fetch all players from ESPN and import them (skipping existing)
+ */
+router.post('/players/:countryId/sync', auth, async (req, res, next) => {
+  try {
+    const { countryId } = req.params;
+    
+    // Get country with ESPN team ID
+    const country = await Country.findById(countryId);
+    if (!country) {
+      return res.status(404).json({
+        success: false,
+        message: 'Country not found'
+      });
+    }
+    
+    // Get ESPN team ID
+    const espnTeamId = Country.getEspnTeamId(country);
+    
+    if (!espnTeamId) {
+      return res.status(400).json({
+        success: false,
+        message: `No ESPN team ID mapping found for country code: ${country.code}`
+      });
+    }
+    
+    console.log(`Syncing ESPN players for ${country.name} (ESPN ID: ${espnTeamId})`);
+    
+    // Fetch all players from ESPN (with pagination)
+    const result = await espnTokenFetcher.fetchAllPlayersForTeam(espnTeamId, { previewOnly: false });
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error || 'Failed to fetch players from ESPN'
+      });
+    }
+    
+    const espnPlayers = result.players || [];
+    console.log(`Fetched ${espnPlayers.length} players from ESPN`);
+    
+    // Import stats
+    const stats = {
+      total: espnPlayers.length,
+      created: 0,
+      skipped: 0,
+      menCreated: 0,
+      womenCreated: 0,
+      errors: []
+    };
+    
+    // Role mapping from ESPN to our schema
+    const mapRole = (playingRoles) => {
+      if (!playingRoles || playingRoles.length === 0) return 'batsman';
+      const role = playingRoles[0].toLowerCase();
+      const roleMapping = {
+        'opening batter': 'batsman',
+        'top-order batter': 'batsman',
+        'middle-order batter': 'batsman',
+        'batter': 'batsman',
+        'wicketkeeper batter': 'wicket-keeper',
+        'wicketkeeper': 'wicket-keeper',
+        'bowler': 'bowler',
+        'allrounder': 'all-rounder',
+        'batting allrounder': 'all-rounder',
+        'bowling allrounder': 'all-rounder'
+      };
+      return roleMapping[role] || 'batsman';
+    };
+    
+    const mapBattingStyle = (styles) => {
+      if (!styles || styles.length === 0) return 'right-hand';
+      const style = styles[0].toLowerCase();
+      return style.includes('left') ? 'left-hand' : 'right-hand';
+    };
+    
+    const mapBowlingStyle = (styles) => {
+      if (!styles || styles.length === 0) return 'none';
+      const style = styles[0].toLowerCase();
+      
+      if (style.includes('right-arm fast-medium') || style.includes('right-arm medium-fast')) return 'right-arm-fast';
+      if (style.includes('right-arm fast')) return 'right-arm-fast';
+      if (style.includes('right-arm medium')) return 'right-arm-medium';
+      if (style.includes('left-arm fast-medium') || style.includes('left-arm medium-fast')) return 'left-arm-fast';
+      if (style.includes('left-arm fast')) return 'left-arm-fast';
+      if (style.includes('left-arm medium')) return 'left-arm-medium';
+      if (style.includes('offbreak') || style.includes('off-break') || style.includes('off break')) return 'right-arm-off-spin';
+      if (style.includes('legbreak') || style.includes('leg-break') || style.includes('leg break')) return 'right-arm-leg-spin';
+      if (style.includes('slow left-arm orthodox') || style.includes('left-arm orthodox')) return 'left-arm-orthodox';
+      if (style.includes('chinaman') || style.includes('left-arm wrist')) return 'left-arm-chinaman';
+      
+      return 'none';
+    };
+    
+    // Process each player
+    for (const espnPlayer of espnPlayers) {
+      try {
+        // Only process players with valid gender
+        if (espnPlayer.gender !== 'M' && espnPlayer.gender !== 'F') {
+          stats.skipped++;
+          continue;
+        }
+        
+        const playerName = espnPlayer.longName || espnPlayer.name;
+        if (!playerName) {
+          stats.skipped++;
+          stats.errors.push({ name: 'Unknown', reason: 'No name provided' });
+          continue;
+        }
+        
+        // Check if player already exists (by name, country, and gender)
+        const existingPlayer = await Player.findOne({
+          name: playerName,
+          country: countryId,
+          gender: espnPlayer.gender
+        });
+        
+        if (existingPlayer) {
+          stats.skipped++;
+          continue;
+        }
+        
+        // Create new player
+        const playerData = {
+          name: playerName,
+          country: countryId,
+          role: mapRole(espnPlayer.playingRoles),
+          battingStyle: mapBattingStyle(espnPlayer.longBattingStyles),
+          bowlingStyle: mapBowlingStyle(espnPlayer.longBowlingStyles),
+          headshotPath: espnPlayer.headshotImageUrl || espnPlayer.imageUrl || espnPlayer.image?.url || null,
+          espnId: espnPlayer.id,
+          gender: espnPlayer.gender,
+          isActive: true
+        };
+        
+        const newPlayer = new Player(playerData);
+        await newPlayer.save();
+        stats.created++;
+        
+        if (espnPlayer.gender === 'M') {
+          stats.menCreated++;
+        } else {
+          stats.womenCreated++;
+        }
+        
+      } catch (playerError) {
+        stats.errors.push({
+          name: espnPlayer.longName || espnPlayer.name || 'Unknown',
+          reason: playerError.message
+        });
+      }
+    }
+    
+    console.log(`Sync complete: ${stats.created} created, ${stats.skipped} skipped`);
+    
+    res.json({
+      success: true,
+      message: `Import complete: ${stats.created} created, ${stats.skipped} skipped`,
+      data: stats
+    });
+    
+  } catch (error) {
+    console.error('Player sync error:', error);
+    next(error);
+  }
+});
+
 // Add direct fetch routes (no browser needed - fastest method!)
 addDirectFetchRoutes(router, auth, Match, matchEspnTeamsToLocal, matchPlayer);
 

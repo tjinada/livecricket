@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PlayerService, CountryService, BulkImportResult, UploadService, UploadProgress } from '../../../core/services';
+import { PlayerService, CountryService, BulkImportResult, UploadService, UploadProgress, EspnService, EspnPlayerSyncPreview, EspnPlayerSyncResult } from '../../../core/services';
 import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../../core/models';
 
 @Component({
@@ -22,6 +22,14 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
               🗑️ Delete All ({{ filteredPlayers.length }})
             </button>
           }
+          <button 
+            (click)="openEspnSyncModal()"
+            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            [disabled]="!filters.country"
+            [title]="!filters.country ? 'Select a country first' : 'Auto-sync players from ESPN Cricinfo'"
+          >
+            🔄 Sync with ESPN
+          </button>
           <button 
             (click)="openBulkImportModal()"
             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -642,6 +650,157 @@ import { Player, Country, PlayerRole, BattingStyle, BowlingStyle } from '../../.
           </div>
         </div>
       }
+
+      <!-- ESPN Sync Modal -->
+      @if (showEspnSyncModal) {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div class="px-6 py-4 border-b">
+              <h3 class="text-lg font-semibold text-gray-800">
+                🔄 Sync Players from ESPN - {{ getSelectedCountryName() }}
+              </h3>
+            </div>
+            <div class="p-6">
+              <!-- Loading Preview -->
+              @if (espnSyncLoading && !espnSyncPreview) {
+                <div class="text-center py-8">
+                  <div class="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p class="text-gray-600">Fetching players from ESPN Cricinfo...</p>
+                </div>
+              }
+
+              <!-- Preview Data -->
+              @if (espnSyncPreview && !espnSyncResult) {
+                <div class="space-y-4">
+                  <!-- ESPN Data Summary -->
+                  <div class="p-4 bg-purple-50 rounded-lg">
+                    <h4 class="font-medium text-purple-800 mb-2">Found on ESPN Cricinfo:</h4>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div class="text-2xl font-bold text-purple-700">{{ espnSyncPreview.espnData.total }}</div>
+                        <div class="text-xs text-purple-600">Total Players</div>
+                      </div>
+                      <div>
+                        <div class="text-2xl font-bold text-blue-600">~{{ espnSyncPreview.espnData.estimatedMen }}</div>
+                        <div class="text-xs text-blue-500">Men</div>
+                      </div>
+                      <div>
+                        <div class="text-2xl font-bold text-pink-600">~{{ espnSyncPreview.espnData.estimatedWomen }}</div>
+                        <div class="text-xs text-pink-500">Women</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Existing Players -->
+                  <div class="p-4 bg-gray-50 rounded-lg">
+                    <h4 class="font-medium text-gray-700 mb-2">Already in database:</h4>
+                    <div class="flex justify-center gap-8">
+                      <div class="text-center">
+                        <span class="text-xl font-bold text-gray-700">{{ espnSyncPreview.existingPlayers.men }}</span>
+                        <span class="text-sm text-gray-500 ml-1">Men</span>
+                      </div>
+                      <div class="text-center">
+                        <span class="text-xl font-bold text-gray-700">{{ espnSyncPreview.existingPlayers.women }}</span>
+                        <span class="text-sm text-gray-500 ml-1">Women</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Sample Players -->
+                  @if (espnSyncPreview.espnData.samplePlayers.length > 0) {
+                    <div class="text-sm text-gray-600">
+                      <p class="font-medium mb-1">Sample players:</p>
+                      <p class="text-gray-500">
+                        {{ getSamplePlayerNames() }}
+                      </p>
+                    </div>
+                  }
+
+                  <!-- Info -->
+                  <div class="p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                    ℹ️ New players will be imported. Existing players (matched by name) will be skipped.
+                  </div>
+                </div>
+              }
+
+              <!-- Sync Result -->
+              @if (espnSyncResult) {
+                <div class="space-y-4">
+                  <div class="p-4 bg-green-50 rounded-lg">
+                    <h4 class="font-medium text-green-800 mb-3">✓ Import Complete!</h4>
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                      <div class="p-3 bg-white rounded">
+                        <div class="text-3xl font-bold text-green-600">{{ espnSyncResult.created }}</div>
+                        <div class="text-sm text-green-700">Players Created</div>
+                      </div>
+                      <div class="p-3 bg-white rounded">
+                        <div class="text-3xl font-bold text-gray-500">{{ espnSyncResult.skipped }}</div>
+                        <div class="text-sm text-gray-600">Skipped (existing)</div>
+                      </div>
+                    </div>
+                    <div class="flex justify-center gap-6 mt-3 text-sm">
+                      <span class="text-blue-600">👨 {{ espnSyncResult.menCreated }} men</span>
+                      <span class="text-pink-600">👩 {{ espnSyncResult.womenCreated }} women</span>
+                    </div>
+                  </div>
+
+                  @if (espnSyncResult.errors.length > 0) {
+                    <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                      <p class="font-medium">Some errors occurred:</p>
+                      <ul class="list-disc list-inside mt-1">
+                        @for (err of espnSyncResult.errors.slice(0, 3); track err.name) {
+                          <li>{{ err.name }}: {{ err.reason }}</li>
+                        }
+                        @if (espnSyncResult.errors.length > 3) {
+                          <li>...and {{ espnSyncResult.errors.length - 3 }} more</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Error -->
+              @if (espnSyncError) {
+                <div class="p-4 bg-red-50 text-red-700 rounded-lg">
+                  <p class="font-medium">Error:</p>
+                  <p>{{ espnSyncError }}</p>
+                  <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 text-sm">
+                    <p class="font-medium">💡 Alternative: Use Bulk Import</p>
+                    <p class="mt-1">ESPN's player API may have changed. You can still import players manually:</p>
+                    <ol class="list-decimal list-inside mt-1 space-y-1">
+                      <li>Go to ESPN Cricinfo team page</li>
+                      <li>Open DevTools (F12) → Network tab</li>
+                      <li>Look for player JSON data</li>
+                      <li>Use "Bulk Import" button to paste JSON</li>
+                    </ol>
+                  </div>
+                </div>
+              }
+
+              <!-- Actions -->
+              <div class="flex justify-end gap-3 mt-6">
+                <button 
+                  type="button"
+                  (click)="closeEspnSyncModal()"
+                  class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  {{ espnSyncResult ? 'Close' : 'Cancel' }}
+                </button>
+                @if (espnSyncPreview && !espnSyncResult && !espnSyncLoading) {
+                  <button 
+                    (click)="executeEspnSync()"
+                    [disabled]="espnSyncLoading"
+                    class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {{ espnSyncLoading ? 'Importing...' : 'Import ' + espnSyncPreview.espnData.total + ' Players' }}
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -710,10 +869,18 @@ export class PlayersComponent implements OnInit {
   bulkDeleting = false;
   bulkDeleteError = '';
 
+  // ESPN Sync
+  showEspnSyncModal = false;
+  espnSyncLoading = false;
+  espnSyncError = '';
+  espnSyncPreview: EspnPlayerSyncPreview | null = null;
+  espnSyncResult: EspnPlayerSyncResult | null = null;
+
   constructor(
     private playerService: PlayerService,
     private countryService: CountryService,
-    private uploadService: UploadService
+    private uploadService: UploadService,
+    private espnService: EspnService
   ) {}
 
   ngOnInit() {
@@ -1209,6 +1376,73 @@ export class PlayersComponent implements OnInit {
       error: (err) => {
         this.bulkDeleteError = err.error?.message || 'Failed to delete players';
         this.bulkDeleting = false;
+      }
+    });
+  }
+
+  // ESPN Sync Methods
+  getSamplePlayerNames(): string {
+    if (!this.espnSyncPreview?.espnData?.samplePlayers) return '';
+    return this.espnSyncPreview.espnData.samplePlayers.map(p => p.name).join(', ');
+  }
+
+  openEspnSyncModal() {
+    if (!this.filters.country) return;
+    
+    this.showEspnSyncModal = true;
+    this.espnSyncLoading = true;
+    this.espnSyncError = '';
+    this.espnSyncPreview = null;
+    this.espnSyncResult = null;
+    
+    // Fetch preview from backend
+    this.espnService.previewPlayerSync(this.filters.country).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.espnSyncPreview = response.data;
+        } else {
+          this.espnSyncError = response.message || 'Failed to fetch players from ESPN';
+        }
+        this.espnSyncLoading = false;
+      },
+      error: (err) => {
+        this.espnSyncError = err.error?.message || 'Failed to connect to ESPN. Check if the country has an ESPN team ID mapping.';
+        this.espnSyncLoading = false;
+      }
+    });
+  }
+
+  closeEspnSyncModal() {
+    const shouldReload = this.espnSyncResult !== null;
+    
+    this.showEspnSyncModal = false;
+    this.espnSyncPreview = null;
+    this.espnSyncResult = null;
+    this.espnSyncError = '';
+    
+    if (shouldReload) {
+      this.loadPlayers();
+    }
+  }
+
+  executeEspnSync() {
+    if (!this.filters.country) return;
+    
+    this.espnSyncLoading = true;
+    this.espnSyncError = '';
+    
+    this.espnService.syncPlayersFromEspn(this.filters.country).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.espnSyncResult = response.data;
+        } else {
+          this.espnSyncError = response.message || 'Failed to sync players from ESPN';
+        }
+        this.espnSyncLoading = false;
+      },
+      error: (err) => {
+        this.espnSyncError = err.error?.message || 'Failed to sync players from ESPN';
+        this.espnSyncLoading = false;
       }
     });
   }
