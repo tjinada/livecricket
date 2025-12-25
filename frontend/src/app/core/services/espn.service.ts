@@ -620,4 +620,81 @@ export class EspnService {
   }): Observable<ApiResponse<any>> {
     return this.http.post<ApiResponse<any>>(`${this.apiUrl}/create-player`, data);
   }
+
+  // ============================================
+  // SQUAD VALIDATION
+  // ============================================
+
+  /**
+   * Validate current match squad against ESPN data
+   * Use this BEFORE syncing to catch player mismatches early!
+   */
+  validateSquad(matchId: string, espnUrl?: string): Observable<ApiResponse<SquadValidationResult>> {
+    return this.http.post<ApiResponse<SquadValidationResult>>(
+      `${this.apiUrl}/match/${matchId}/validate-squad`,
+      { espnUrl }
+    );
+  }
+}
+
+// ============================================
+// SQUAD VALIDATION TYPES
+// ============================================
+
+export interface SquadValidationMismatch {
+  team: string;
+  espnName: string;
+  matchedTo: string | null;
+  matchScore: number;
+  matchType: string;
+  issue: 'fuzzy_match' | 'wrong_match' | 'not_in_squad';
+  correctPlayer?: {
+    id: string;
+    name: string;
+  } | null;
+  suggestion: string;
+}
+
+export interface SquadValidationWarning {
+  team: string;
+  playerName: string;
+  issue: 'not_in_espn';
+  suggestion: string;
+}
+
+export interface SquadValidationPlayerResult {
+  espnName: string;
+  espnId: string | null;
+  matchedPlayer: {
+    id: string;
+    name: string;
+    espnId: string | null;
+  } | null;
+  matchScore: number;
+  matchType: string;
+  isValid: boolean;
+}
+
+export interface SquadValidationTeam {
+  espnTeam: string;
+  localTeam: string;
+  squadKey: string;
+  players: SquadValidationPlayerResult[];
+  issues: any[];
+}
+
+export interface SquadValidationResult {
+  isValid: boolean;
+  checkedAt: string;
+  teams: SquadValidationTeam[];
+  mismatches: SquadValidationMismatch[];
+  warnings: SquadValidationWarning[];
+  summary: {
+    totalEspnPlayers: number;
+    totalLocalPlayers: number;
+    exactMatches: number;
+    fuzzyMatches: number;
+    mismatches: number;
+    notInSquad: number;
+  };
 }

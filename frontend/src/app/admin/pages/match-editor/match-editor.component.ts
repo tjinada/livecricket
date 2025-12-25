@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatchService, Match } from '../../../core/services/match.service';
 import { ScoringService } from '../../../core/services/scoring.service';
-import { EspnService } from '../../../core/services/espn.service';
-import { ApiResponse } from '../../../core/models';
+import { EspnService, SquadValidationResult, SquadValidationMismatch } from '../../../core/services/espn.service';
+import { PlayerService } from '../../../core/services/player.service';
+import { ApiResponse, Player } from '../../../core/models';
 import { EspnSyncModalComponent } from '../../components/espn-sync-modal/espn-sync-modal.component';
 
 interface BattingStatEdit {
@@ -115,6 +116,15 @@ interface InningsEdit {
               <div class="flex items-center gap-2">
                 <span class="text-lg">📡</span>
                 <h3 class="font-semibold text-gray-800">ESPN Sync</h3>
+                @if (validatingSquad) {
+                  <span class="text-xs text-blue-500 animate-pulse">Validating squad...</span>
+                } @else if (squadValidation) {
+                  @if (squadValidation.isValid) {
+                    <span class="text-xs text-green-600">✓ Squad OK</span>
+                  } @else {
+                    <span class="text-xs text-red-600">⚠ {{ squadValidation.mismatches.length }} issue(s)</span>
+                  }
+                }
               </div>
               @if (match.lastEspnSync) {
                 <span class="text-xs text-gray-500">
@@ -122,12 +132,12 @@ interface InningsEdit {
                 </span>
               }
             </div>
-            <div class="flex gap-3">
+            <div class="flex gap-3 flex-wrap">
               <input 
                 type="text"
                 [(ngModel)]="espnUrl"
                 placeholder="https://www.espncricinfo.com/.../full-scorecard"
-                class="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="flex-1 min-w-[200px] px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <button 
                 (click)="saveEspnUrl()"
@@ -135,6 +145,14 @@ interface InningsEdit {
                 class="px-3 py-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {{ savingEspnUrl ? 'Saving...' : 'Save URL' }}
+              </button>
+              <button 
+                (click)="validateSquad()"
+                [disabled]="!match.espnUrl || validatingSquad"
+                class="px-3 py-2 text-sm text-amber-600 hover:text-amber-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Check squad matches ESPN data"
+              >
+                {{ validatingSquad ? 'Checking...' : '🔍 Validate' }}
               </button>
               <button 
                 (click)="openEspnSyncModal()"
@@ -149,6 +167,153 @@ interface InningsEdit {
               <p class="text-xs text-gray-500 mt-2">
                 Add an ESPN Cricinfo full-scorecard URL to enable syncing match data.
               </p>
+            }
+            
+            <!-- Squad Validation Results -->
+            @if (squadValidation && !squadValidation.isValid) {
+              <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="font-medium text-red-700">⚠ Squad Validation Issues</span>
+                  <button (click)="dismissValidation()" class="text-red-400 hover:text-red-600 text-sm">Dismiss</button>
+                </div>
+                <div class="space-y-2 text-sm">
+                  @for (mismatch of squadValidation.mismatches; track mismatch.espnName) {
+                    <div class="p-2 bg-white rounded border border-red-100">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-gray-600">ESPN:</span>
+                        <span class="font-medium">{{ mismatch.espnName }}</span>
+                        <span class="text-gray-400">→</span>
+                        @if (mismatch.matchedTo) {
+                          <span class="text-amber-600">Matched:</span>
+                          <span class="font-medium text-amber-700">{{ mismatch.matchedTo }}</span>
+                          <span class="text-xs text-gray-400">({{ mismatch.matchScore }}% {{ mismatch.matchType }})</span>
+                        } @else {
+                          <span class="text-red-600">Not found in squad</span>
+                        }
+                      </div>
+                      @if (mismatch.correctPlayer) {
+                        <div class="text-xs text-green-600 mt-1">
+                          💡 Suggestion: Add "{{ mismatch.correctPlayer.name }}" to squad
+                        </div>
+                      }
+                      @if (mismatch.issue === 'fuzzy_match') {
+                        <div class="text-xs text-amber-600 mt-1">
+                          ⚠ Fuzzy match - verify this is correct before syncing
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+                @if (squadValidation.warnings && squadValidation.warnings.length > 0) {
+                  <div class="mt-3 pt-3 border-t border-red-200">
+                    <span class="text-sm font-medium text-amber-700">Warnings:</span>
+                    <div class="space-y-1 mt-1">
+                      @for (warning of squadValidation.warnings; track warning.playerName) {
+                        <div class="text-xs text-amber-600">
+                          • {{ warning.playerName }}: {{ warning.suggestion }}
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+                <div class="mt-3 text-xs text-gray-500">
+                  Fix squad issues in "Edit Match" before syncing to avoid wrong player assignments.
+                </div>
+              </div>
+            }
+            
+            @if (squadValidation && squadValidation.isValid && squadValidation.summary) {
+              <div class="mt-2 text-xs text-green-600">
+                ✓ All {{ squadValidation.summary.totalEspnPlayers }} ESPN players matched ({{ squadValidation.summary.exactMatches }} exact)
+              </div>
+            }
+          </div>
+
+          <!-- Squad Management Section -->
+          <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">👥</span>
+                <h3 class="font-semibold text-gray-800">Squad Management</h3>
+              </div>
+              <button 
+                (click)="showSquadManagement = !showSquadManagement"
+                class="text-sm text-blue-600 hover:text-blue-800"
+              >
+                {{ showSquadManagement ? 'Hide' : 'Show' }}
+              </button>
+            </div>
+            
+            @if (showSquadManagement) {
+              <div class="space-y-4">
+                <!-- Team 1 Squad -->
+                <div class="border rounded-lg overflow-hidden">
+                  <div class="p-3 bg-gray-50 border-b flex items-center justify-between">
+                    <span class="font-medium">{{ match.team1?.name }} ({{ getTeam1SquadPlayers().length }}/15)</span>
+                    <button 
+                      (click)="openAddToSquadModal('team1')"
+                      [disabled]="getTeam1SquadPlayers().length >= 15"
+                      class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      + Add Player
+                    </button>
+                  </div>
+                  <div class="p-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                    @for (player of getTeam1SquadPlayers(); track player.playerId) {
+                      <div class="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                        <span class="text-sm">{{ player.name }}</span>
+                        <button 
+                          (click)="removeFromSquad('team1', player.playerId)"
+                          [disabled]="squadUpdating"
+                          class="text-red-400 hover:text-red-600 disabled:opacity-50 text-lg leading-none"
+                          title="Remove from squad"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    }
+                    @if (getTeam1SquadPlayers().length === 0) {
+                      <div class="col-span-full text-gray-400 text-sm text-center py-4">No players in squad</div>
+                    }
+                  </div>
+                </div>
+                
+                <!-- Team 2 Squad -->
+                <div class="border rounded-lg overflow-hidden">
+                  <div class="p-3 bg-gray-50 border-b flex items-center justify-between">
+                    <span class="font-medium">{{ match.team2?.name }} ({{ getTeam2SquadPlayers().length }}/15)</span>
+                    <button 
+                      (click)="openAddToSquadModal('team2')"
+                      [disabled]="getTeam2SquadPlayers().length >= 15"
+                      class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      + Add Player
+                    </button>
+                  </div>
+                  <div class="p-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                    @for (player of getTeam2SquadPlayers(); track player.playerId) {
+                      <div class="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                        <span class="text-sm">{{ player.name }}</span>
+                        <button 
+                          (click)="removeFromSquad('team2', player.playerId)"
+                          [disabled]="squadUpdating"
+                          class="text-red-400 hover:text-red-600 disabled:opacity-50 text-lg leading-none"
+                          title="Remove from squad"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    }
+                    @if (getTeam2SquadPlayers().length === 0) {
+                      <div class="col-span-full text-gray-400 text-sm text-center py-4">No players in squad</div>
+                    }
+                  </div>
+                </div>
+                
+                <p class="text-xs text-gray-500">
+                  💡 Add up to 15 players per squad. Any player in the squad can bat or bowl.
+                </p>
+              </div>
             }
           </div>
 
@@ -785,6 +950,62 @@ interface InningsEdit {
           </div>
         </div>
       }
+
+      <!-- Add to Squad Modal -->
+      @if (showAddToSquadModal) {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center">
+              <h3 class="text-lg font-semibold">Add Player to {{ addToSquadTeam === 'team1' ? match?.team1?.name : match?.team2?.name }} Squad</h3>
+              <button (click)="closeAddToSquadModal()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <div class="p-4 border-b">
+              <input 
+                type="text"
+                [(ngModel)]="squadPlayerSearch"
+                placeholder="Search players..."
+                class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div class="flex-1 overflow-y-auto p-4">
+              @if (loadingCountryPlayers) {
+                <div class="text-center text-gray-500 py-8">Loading players...</div>
+              } @else if (getFilteredCountryPlayers().length === 0) {
+                <div class="text-center text-gray-500 py-8">
+                  @if (squadPlayerSearch) {
+                    No players match "{{ squadPlayerSearch }}"
+                  } @else {
+                    No players available to add
+                  }
+                </div>
+              } @else {
+                <div class="space-y-2">
+                  @for (player of getFilteredCountryPlayers(); track player._id) {
+                    <button 
+                      (click)="addPlayerToSquad(player._id)"
+                      [disabled]="squadUpdating"
+                      class="w-full p-3 text-left border rounded-lg hover:bg-blue-50 hover:border-blue-500 disabled:opacity-50 flex justify-between items-center"
+                    >
+                      <div>
+                        <span class="font-medium">{{ player.name }}</span>
+                        @if (player.role) {
+                          <span class="text-xs text-gray-500 ml-2">({{ player.role }})</span>
+                        }
+                      </div>
+                      <span class="text-blue-600">+ Add</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+            <div class="p-4 border-t bg-gray-50">
+              <p class="text-xs text-gray-500">
+                Showing {{ getFilteredCountryPlayers().length }} player(s) not already in squad
+              </p>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -815,6 +1036,11 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   showEspnSyncModal = false;
   espnUrl = '';
   savingEspnUrl = false;
+  
+  // Squad Validation
+  squadValidation: SquadValidationResult | null = null;
+  validatingSquad = false;
+  autoValidateTriggered = false;
 
   // Cache for player data
   private battingTeamPlayers: Array<{playerId: string, name: string}> = [];
@@ -825,7 +1051,8 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     private router: Router,
     private matchService: MatchService,
     private scoringService: ScoringService,
-    private espnService: EspnService
+    private espnService: EspnService,
+    private playerService: PlayerService
   ) {}
 
   ngOnInit(): void {
@@ -850,6 +1077,12 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           this.selectedInningsIndex = this.match?.currentInnings || 0;
           this.cacheTeamPlayers();
           this.loadInningsData();
+          
+          // Auto-validate squad if ESPN URL exists and not yet validated
+          if (this.match.espnUrl && !this.autoValidateTriggered) {
+            this.autoValidateTriggered = true;
+            this.validateSquad();
+          }
         }
         this.loading = false;
       },
@@ -877,15 +1110,14 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
       ? this.match.squads?.team2
       : this.match.squads?.team1;
 
+    // Include ALL players in squad (not just Playing XI)
     this.battingTeamPlayers = (battingSquad || [])
-      .filter((p: any) => p.isPlayingXI)
       .map((p: any) => ({
         playerId: (p.player?._id || p.player)?.toString(),
         name: p.player?.name || 'Unknown'
       }));
 
     this.bowlingTeamPlayers = (bowlingSquad || [])
-      .filter((p: any) => p.isPlayingXI)
       .map((p: any) => ({
         playerId: (p.player?._id || p.player)?.toString(),
         name: p.player?.name || 'Unknown'
@@ -1456,6 +1688,8 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         if (response.success && this.match) {
           this.match.espnUrl = this.espnUrl;
           this.showToast('ESPN URL saved');
+          // Auto-validate squad after saving URL
+          this.validateSquad();
         }
         this.savingEspnUrl = false;
       },
@@ -1464,6 +1698,48 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         this.savingEspnUrl = false;
       }
     });
+  }
+
+  // Squad Validation
+  validateSquad(): void {
+    if (!this.match?.espnUrl) {
+      this.error = 'No ESPN URL set for this match';
+      return;
+    }
+
+    this.validatingSquad = true;
+    this.squadValidation = null;
+
+    this.espnService.validateSquad(this.matchId, this.match.espnUrl).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.squadValidation = response.data;
+          
+          if (!response.data.isValid) {
+            // Show toast for issues
+            const issues = response.data.mismatches.length;
+            const warnings = response.data.warnings.length;
+            if (issues > 0) {
+              this.showToast(`⚠️ ${issues} squad issue(s) found - check below`);
+            } else if (warnings > 0) {
+              this.showToast(`⚠️ ${warnings} warning(s) found`);
+            }
+          } else {
+            this.showToast('✓ Squad validated successfully');
+          }
+        }
+        this.validatingSquad = false;
+      },
+      error: (err) => {
+        console.error('Squad validation error:', err);
+        this.validatingSquad = false;
+        // Don't show error toast for validation - it's a background check
+      }
+    });
+  }
+
+  dismissValidation(): void {
+    this.squadValidation = null;
   }
 
   openEspnSyncModal(): void {
@@ -1483,5 +1759,147 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     this.showToast('Match data synced from ESPN');
     // Reload match data
     this.loadMatch();
+  }
+
+  // Squad Management
+  showSquadManagement = false;
+  squadUpdating = false;
+  
+  // Add to Squad Modal
+  showAddToSquadModal = false;
+  addToSquadTeam: 'team1' | 'team2' = 'team1';
+  squadPlayerSearch = '';
+  countryPlayers: Player[] = [];
+  loadingCountryPlayers = false;
+
+  getTeam1SquadPlayers(): Array<{playerId: string, name: string}> {
+    if (!this.match?.squads?.team1) return [];
+    return this.match.squads.team1.map((p: any) => ({
+      playerId: (p.player?._id || p.player)?.toString(),
+      name: p.player?.name || 'Unknown'
+    }));
+  }
+
+  getTeam2SquadPlayers(): Array<{playerId: string, name: string}> {
+    if (!this.match?.squads?.team2) return [];
+    return this.match.squads.team2.map((p: any) => ({
+      playerId: (p.player?._id || p.player)?.toString(),
+      name: p.player?.name || 'Unknown'
+    }));
+  }
+
+
+  // Add to Squad Modal Methods
+  openAddToSquadModal(team: 'team1' | 'team2'): void {
+    this.addToSquadTeam = team;
+    this.squadPlayerSearch = '';
+    this.showAddToSquadModal = true;
+    this.loadCountryPlayers();
+  }
+
+  closeAddToSquadModal(): void {
+    this.showAddToSquadModal = false;
+    this.countryPlayers = [];
+  }
+
+  loadCountryPlayers(): void {
+    if (!this.match) return;
+    
+    const countryId = this.addToSquadTeam === 'team1' 
+      ? (this.match.team1?._id || this.match.team1)
+      : (this.match.team2?._id || this.match.team2);
+    
+    if (!countryId) return;
+
+    this.loadingCountryPlayers = true;
+    // Convert match gender format ('men'/'women') to player gender format ('M'/'F')
+    const playerGender: 'M' | 'F' = this.match.gender === 'men' ? 'M' : 'F';
+    this.playerService.getAll({ 
+      country: countryId.toString(),
+      gender: playerGender
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.countryPlayers = response.data;
+        }
+        this.loadingCountryPlayers = false;
+      },
+      error: () => {
+        this.loadingCountryPlayers = false;
+      }
+    });
+  }
+
+  getFilteredCountryPlayers(): Player[] {
+    const currentSquadIds = this.addToSquadTeam === 'team1'
+      ? this.getTeam1SquadPlayers().map(p => p.playerId)
+      : this.getTeam2SquadPlayers().map(p => p.playerId);
+    
+    return this.countryPlayers
+      .filter(p => !currentSquadIds.includes(p._id))
+      .filter(p => {
+        if (!this.squadPlayerSearch) return true;
+        return p.name.toLowerCase().includes(this.squadPlayerSearch.toLowerCase());
+      });
+  }
+
+  addPlayerToSquad(playerId: string): void {
+    if (!this.match) return;
+    
+    this.squadUpdating = true;
+    
+    this.matchService.updateSquad(this.matchId, {
+      team: this.addToSquadTeam,
+      action: 'add',
+      playerId
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.match!.squads = response.data;
+          this.showToast('Player added to squad');
+          this.cacheTeamPlayers();
+          this.loadInningsData();
+          // Refresh the modal list
+          this.loadCountryPlayers();
+        } else {
+          this.error = response.message || 'Failed to add player';
+        }
+        this.squadUpdating = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to add player';
+        this.squadUpdating = false;
+      }
+    });
+  }
+
+  removeFromSquad(team: 'team1' | 'team2', playerId: string): void {
+    if (!this.match) return;
+    
+    if (!confirm('Remove this player from the squad?')) return;
+    
+    this.squadUpdating = true;
+    
+    this.matchService.updateSquad(this.matchId, {
+      team,
+      action: 'remove',
+      playerId
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.match!.squads = response.data;
+          this.showToast('Player removed from squad');
+          this.cacheTeamPlayers();
+          this.loadInningsData();
+        } else {
+          this.error = response.message || 'Failed to remove player';
+        }
+        this.squadUpdating = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to remove player';
+        this.squadUpdating = false;
+      }
+    });
   }
 }

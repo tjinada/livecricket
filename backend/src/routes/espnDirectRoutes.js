@@ -742,6 +742,278 @@ function addDirectFetchRoutes(router, auth, Match, matchEspnTeamsToLocal, matchP
     }
   });
 
+  /**
+   * POST /api/espn/match/:matchId/validate-squad
+   * Validate current match squad against ESPN data
+   * Auto-detects mismatches BEFORE syncing to catch issues early
+   */
+  router.post('/match/:matchId/validate-squad', auth, async (req, res, next) => {
+    try {
+      const { matchId } = req.params;
+      const { espnUrl } = req.body;
+
+      // Get the match with populated teams and squads
+      const match = await Match.findById(matchId)
+        .populate('team1', 'name shortName code')
+        .populate('team2', 'name shortName code')
+        .populate('squads.team1.player', 'name role espnId')
+        .populate('squads.team2.player', 'name role espnId');
+
+      if (!match) {
+        return res.status(404).json({
+          success: false,
+          message: 'Match not found'
+        });
+      }
+
+      const urlToFetch = espnUrl || match.espnUrl;
+      if (!urlToFetch) {
+        return res.status(400).json({
+          success: false,
+          message: 'ESPN URL not provided and not set for this match'
+        });
+      }
+
+      console.log(`Validating squad for match ${matchId} against ESPN`);
+
+      // Fetch ESPN squad data
+      const result = await espnTokenFetcher.fetchSquadsData(urlToFetch);
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          message: result.error || 'Failed to fetch ESPN data'
+        });
+      }
+
+      const espnData = espnTokenFetcher.transformSquadsData(result.data);
+      if (!espnData.teams || espnData.teams.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Could not extract team data from ESPN'
+        });
+      }
+
+      const validation = {
+        isValid: true,
+        checkedAt: new Date(),
+        teams: [],
+        mismatches: [],
+        warnings: [],
+        summary: {
+          totalEspnPlayers: 0,
+          totalLocalPlayers: 0,
+          exactMatches: 0,
+          fuzzyMatches: 0,
+          mismatches: 0,
+          notInSquad: 0
+        }
+      };
+
+      // Match ESPN teams to local teams
+      const teamMappings = [
+        { espnTeam: espnData.teams[0], localTeam: match.team1, squad: match.squads?.team1 || [], squadKey: 'team1' },
+        { espnTeam: espnData.teams[1], localTeam: match.team2, squad: match.squads?.team2 || [], squadKey: 'team2' }
+      ];
+
+      // Try to match ESPN teams to local teams by name
+      for (const mapping of teamMappings) {
+        const espnTeamName = normalizeTeamNameForMatching(mapping.espnTeam?.name || '');
+        const localTeam1Name = normalizeTeamNameForMatching(match.team1?.name || '');
+        const localTeam2Name = normalizeTeamNameForMatching(match.team2?.name || '');
+        
+        if (espnTeamName.includes(localTeam2Name) || localTeam2Name.includes(espnTeamName)) {
+          // Swap if ESPN team 0 matches local team 2
+          if (mapping.squadKey === 'team1') {
+            mapping.localTeam = match.team2;
+            mapping.squad = match.squads?.team2 || [];
+            mapping.squadKey = 'team2';
+          }
+        }
+      }
+
+      // Validate each team
+      for (const { espnTeam, localTeam, squad, squadKey } of teamMappings) {
+        if (!espnTeam || !espnTeam.players) continue;
+
+        const teamValidation = {
+          espnTeam: espnTeam.name,
+          localTeam: localTeam?.name,
+          squadKey,
+          players: [],
+          issues: []
+        };
+
+        // Use the entire squad (we removed Playing XI concept)
+        const squadPlayers = squad;
+        const genderFilter = espnData.matchInfo?.gender === 'women' ? 'F' : 'M';
+
+        validation.summary.totalEspnPlayers += espnTeam.players.length;
+        validation.summary.totalLocalPlayers += squadPlayers.length;
+
+        // Check each ESPN player against local squad
+        for (const espnPlayer of espnTeam.players) {
+          const normalizedEspnName = normalizePlayerNameForMatching(espnPlayer.name);
+          
+          let bestMatch = null;
+          let bestScore = 0;
+          let matchType = 'none';
+
+          // First check by ESPN ID if available
+          if (espnPlayer.espnId) {
+            const espnIdMatch = squadPlayers.find(p => p.player?.espnId === espnPlayer.espnId);
+            if (espnIdMatch) {
+              bestMatch = espnIdMatch;
+              bestScore = 100;
+              matchType = 'espnId';
+            }
+          }
+
+          // If no ESPN ID match, try name matching
+          if (!bestMatch) {
+            for (const squadPlayer of squadPlayers) {
+              const normalizedLocalName = normalizePlayerNameForMatching(squadPlayer.player?.name || '');
+              
+              let score = 0;
+              let type = 'none';
+
+              if (normalizedEspnName === normalizedLocalName) {
+                score = 100;
+                type = 'exact';
+              } else if (normalizedEspnName.includes(normalizedLocalName) || normalizedLocalName.includes(normalizedEspnName)) {
+                score = 80;
+                type = 'partial';
+              } else {
+                const espnParts = normalizedEspnName.split(' ');
+                const localParts = normalizedLocalName.split(' ');
+                const espnLastName = espnParts[espnParts.length - 1];
+                const localLastName = localParts[localParts.length - 1];
+                
+                if (espnLastName === localLastName && espnLastName.length > 2) {
+                  score = 70;
+                  type = 'lastName';
+                } else {
+                  score = calculateSimpleSimilarity(normalizedEspnName, normalizedLocalName);
+                  type = score > 50 ? 'fuzzy' : 'none';
+                }
+              }
+
+              if (score > bestScore) {
+                bestScore = score;
+                bestMatch = squadPlayer;
+                matchType = type;
+              }
+            }
+          }
+
+          const playerValidation = {
+            espnName: espnPlayer.name,
+            espnId: espnPlayer.espnId,
+            matchedPlayer: bestMatch ? {
+              id: bestMatch.player?._id,
+              name: bestMatch.player?.name,
+              espnId: bestMatch.player?.espnId
+            } : null,
+            matchScore: bestScore,
+            matchType,
+            isValid: bestScore >= 70 && matchType === 'exact'
+          };
+
+          teamValidation.players.push(playerValidation);
+
+          // Track statistics
+          if (matchType === 'exact' || matchType === 'espnId') {
+            validation.summary.exactMatches++;
+          } else if (bestScore >= 70) {
+            validation.summary.fuzzyMatches++;
+            // Fuzzy match is a potential issue - only flag non-exact matches
+            if (matchType !== 'exact' && matchType !== 'espnId') {
+              validation.mismatches.push({
+                team: localTeam?.name,
+                espnName: espnPlayer.name,
+                matchedTo: bestMatch?.player?.name || null,
+                matchScore: bestScore,
+                matchType,
+                issue: 'fuzzy_match',
+                suggestion: `"${espnPlayer.name}" matched to "${bestMatch?.player?.name}" with ${bestScore}% confidence (${matchType}). Verify this is correct.`
+              });
+            }
+          } else {
+            validation.summary.mismatches++;
+            validation.isValid = false;
+            
+            // Find the correct player in the database (not just squad)
+            const allPlayers = await Player.find({
+              country: localTeam?._id,
+              gender: genderFilter
+            }).lean();
+
+            let correctPlayer = null;
+            for (const p of allPlayers) {
+              const normalizedDbName = normalizePlayerNameForMatching(p.name);
+              if (normalizedEspnName === normalizedDbName) {
+                correctPlayer = p;
+                break;
+              }
+            }
+
+            validation.mismatches.push({
+              team: localTeam?.name,
+              espnName: espnPlayer.name,
+              matchedTo: bestMatch?.player?.name || null,
+              matchScore: bestScore,
+              matchType,
+              issue: bestMatch ? 'wrong_match' : 'not_in_squad',
+              correctPlayer: correctPlayer ? {
+                id: correctPlayer._id,
+                name: correctPlayer.name
+              } : null,
+              suggestion: correctPlayer 
+                ? `Add "${correctPlayer.name}" to the squad.`
+                : `"${espnPlayer.name}" not found in squad or database. May need to create this player.`
+            });
+          }
+        }
+
+        // Check for players in local squad but not in ESPN (substitutions, etc.)
+        for (const squadPlayer of squadPlayers) {
+          const normalizedLocalName = normalizePlayerNameForMatching(squadPlayer.player?.name || '');
+          const inEspn = espnTeam.players.some(ep => {
+            const normalizedEspnName = normalizePlayerNameForMatching(ep.name);
+            return normalizedEspnName === normalizedLocalName || 
+                   calculateSimpleSimilarity(normalizedEspnName, normalizedLocalName) >= 80;
+          });
+
+          if (!inEspn) {
+            validation.warnings.push({
+              team: localTeam?.name,
+              playerName: squadPlayer.player?.name,
+              issue: 'not_in_espn',
+              suggestion: `"${squadPlayer.player?.name}" is in your squad but not in ESPN squad. This might be a substitute or incorrect selection.`
+            });
+          }
+        }
+
+        validation.teams.push(teamValidation);
+      }
+
+      // Overall validation status
+      if (validation.mismatches.length > 0) {
+        validation.isValid = false;
+      }
+
+      console.log(`Squad validation complete: ${validation.isValid ? 'VALID' : 'ISSUES FOUND'} - ${validation.mismatches.length} mismatches, ${validation.warnings.length} warnings`);
+
+      res.json({
+        success: true,
+        data: validation
+      });
+
+    } catch (error) {
+      console.error('Squad validation error:', error);
+      next(error);
+    }
+  });
+
   return router;
 }
 

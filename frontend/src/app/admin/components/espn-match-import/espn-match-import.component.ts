@@ -204,7 +204,18 @@ interface EspnImportResult {
                       ⚠️ {{ preview.unmatchedPlayers.length }} players need to be created or matched
                     </p>
                     <p class="text-yellow-700 text-xs mt-1">
-                      You can create them now or manually match them after the match is created.
+                      Create all players above before applying to form.
+                    </p>
+                  </div>
+                }
+                
+                @if (hasPlayersNeedingCreation()) {
+                  <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p class="text-red-800 text-sm font-medium">
+                      🚫 Cannot apply - {{ getPlayersNeedingCreationCount() }} player(s) still need to be created
+                    </p>
+                    <p class="text-red-700 text-xs mt-1">
+                      Click "Create" next to each unmatched player (yellow rows) before applying.
                     </p>
                   </div>
                 }
@@ -373,12 +384,43 @@ export class EspnMatchImportComponent {
     const teamsMatched = this.preview.teamMapping.every(t => t.localTeam !== null);
     if (!teamsMatched) return false;
     
+    // Check that ALL players are matched (no needsCreation)
     for (const team of this.preview.teamMapping) {
-      const matchedCount = team.players.filter(p => p.localPlayer !== null).length;
-      if (matchedCount < 11) return false;
+      for (const player of team.players) {
+        if (!player.localPlayer) {
+          return false; // Any unmatched player blocks the apply
+        }
+      }
     }
     
     return true;
+  }
+  
+  hasPlayersNeedingCreation(): boolean {
+    if (!this.preview) return false;
+    
+    for (const team of this.preview.teamMapping) {
+      for (const player of team.players) {
+        if (!player.localPlayer) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  
+  getPlayersNeedingCreationCount(): number {
+    if (!this.preview) return 0;
+    
+    let count = 0;
+    for (const team of this.preview.teamMapping) {
+      for (const player of team.players) {
+        if (!player.localPlayer) {
+          count++;
+        }
+      }
+    }
+    return count;
   }
   
   applyImport(): void {

@@ -165,4 +165,14 @@ export class MatchService {
   updateTitle(id: string, title: string): Observable<ApiResponse<Match>> {
     return this.http.put<ApiResponse<Match>>(`${this.apiUrl}/${id}/title`, { title });
   }
+
+  // Squad Management - update Playing XI mid-match
+  updateSquad(id: string, data: {
+    team: 'team1' | 'team2';
+    action: 'add' | 'remove' | 'replace' | 'toggle';
+    playerId: string;
+    newPlayerId?: string;
+  }): Observable<ApiResponse<any>> {
+    return this.http.patch<ApiResponse<any>>(`${this.apiUrl}/${id}/squad`, data);
+  }
 }

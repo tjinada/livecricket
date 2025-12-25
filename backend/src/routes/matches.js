@@ -969,4 +969,215 @@ router.get('/:id/sync-check', async (req, res, next) => {
   }
 });
 
+// PATCH /api/matches/:id/squad - Update squad Playing XI (works for any match status)
+// This is for Squad Management - adding/removing players from Playing XI mid-match
+router.patch('/:id/squad', auth, async (req, res, next) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+    
+    if (match.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot modify squad for completed matches'
+      });
+    }
+    
+    const { team, action, playerId, newPlayerId } = req.body;
+    
+    if (!team || !['team1', 'team2'].includes(team)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid team (team1 or team2) is required'
+      });
+    }
+    
+    if (!action || !['add', 'remove', 'replace', 'toggle'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid action (add, remove, replace, toggle) is required'
+      });
+    }
+    
+    const squad = match.squads[team];
+    
+    switch (action) {
+      case 'toggle': {
+        // Toggle a player's Playing XI status
+        if (!playerId) {
+          return res.status(400).json({
+            success: false,
+            message: 'playerId is required for toggle action'
+          });
+        }
+        
+        const playerIndex = squad.findIndex(p => 
+          (p.player._id || p.player).toString() === playerId
+        );
+        
+        if (playerIndex === -1) {
+          return res.status(400).json({
+            success: false,
+            message: 'Player not found in squad'
+          });
+        }
+        
+        // If toggling ON, check we don't exceed 11
+        const currentPlayingXI = squad.filter(p => p.isPlayingXI).length;
+        if (!squad[playerIndex].isPlayingXI && currentPlayingXI >= 11) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cannot add more than 11 players to Playing XI'
+          });
+        }
+        
+        squad[playerIndex].isPlayingXI = !squad[playerIndex].isPlayingXI;
+        
+        // Update batting order
+        if (squad[playerIndex].isPlayingXI) {
+          const maxOrder = Math.max(0, ...squad.filter(p => p.isPlayingXI && p.battingOrder).map(p => p.battingOrder || 0));
+          squad[playerIndex].battingOrder = maxOrder + 1;
+        } else {
+          // Set to null (not 0) when removing from Playing XI - schema has min: 1
+          squad[playerIndex].battingOrder = null;
+        }
+        break;
+      }
+      
+      case 'add': {
+        // Add a player to squad as a RESERVE (not Playing XI)
+        if (!playerId) {
+          return res.status(400).json({
+            success: false,
+            message: 'playerId is required for add action'
+          });
+        }
+        
+        const existingIndex = squad.findIndex(p => 
+          (p.player._id || p.player).toString() === playerId
+        );
+        
+        if (existingIndex !== -1) {
+          // Player already in squad - nothing to do
+          return res.status(400).json({
+            success: false,
+            message: 'Player is already in the squad'
+          });
+        }
+        
+        // Check squad size (max 15)
+        if (squad.length >= 15) {
+          return res.status(400).json({
+            success: false,
+            message: 'Squad cannot exceed 15 players'
+          });
+        }
+        
+        // Add new player to squad as reserve (isPlayingXI: false)
+        squad.push({
+          player: playerId,
+          role: 'player',
+          isPlayingXI: false,
+          battingOrder: null
+        });
+        break;
+      }
+      
+      case 'remove': {
+        // Remove player from squad entirely
+        if (!playerId) {
+          return res.status(400).json({
+            success: false,
+            message: 'playerId is required for remove action'
+          });
+        }
+        
+        const playerIndex = squad.findIndex(p => 
+          (p.player._id || p.player).toString() === playerId
+        );
+        
+        if (playerIndex === -1) {
+          return res.status(400).json({
+            success: false,
+            message: 'Player not found in squad'
+          });
+        }
+        
+        // Remove from squad entirely
+        squad.splice(playerIndex, 1);
+        break;
+      }
+      
+      case 'replace': {
+        // Replace one player with another in Playing XI
+        if (!playerId || !newPlayerId) {
+          return res.status(400).json({
+            success: false,
+            message: 'playerId and newPlayerId are required for replace action'
+          });
+        }
+        
+        const oldPlayerIndex = squad.findIndex(p => 
+          (p.player._id || p.player).toString() === playerId
+        );
+        
+        if (oldPlayerIndex === -1) {
+          return res.status(400).json({
+            success: false,
+            message: 'Player to replace not found in squad'
+          });
+        }
+        
+        const oldBattingOrder = squad[oldPlayerIndex].battingOrder;
+        
+        // Remove old player from Playing XI
+        squad[oldPlayerIndex].isPlayingXI = false;
+        squad[oldPlayerIndex].battingOrder = null;
+        
+        // Add new player
+        const newPlayerIndex = squad.findIndex(p => 
+          (p.player._id || p.player).toString() === newPlayerId
+        );
+        
+        if (newPlayerIndex !== -1) {
+          // Player already in squad as reserve
+          squad[newPlayerIndex].isPlayingXI = true;
+          squad[newPlayerIndex].battingOrder = oldBattingOrder;
+        } else {
+          // Add new player to squad
+          squad.push({
+            player: newPlayerId,
+            role: 'player',
+            isPlayingXI: true,
+            battingOrder: oldBattingOrder
+          });
+        }
+        break;
+      }
+    }
+    
+    await match.save();
+    
+    // Populate and return
+    await match.populate('squads.team1.player', 'name role battingStyle bowlingStyle headshotPath');
+    await match.populate('squads.team2.player', 'name role battingStyle bowlingStyle headshotPath');
+    
+    // Broadcast update to SSE clients
+    broadcastToMatch(req.params.id, 'squad-change', { team, action, playerId, newPlayerId });
+    
+    res.json({
+      success: true,
+      data: match.squads
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

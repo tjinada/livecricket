@@ -1,0 +1,120 @@
+// Add these properties to the component class after "squadUpdating = false;":
+
+  // Add to Squad Modal
+  showAddToSquadModal = false;
+  addToSquadTeam: 'team1' | 'team2' = 'team1';
+  squadPlayerSearch = '';
+  countryPlayers: Player[] = [];
+  loadingCountryPlayers = false;
+
+// Add these methods at the end of the component class:
+
+  openAddToSquadModal(team: 'team1' | 'team2'): void {
+    this.addToSquadTeam = team;
+    this.squadPlayerSearch = '';
+    this.showAddToSquadModal = true;
+    this.loadCountryPlayers();
+  }
+
+  closeAddToSquadModal(): void {
+    this.showAddToSquadModal = false;
+    this.countryPlayers = [];
+  }
+
+  loadCountryPlayers(): void {
+    if (!this.match) return;
+    
+    const countryId = this.addToSquadTeam === 'team1' 
+      ? (this.match.team1?._id || this.match.team1)
+      : (this.match.team2?._id || this.match.team2);
+    
+    if (!countryId) return;
+
+    this.loadingCountryPlayers = true;
+    this.playerService.getAll({ 
+      country: countryId.toString(),
+      gender: this.match.gender || 'women'
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.countryPlayers = response.data;
+        }
+        this.loadingCountryPlayers = false;
+      },
+      error: () => {
+        this.loadingCountryPlayers = false;
+      }
+    });
+  }
+
+  getFilteredCountryPlayers(): Player[] {
+    const currentSquadIds = this.addToSquadTeam === 'team1'
+      ? this.getTeam1SquadPlayers().map(p => p.playerId)
+      : this.getTeam2SquadPlayers().map(p => p.playerId);
+    
+    return this.countryPlayers
+      .filter(p => !currentSquadIds.includes(p._id))
+      .filter(p => {
+        if (!this.squadPlayerSearch) return true;
+        return p.name.toLowerCase().includes(this.squadPlayerSearch.toLowerCase());
+      });
+  }
+
+  addPlayerToSquad(playerId: string): void {
+    if (!this.match) return;
+    
+    this.squadUpdating = true;
+    
+    this.matchService.updateSquad(this.matchId, {
+      team: this.addToSquadTeam,
+      action: 'add',
+      playerId
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.match!.squads = response.data;
+          this.showToast('Player added to squad');
+          this.cacheTeamPlayers();
+          this.loadInningsData();
+          // Refresh the modal list
+          this.loadCountryPlayers();
+        } else {
+          this.error = response.message || 'Failed to add player';
+        }
+        this.squadUpdating = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to add player';
+        this.squadUpdating = false;
+      }
+    });
+  }
+
+  removeFromSquad(team: 'team1' | 'team2', playerId: string): void {
+    if (!this.match) return;
+    
+    if (!confirm('Remove this player from the squad?')) return;
+    
+    this.squadUpdating = true;
+    
+    this.matchService.removeFromSquad(this.matchId, {
+      team,
+      playerId
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.match!.squads = response.data;
+          this.showToast('Player removed from squad');
+          this.cacheTeamPlayers();
+          this.loadInningsData();
+        } else {
+          this.error = response.message || 'Failed to remove player';
+        }
+        this.squadUpdating = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to remove player';
+        this.squadUpdating = false;
+      }
+    });
+  }
