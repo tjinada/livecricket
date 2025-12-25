@@ -206,10 +206,15 @@ export class StartingXiViewComponent implements OnInit, OnChanges {
     }
   }
   
-  // Helper to transform headshotPath to full Cloudinary URL
+  // Helper to transform image path to full URL
+  // Handles both local uploads (/uploads/...) and ESPN headshotPath
   getPlayerImageUrl(path: string | null): string | null {
     if (!path) return null;
+    // Already a full URL - return as-is
     if (path.startsWith('http')) return path;
+    // Local upload path - use relative URL (served by backend)
+    if (path.startsWith('/uploads')) return path;
+    // ESPN headshotPath - prepend Cloudinary CDN URL
     return `https://img1.hscicdn.com/image/upload${path}`;
   }
   

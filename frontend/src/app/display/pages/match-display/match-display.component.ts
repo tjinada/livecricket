@@ -191,11 +191,23 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       .filter((p: any) => p.isPlayingXI && p.battingOrder)
       .map((p: any) => ({
         name: p.player?.name || 'Unknown',
-        image: p.player?.headshotPath || null,
+        image: this.getPlayerImagePath(p.player),
         role: p.player?.role || 'player',
         battingOrder: p.battingOrder || 99
       }))
       .sort((a, b) => a.battingOrder - b.battingOrder);
+  }
+  
+  /**
+   * Get player image path - prefers local imageUrl over ESPN headshotPath
+   * Returns the raw path (not full URL) for use by Starting XI component
+   */
+  private getPlayerImagePath(player: any): string | null {
+    if (!player) return null;
+    // Prefer locally uploaded imageUrl (e.g., /uploads/player-images/...)
+    if (player.imageUrl) return player.imageUrl;
+    // Fall back to ESPN headshotPath
+    return player.headshotPath || null;
   }
 
   updateBackground() {
@@ -1531,7 +1543,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       .filter((p: any) => p.isPlayingXI && p.battingOrder)
       .map((p: any) => ({
         name: p.player?.name || 'Unknown',
-        image: p.player?.headshotPath || null,
+        image: this.getPlayerImagePath(p.player),
         role: p.player?.role || 'player',
         battingOrder: p.battingOrder || 99
       }))
@@ -1557,7 +1569,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
       .filter((p: any) => p.isPlayingXI && p.battingOrder)
       .map((p: any) => ({
         name: p.player?.name || 'Unknown',
-        image: p.player?.headshotPath || null,
+        image: this.getPlayerImagePath(p.player),
         role: p.player?.role || 'player',
         battingOrder: p.battingOrder || 99
       }))
