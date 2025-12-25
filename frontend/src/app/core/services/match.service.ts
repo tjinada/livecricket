@@ -175,4 +175,12 @@ export class MatchService {
   }): Observable<ApiResponse<any>> {
     return this.http.patch<ApiResponse<any>>(`${this.apiUrl}/${id}/squad`, data);
   }
+
+  // Reorder squad (drag-drop)
+  reorderSquad(id: string, data: {
+    team: 'team1' | 'team2';
+    squad: Array<{ playerId: string; battingOrder: number }>;
+  }): Observable<ApiResponse<any>> {
+    return this.http.patch<ApiResponse<any>>(`${this.apiUrl}/${id}/squad-order`, data);
+  }
 }

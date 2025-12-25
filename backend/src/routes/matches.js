@@ -1051,7 +1051,7 @@ router.patch('/:id/squad', auth, async (req, res, next) => {
       }
       
       case 'add': {
-        // Add a player to squad as a RESERVE (not Playing XI)
+        // Add a player to squad (all squad players can bat/bowl)
         if (!playerId) {
           return res.status(400).json({
             success: false,
@@ -1079,12 +1079,15 @@ router.patch('/:id/squad', auth, async (req, res, next) => {
           });
         }
         
-        // Add new player to squad as reserve (isPlayingXI: false)
+        // Calculate next battingOrder (max of existing + 1)
+        const maxOrder = Math.max(0, ...squad.map(p => p.battingOrder || 0));
+        
+        // Add new player to squad with isPlayingXI: true so they can bat/bowl
         squad.push({
           player: playerId,
           role: 'player',
-          isPlayingXI: false,
-          battingOrder: null
+          isPlayingXI: true,
+          battingOrder: maxOrder + 1
         });
         break;
       }
@@ -1170,6 +1173,72 @@ router.patch('/:id/squad', auth, async (req, res, next) => {
     
     // Broadcast update to SSE clients
     broadcastToMatch(req.params.id, 'squad-change', { team, action, playerId, newPlayerId });
+    
+    res.json({
+      success: true,
+      data: match.squads
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/matches/:id/squad-order - Reorder squad (drag-drop)
+router.patch('/:id/squad-order', auth, async (req, res, next) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+    
+    if (match.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot modify squad for completed matches'
+      });
+    }
+    
+    const { team, squad: newOrder } = req.body;
+    
+    if (!team || !['team1', 'team2'].includes(team)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid team (team1 or team2) is required'
+      });
+    }
+    
+    if (!newOrder || !Array.isArray(newOrder)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Squad array with new order is required'
+      });
+    }
+    
+    const currentSquad = match.squads[team];
+    
+    // Update batting orders based on new positions
+    for (const item of newOrder) {
+      const squadPlayer = currentSquad.find(p => 
+        (p.player._id || p.player).toString() === item.playerId
+      );
+      
+      if (squadPlayer) {
+        squadPlayer.battingOrder = item.battingOrder;
+      }
+    }
+    
+    await match.save();
+    
+    // Populate and return
+    await match.populate('squads.team1.player', 'name role battingStyle bowlingStyle headshotPath');
+    await match.populate('squads.team2.player', 'name role battingStyle bowlingStyle headshotPath');
+    
+    // Broadcast update to SSE clients
+    broadcastToMatch(req.params.id, 'squad-order-change', { team });
     
     res.json({
       success: true,

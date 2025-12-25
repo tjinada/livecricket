@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { MatchService, Match } from '../../../core/services/match.service';
 import { ScoringService } from '../../../core/services/scoring.service';
 import { EspnService, SquadValidationResult, SquadValidationMismatch } from '../../../core/services/espn.service';
@@ -57,7 +58,7 @@ interface InningsEdit {
 @Component({
   selector: 'app-match-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, EspnSyncModalComponent],
+  imports: [CommonModule, FormsModule, RouterLink, DragDropModule, EspnSyncModalComponent],
   template: `
     <div class="min-h-screen bg-gray-100">
       <!-- Header -->
@@ -235,6 +236,7 @@ interface InningsEdit {
               <div class="flex items-center gap-2">
                 <span class="text-lg">👥</span>
                 <h3 class="font-semibold text-gray-800">Squad Management</h3>
+                <span class="text-xs text-gray-500">(drag to reorder)</span>
               </div>
               <button 
                 (click)="showSquadManagement = !showSquadManagement"
@@ -245,75 +247,107 @@ interface InningsEdit {
             </div>
             
             @if (showSquadManagement) {
-              <div class="space-y-4">
-                <!-- Team 1 Squad -->
-                <div class="border rounded-lg overflow-hidden">
-                  <div class="p-3 bg-gray-50 border-b flex items-center justify-between">
-                    <span class="font-medium">{{ match.team1?.name }} ({{ getTeam1SquadPlayers().length }}/15)</span>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Team 1 Squad Column -->
+                <div class="border rounded-lg overflow-hidden flex flex-col">
+                  <div class="p-3 bg-gradient-to-r from-green-50 to-green-100 border-b flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-green-800">{{ match.team1?.name }}</span>
+                      <span class="text-xs px-2 py-0.5 bg-green-200 text-green-800 rounded-full">{{ team1SquadList.length }}/15</span>
+                    </div>
                     <button 
                       (click)="openAddToSquadModal('team1')"
-                      [disabled]="getTeam1SquadPlayers().length >= 15"
-                      class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      [disabled]="team1SquadList.length >= 15"
+                      class="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      + Add Player
+                      + Add
                     </button>
                   </div>
-                  <div class="p-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-                    @for (player of getTeam1SquadPlayers(); track player.playerId) {
-                      <div class="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                        <span class="text-sm">{{ player.name }}</span>
+                  <div 
+                    cdkDropList
+                    #team1List="cdkDropList"
+                    [cdkDropListData]="team1SquadList"
+                    (cdkDropListDropped)="onSquadDrop($event, 'team1')"
+                    class="flex-1 overflow-y-auto p-2 space-y-1 min-h-[200px] max-h-[400px] bg-gray-50"
+                  >
+                    @for (player of team1SquadList; track player.playerId; let i = $index) {
+                      <div 
+                        cdkDrag
+                        class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:border-green-300 transition-all group"
+                      >
+                        <span class="text-xs text-gray-400 font-mono w-5">#{{ i + 1 }}</span>
+                        <span class="flex-1 text-sm font-medium truncate">{{ player.name }}</span>
                         <button 
-                          (click)="removeFromSquad('team1', player.playerId)"
+                          (click)="removeFromSquad('team1', player.playerId); $event.stopPropagation()"
                           [disabled]="squadUpdating"
-                          class="text-red-400 hover:text-red-600 disabled:opacity-50 text-lg leading-none"
+                          class="text-gray-300 hover:text-red-500 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                           title="Remove from squad"
                         >
-                          ×
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                          </svg>
                         </button>
+                        <div *cdkDragPlaceholder class="h-10 bg-green-100 rounded-lg border-2 border-dashed border-green-300"></div>
                       </div>
                     }
-                    @if (getTeam1SquadPlayers().length === 0) {
-                      <div class="col-span-full text-gray-400 text-sm text-center py-4">No players in squad</div>
+                    @if (team1SquadList.length === 0) {
+                      <div class="text-gray-400 text-sm text-center py-8">No players in squad.<br>Click "+ Add" to start.</div>
                     }
                   </div>
                 </div>
                 
-                <!-- Team 2 Squad -->
-                <div class="border rounded-lg overflow-hidden">
-                  <div class="p-3 bg-gray-50 border-b flex items-center justify-between">
-                    <span class="font-medium">{{ match.team2?.name }} ({{ getTeam2SquadPlayers().length }}/15)</span>
+                <!-- Team 2 Squad Column -->
+                <div class="border rounded-lg overflow-hidden flex flex-col">
+                  <div class="p-3 bg-gradient-to-r from-blue-50 to-blue-100 border-b flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-blue-800">{{ match.team2?.name }}</span>
+                      <span class="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full">{{ team2SquadList.length }}/15</span>
+                    </div>
                     <button 
                       (click)="openAddToSquadModal('team2')"
-                      [disabled]="getTeam2SquadPlayers().length >= 15"
-                      class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      [disabled]="team2SquadList.length >= 15"
+                      class="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      + Add Player
+                      + Add
                     </button>
                   </div>
-                  <div class="p-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-                    @for (player of getTeam2SquadPlayers(); track player.playerId) {
-                      <div class="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                        <span class="text-sm">{{ player.name }}</span>
+                  <div 
+                    cdkDropList
+                    #team2List="cdkDropList"
+                    [cdkDropListData]="team2SquadList"
+                    (cdkDropListDropped)="onSquadDrop($event, 'team2')"
+                    class="flex-1 overflow-y-auto p-2 space-y-1 min-h-[200px] max-h-[400px] bg-gray-50"
+                  >
+                    @for (player of team2SquadList; track player.playerId; let i = $index) {
+                      <div 
+                        cdkDrag
+                        class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:border-blue-300 transition-all group"
+                      >
+                        <span class="text-xs text-gray-400 font-mono w-5">#{{ i + 1 }}</span>
+                        <span class="flex-1 text-sm font-medium truncate">{{ player.name }}</span>
                         <button 
-                          (click)="removeFromSquad('team2', player.playerId)"
+                          (click)="removeFromSquad('team2', player.playerId); $event.stopPropagation()"
                           [disabled]="squadUpdating"
-                          class="text-red-400 hover:text-red-600 disabled:opacity-50 text-lg leading-none"
+                          class="text-gray-300 hover:text-red-500 disabled:opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                           title="Remove from squad"
                         >
-                          ×
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                          </svg>
                         </button>
+                        <div *cdkDragPlaceholder class="h-10 bg-blue-100 rounded-lg border-2 border-dashed border-blue-300"></div>
                       </div>
                     }
-                    @if (getTeam2SquadPlayers().length === 0) {
-                      <div class="col-span-full text-gray-400 text-sm text-center py-4">No players in squad</div>
+                    @if (team2SquadList.length === 0) {
+                      <div class="text-gray-400 text-sm text-center py-8">No players in squad.<br>Click "+ Add" to start.</div>
                     }
                   </div>
                 </div>
-                
-                <p class="text-xs text-gray-500">
-                  💡 Add up to 15 players per squad. Any player in the squad can bat or bowl.
-                </p>
               </div>
+              
+              <p class="text-xs text-gray-500 mt-3">
+                💡 Drag players to reorder batting position. Any player in the squad can bat or bowl.
+              </p>
             }
           </div>
 
@@ -1075,6 +1109,7 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
           this.match = response.data;
           this.espnUrl = this.match.espnUrl || '';
           this.selectedInningsIndex = this.match?.currentInnings || 0;
+          this.buildSquadLists();
           this.cacheTeamPlayers();
           this.loadInningsData();
           
@@ -1764,6 +1799,8 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   // Squad Management
   showSquadManagement = false;
   squadUpdating = false;
+  team1SquadList: Array<{playerId: string, name: string, battingOrder: number}> = [];
+  team2SquadList: Array<{playerId: string, name: string, battingOrder: number}> = [];
   
   // Add to Squad Modal
   showAddToSquadModal = false;
@@ -1772,20 +1809,77 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   countryPlayers: Player[] = [];
   loadingCountryPlayers = false;
 
-  getTeam1SquadPlayers(): Array<{playerId: string, name: string}> {
-    if (!this.match?.squads?.team1) return [];
-    return this.match.squads.team1.map((p: any) => ({
+  // Build squad lists from match data
+  private buildSquadLists(): void {
+    if (!this.match?.squads) return;
+    
+    this.team1SquadList = (this.match.squads.team1 || []).map((p: any) => ({
       playerId: (p.player?._id || p.player)?.toString(),
-      name: p.player?.name || 'Unknown'
+      name: p.player?.name || 'Unknown',
+      battingOrder: p.battingOrder || 99
+    })).sort((a: any, b: any) => a.battingOrder - b.battingOrder);
+    
+    this.team2SquadList = (this.match.squads.team2 || []).map((p: any) => ({
+      playerId: (p.player?._id || p.player)?.toString(),
+      name: p.player?.name || 'Unknown',
+      battingOrder: p.battingOrder || 99
+    })).sort((a: any, b: any) => a.battingOrder - b.battingOrder);
+  }
+
+  // Handle drag-drop reordering
+  onSquadDrop(event: CdkDragDrop<any[]>, team: 'team1' | 'team2'): void {
+    const squadList = team === 'team1' ? this.team1SquadList : this.team2SquadList;
+    
+    if (event.previousIndex === event.currentIndex) return;
+    
+    moveItemInArray(squadList, event.previousIndex, event.currentIndex);
+    
+    // Update batting orders and save to backend
+    this.saveSquadOrder(team, squadList);
+  }
+
+  private saveSquadOrder(team: 'team1' | 'team2', squadList: Array<{playerId: string, name: string, battingOrder: number}>): void {
+    if (!this.match) return;
+    
+    this.squadUpdating = true;
+    
+    // Build the reordered squad array with new batting orders
+    const reorderedSquad = squadList.map((p, index) => ({
+      playerId: p.playerId,
+      battingOrder: index + 1
     }));
+    
+    this.matchService.reorderSquad(this.matchId, {
+      team,
+      squad: reorderedSquad
+    }).subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          this.match!.squads = response.data;
+          this.buildSquadLists();
+          this.cacheTeamPlayers();
+          this.loadInningsData();
+        } else {
+          this.error = response.message || 'Failed to save order';
+          // Revert on error
+          this.buildSquadLists();
+        }
+        this.squadUpdating = false;
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Failed to save order';
+        this.buildSquadLists();
+        this.squadUpdating = false;
+      }
+    });
+  }
+
+  getTeam1SquadPlayers(): Array<{playerId: string, name: string}> {
+    return this.team1SquadList;
   }
 
   getTeam2SquadPlayers(): Array<{playerId: string, name: string}> {
-    if (!this.match?.squads?.team2) return [];
-    return this.match.squads.team2.map((p: any) => ({
-      playerId: (p.player?._id || p.player)?.toString(),
-      name: p.player?.name || 'Unknown'
-    }));
+    return this.team2SquadList;
   }
 
 
@@ -1857,6 +1951,7 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         if (response.success && response.data) {
           this.match!.squads = response.data;
           this.showToast('Player added to squad');
+          this.buildSquadLists();
           this.cacheTeamPlayers();
           this.loadInningsData();
           // Refresh the modal list
@@ -1889,6 +1984,7 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         if (response.success && response.data) {
           this.match!.squads = response.data;
           this.showToast('Player removed from squad');
+          this.buildSquadLists();
           this.cacheTeamPlayers();
           this.loadInningsData();
         } else {

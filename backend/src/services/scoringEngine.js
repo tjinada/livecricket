@@ -808,17 +808,17 @@ async function changeBowler(matchId, newBowlerId) {
     throw new Error('Bowler cannot bowl consecutive overs');
   }
 
-  // Check if bowler is in playing XI of bowling team
+  // Check if bowler is in bowling team's squad (any player in squad can bowl)
   const bowlingTeamSquad = match.team1.toString() === innings.bowlingTeam.toString()
     ? match.squads.team1
     : match.squads.team2;
 
-  const isInPlayingXI = bowlingTeamSquad.some(
-    p => p.player.toString() === newBowlerId.toString() && p.isPlayingXI
+  const isInSquad = bowlingTeamSquad.some(
+    p => (p.player._id || p.player).toString() === newBowlerId.toString()
   );
 
-  if (!isInPlayingXI) {
-    throw new Error('Bowler is not in playing XI');
+  if (!isInSquad) {
+    throw new Error('Bowler is not in bowling team squad');
   }
 
   innings.currentBowler = newBowlerId;
@@ -1219,17 +1219,17 @@ async function changeBatsman(matchId, position, newBatsmanId) {
     throw new Error('Position must be striker or nonStriker');
   }
 
-  // Verify new batsman is in the batting team's playing XI
+  // Verify new batsman is in the batting team's squad (any player in squad can bat)
   const battingTeamSquad = match.team1.toString() === innings.battingTeam.toString()
     ? match.squads.team1
     : match.squads.team2;
 
-  const isInPlayingXI = battingTeamSquad.some(
-    p => p.player.toString() === newBatsmanId.toString() && p.isPlayingXI
+  const isInSquad = battingTeamSquad.some(
+    p => (p.player._id || p.player).toString() === newBatsmanId.toString()
   );
 
-  if (!isInPlayingXI) {
-    throw new Error('Player is not in batting team playing XI');
+  if (!isInSquad) {
+    throw new Error('Player is not in batting team squad');
   }
 
   // Check if the new batsman is already batting (as the other position)
