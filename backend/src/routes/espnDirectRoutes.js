@@ -301,6 +301,7 @@ function addDirectFetchRoutes(router, auth, Match, matchEspnTeamsToLocal, matchP
 
           inningsPreview.batting.push({
             espnName: espnBatsman.name,
+            espnId: espnBatsman.espnId || null,  // Include ESPN ID for ball-by-ball mapping
             espnStats: {
               runs: espnBatsman.runs,
               balls: espnBatsman.balls,
@@ -328,6 +329,7 @@ function addDirectFetchRoutes(router, auth, Match, matchEspnTeamsToLocal, matchP
 
           inningsPreview.bowling.push({
             espnName: espnBowler.name,
+            espnId: espnBowler.espnId || null,  // Include ESPN ID for ball-by-ball mapping
             espnStats: {
               overs: espnBowler.overs,
               maidens: espnBowler.maidens,

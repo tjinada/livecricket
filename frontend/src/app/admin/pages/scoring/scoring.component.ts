@@ -71,7 +71,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
         <div class="flex items-center justify-center h-64">
           <p class="text-gray-500">Match not found</p>
         </div>
-      } @else if (match.status === 'completed') {
+      } @else if (match.status === 'completed' && !showFullScoringView) {
         <!-- Completed Match View - Display Controls Still Available -->
         <div class="max-w-3xl mx-auto px-4 py-6">
           <!-- Match Result Header -->
@@ -82,13 +82,21 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 {{ match.team1?.name }} vs {{ match.team2?.name }}
               </h2>
               @if (match.result?.winner) {
-                <p class="text-xl">
+                <p class="text-xl mb-4">
                   {{ match.result!.winner.name }} won
                   @if (match.result!.winMargin) {
                     <span>by {{ match.result!.winMargin }} {{ match.result!.winType }}</span>
                   }
                 </p>
               }
+              <!-- Button to go to full scoring view -->
+              <button 
+                (click)="showFullScoringView = true"
+                class="px-6 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium transition-colors inline-flex items-center gap-2"
+              >
+                <span>🏏</span>
+                <span>Open Scoring Interface</span>
+              </button>
             </div>
           </div>
 
@@ -352,7 +360,7 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
             (saved)="saveBackgroundSettings($event)"
           ></app-background-settings>
         }
-      } @else if (match.status !== 'live') {
+      } @else if (match.status !== 'live' && !(match.status === 'completed' && showFullScoringView)) {
         <div class="flex items-center justify-center h-64 flex-col gap-4">
           <p class="text-gray-500">Match is not live</p>
           <a routerLink="/admin/matches" class="text-green-600 hover:text-green-800">
@@ -361,6 +369,27 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
         </div>
       } @else {
         <div class="max-w-7xl mx-auto px-4 py-6">
+          <!-- Match Completed Banner (shown when continuing to edit a completed match) -->
+          @if (match.status === 'completed') {
+            <div class="bg-gradient-to-r from-green-600 to-green-700 rounded-lg shadow p-4 mb-6 flex items-center justify-between">
+              <div class="flex items-center gap-3 text-white">
+                <span class="text-2xl">🏆</span>
+                <div>
+                  <p class="font-semibold">Match Completed</p>
+                  @if (match.result?.winner) {
+                    <p class="text-green-200 text-sm">{{ match.result!.winner.name }} won by {{ match.result!.winMargin }} {{ match.result!.winType }}</p>
+                  }
+                </div>
+              </div>
+              <button 
+                (click)="showFullScoringView = false"
+                class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                View Match Summary
+              </button>
+            </div>
+          }
+
           <!-- Match Header -->
           <div class="bg-white rounded-lg shadow p-4 mb-6">
             <div class="flex justify-between items-center">
@@ -2722,6 +2751,11 @@ export class ScoringComponent implements OnInit, OnDestroy {
           this.match = response.data;
           this.displayView = this.match.displayView || 'live-score';
           this.buildPlayerNameCache();
+          // Keep admin in scoring view even if match completes while they're scoring
+          // This prevents the jarring switch to "Match Completed" view mid-scoring
+          if (this.match.status === 'live') {
+            this.showFullScoringView = true;
+          }
           // Note: Bowler selection now handled via inline dropdown, not auto-opening modal
         }
         this.loading = false;

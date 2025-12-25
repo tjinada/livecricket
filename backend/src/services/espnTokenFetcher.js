@@ -392,7 +392,7 @@ function transformData(capturedData) {
             for (const batsman of innings.inningBatsmen) {
               inningsData.batting.push({
                 name: batsman.player?.longName || batsman.player?.name,
-                espnId: batsman.player?.id,
+                espnId: batsman.player?.id || batsman.player?.objectId || null,  // Include ESPN player ID
                 runs: batsman.runs || 0,
                 balls: batsman.balls || 0,
                 fours: batsman.fours || 0,
@@ -408,7 +408,7 @@ function transformData(capturedData) {
             for (const bowler of innings.inningBowlers) {
               inningsData.bowling.push({
                 name: bowler.player?.longName || bowler.player?.name,
-                espnId: bowler.player?.id,
+                espnId: bowler.player?.id || bowler.player?.objectId || null,  // Include ESPN player ID
                 overs: bowler.overs || 0,
                 maidens: bowler.maidens || 0,
                 runs: bowler.conceded || bowler.runs || 0,

@@ -627,13 +627,14 @@ export class EspnSyncModalComponent implements OnInit {
         inningsData.currentBowler = { playerId: innings.currentBowler.matchedPlayer._id };
       }
 
-      // Add batting with ESPN names for player mapping
+      // Add batting with ESPN names AND ESPN IDs for ball-by-ball player mapping
       innings.batting.forEach((bat, batIdx) => {
         const playerId = this.manualSelections.get(`${inningsIdx}-batting-${batIdx}`);
         if (playerId) {
           inningsData.batting.push({
             playerId,
             espnName: bat.espnName, // Include ESPN name for ball-by-ball mapping
+            espnId: bat.espnId || null, // Include ESPN ID for ball-by-ball mapping (from overs API)
             runs: bat.espnStats.runs,
             balls: bat.espnStats.balls,
             fours: bat.espnStats.fours,
@@ -643,13 +644,14 @@ export class EspnSyncModalComponent implements OnInit {
         }
       });
 
-      // Add bowling with ESPN names for player mapping
+      // Add bowling with ESPN names AND ESPN IDs for ball-by-ball player mapping
       innings.bowling.forEach((bowl, bowlIdx) => {
         const playerId = this.manualSelections.get(`${inningsIdx}-bowling-${bowlIdx}`);
         if (playerId) {
           inningsData.bowling.push({
             playerId,
             espnName: bowl.espnName, // Include ESPN name for ball-by-ball mapping
+            espnId: bowl.espnId || null, // Include ESPN ID for ball-by-ball mapping (from overs API)
             overs: bowl.espnStats.overs,
             maidens: bowl.espnStats.maidens,
             runs: bowl.espnStats.runs,

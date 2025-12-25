@@ -1369,14 +1369,19 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
       }
     }
 
-    // Build a player name to ID mapping for ball-by-ball data
-    // This maps ESPN player names to local player IDs
+    // Build player mappings for ball-by-ball data
+    // Maps ESPN player names (lowercase) AND ESPN player IDs to local player IDs
     const playerNameToId = new Map();
+    const espnIdToLocalId = new Map();  // NEW: Map ESPN numeric IDs to local player IDs
     
     // From manual mappings
     if (playerMappings) {
       for (const [espnName, mapping] of Object.entries(playerMappings)) {
         playerNameToId.set(espnName.toLowerCase(), mapping.playerId);
+        // Also store espnId if available
+        if (mapping.espnId) {
+          espnIdToLocalId.set(String(mapping.espnId), mapping.playerId);
+        }
       }
     }
     
@@ -1384,22 +1389,51 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
     if (match.espnPlayerMappings) {
       for (const mapping of match.espnPlayerMappings) {
         playerNameToId.set(mapping.espnName.toLowerCase(), mapping.player.toString());
+        // Also store espnId if available
+        if (mapping.espnId) {
+          espnIdToLocalId.set(String(mapping.espnId), mapping.player.toString());
+        }
       }
     }
     
     // From innings data batting/bowling
+    // These come from the ESPN scorecard which has BOTH names and ESPN IDs
     for (const innings of inningsData) {
       for (const bat of (innings.batting || [])) {
         if (bat.playerId && bat.espnName) {
           playerNameToId.set(bat.espnName.toLowerCase(), bat.playerId);
+        }
+        // NEW: Also map ESPN ID if available (comes from scorecard)
+        if (bat.playerId && bat.espnId) {
+          espnIdToLocalId.set(String(bat.espnId), bat.playerId);
         }
       }
       for (const bowl of (innings.bowling || [])) {
         if (bowl.playerId && bowl.espnName) {
           playerNameToId.set(bowl.espnName.toLowerCase(), bowl.playerId);
         }
+        // NEW: Also map ESPN ID if available (comes from scorecard)
+        if (bowl.playerId && bowl.espnId) {
+          espnIdToLocalId.set(String(bowl.espnId), bowl.playerId);
+        }
       }
     }
+    
+    console.log(`Built player mappings: ${playerNameToId.size} names, ${espnIdToLocalId.size} ESPN IDs`);
+    
+    // Helper function to resolve player ID from ESPN data
+    // Tries ESPN ID first (most reliable), then falls back to name
+    const resolvePlayerId = (espnId, espnName) => {
+      // Try ESPN ID first (from overs/details API)
+      if (espnId && espnIdToLocalId.has(String(espnId))) {
+        return espnIdToLocalId.get(String(espnId));
+      }
+      // Fall back to name lookup
+      if (espnName && playerNameToId.has(espnName.toLowerCase())) {
+        return playerNameToId.get(espnName.toLowerCase());
+      }
+      return null;
+    };
 
     // ============================================
     // STEP 1: DELETE ALL EXISTING BALL RECORDS
@@ -1615,12 +1649,15 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
           const overNumber = espnBall.overNumber !== undefined ? espnBall.overNumber : Math.floor(espnBall.oversActual || 0);
           const ballInOver = espnBall.ballInOver !== undefined ? espnBall.ballInOver : Math.round(((espnBall.oversActual || 0) - overNumber) * 10);
           
-          // Map ESPN player names to local player IDs
-          const batsmanId = espnBall.batsmanName ? playerNameToId.get(espnBall.batsmanName.toLowerCase()) : null;
-          const bowlerId = espnBall.bowlerName ? playerNameToId.get(espnBall.bowlerName.toLowerCase()) : null;
-          const nonStrikerId = espnBall.nonStrikerName ? playerNameToId.get(espnBall.nonStrikerName.toLowerCase()) : null;
-          const dismissedBatsmanId = espnBall.dismissedBatsmanName ? playerNameToId.get(espnBall.dismissedBatsmanName.toLowerCase()) : null;
-          const fielderId = espnBall.fielderName ? playerNameToId.get(espnBall.fielderName.toLowerCase()) : null;
+          // Map ESPN player IDs/names to local player IDs
+          // ESPN overs/details API provides IDs (batsmanId, bowlerId, etc.)
+          // ESPN scorecard provides names (batsmanName, bowlerName, etc.)
+          // We try ID first, then fall back to name
+          const batsmanId = resolvePlayerId(espnBall.batsmanId, espnBall.batsmanName);
+          const bowlerId = resolvePlayerId(espnBall.bowlerId, espnBall.bowlerName);
+          const nonStrikerId = resolvePlayerId(espnBall.nonStrikerId, espnBall.nonStrikerName);
+          const dismissedBatsmanId = resolvePlayerId(espnBall.dismissedBatsmanId, espnBall.dismissedBatsmanName);
+          const fielderId = resolvePlayerId(espnBall.fielderId, espnBall.fielderName);
 
           // ballInOver can be > 6 if there are extras in the over
           // We cap ballNumber at 6 for the schema validation, but use sequence for ordering

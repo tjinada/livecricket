@@ -136,6 +136,7 @@ export interface PlayerCandidate {
 
 export interface BattingSyncPreview {
   espnName: string;
+  espnId?: string | null; // ESPN player ID for ball-by-ball mapping
   espnStats: {
     runs: number;
     balls: number;
@@ -153,6 +154,7 @@ export interface BattingSyncPreview {
 
 export interface BowlingSyncPreview {
   espnName: string;
+  espnId?: string | null; // ESPN player ID for ball-by-ball mapping
   espnStats: {
     overs: number;
     maidens: number;
@@ -207,6 +209,7 @@ export interface EspnSyncPreview {
 export interface BattingSyncData {
   playerId: string;
   espnName?: string; // ESPN name for ball-by-ball player mapping
+  espnId?: string | null; // ESPN player ID for ball-by-ball player mapping (from overs API)
   runs: number;
   balls: number;
   fours: number;
@@ -222,6 +225,7 @@ export interface BattingSyncData {
 export interface BowlingSyncData {
   playerId: string;
   espnName?: string; // ESPN name for ball-by-ball player mapping
+  espnId?: string | null; // ESPN player ID for ball-by-ball player mapping (from overs API)
   overs: number;
   maidens: number;
   runs: number;
