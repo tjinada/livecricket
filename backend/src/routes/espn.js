@@ -2062,10 +2062,12 @@ function matchPlayer(espnName, squad, manualMappings, teamId) {
 function normalizePlayerName(name) {
   return name
     .toLowerCase()
-    .replace(/\(c\)/g, '')      // Remove captain marker
-    .replace(/†/g, '')          // Remove wicketkeeper marker
-    .replace(/\*/g, '')         // Remove asterisk
-    .replace(/\s+/g, ' ')       // Normalize whitespace
+    .replace(/\(c\)/g, '')           // Remove captain marker
+    .replace(/\(vc\)/g, '')          // Remove vice-captain marker
+    .replace(/†/g, '')               // Remove wicketkeeper marker
+    .replace(/\*/g, '')               // Remove asterisk
+    .replace(/\([^)]+\)/g, '')       // Remove ANY parenthetical text (role, etc.)
+    .replace(/\s+/g, ' ')             // Normalize whitespace
     .trim();
 }
 
