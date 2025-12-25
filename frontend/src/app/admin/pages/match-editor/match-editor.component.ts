@@ -253,11 +253,11 @@ interface InningsEdit {
                   <div class="p-3 bg-gradient-to-r from-green-50 to-green-100 border-b flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <span class="font-semibold text-green-800">{{ match.team1?.name }}</span>
-                      <span class="text-xs px-2 py-0.5 bg-green-200 text-green-800 rounded-full">{{ team1SquadList.length }}/15</span>
+                      <span class="text-xs px-2 py-0.5 bg-green-200 text-green-800 rounded-full">{{ team1SquadList.length }}/30</span>
                     </div>
                     <button 
                       (click)="openAddToSquadModal('team1')"
-                      [disabled]="team1SquadList.length >= 15"
+                      [disabled]="team1SquadList.length >= 30"
                       class="text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       + Add
@@ -301,11 +301,11 @@ interface InningsEdit {
                   <div class="p-3 bg-gradient-to-r from-blue-50 to-blue-100 border-b flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <span class="font-semibold text-blue-800">{{ match.team2?.name }}</span>
-                      <span class="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full">{{ team2SquadList.length }}/15</span>
+                      <span class="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full">{{ team2SquadList.length }}/30</span>
                     </div>
                     <button 
                       (click)="openAddToSquadModal('team2')"
-                      [disabled]="team2SquadList.length >= 15"
+                      [disabled]="team2SquadList.length >= 30"
                       class="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       + Add
