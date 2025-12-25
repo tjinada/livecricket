@@ -1237,8 +1237,8 @@ export class MatchesComponent implements OnInit {
   }
 
   addToSquad(team: 'team1' | 'team2', player: Player) {
-    // Check if we've hit the max squad size (15)
-    if (this.getSquadCount(team) >= 15) return;
+    // Check if we've hit the max squad size (30)
+    if (this.getSquadCount(team) >= 30) return;
     
     // Add player with next batting order
     const nextOrder = this.getSquadCount(team) + 1;

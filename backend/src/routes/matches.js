@@ -260,18 +260,18 @@ router.put('/:id/squad', auth, async (req, res, next) => {
     
     const { team1, team2 } = req.body;
     
-    // Validate squad size (min 11, max 15 per team)
-    if (team1 && team1.length > 15) {
+    // Validate squad size (min 11, max 30 per team)
+    if (team1 && team1.length > 30) {
       return res.status(400).json({
         success: false,
-        message: 'Team 1 squad cannot exceed 15 players'
+        message: 'Team 1 squad cannot exceed 30 players'
       });
     }
     
-    if (team2 && team2.length > 15) {
+    if (team2 && team2.length > 30) {
       return res.status(400).json({
         success: false,
-        message: 'Team 2 squad cannot exceed 15 players'
+        message: 'Team 2 squad cannot exceed 30 players'
       });
     }
     
