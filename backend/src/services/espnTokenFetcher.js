@@ -352,6 +352,7 @@ function transformData(capturedData) {
     matchState: { isStarted: false, isLive: false, isComplete: false },
     target: null,
     ballByBall: null,
+    currentPlayers: null,  // For live matches: striker, nonStriker, bowler
     debug: {}
   };
 
@@ -371,16 +372,127 @@ function transformData(capturedData) {
           };
         }
       }
+
+      // Extract current players from match details (for live matches)
+      // ESPN provides this in content.supportInfo.liveSummary (primary source)
+      // The liveSummary contains batsmen[] and bowlers[] arrays with currentType flags:
+      //   - batsmen: currentType=2 is striker, currentType=1 is non-striker
+      //   - bowlers: currentType=1 is current bowler, currentType=2 is previous bowler
+      const content = capturedData.matchDetails.content;
+      
+      // Debug: log what's available
+      console.log('  Match details content keys:', content ? Object.keys(content) : 'N/A');
+      if (content?.supportInfo?.liveSummary) {
+        console.log('  liveSummary available - batsmen:', content.supportInfo.liveSummary.batsmen?.length || 0, 
+                    ', bowlers:', content.supportInfo.liveSummary.bowlers?.length || 0);
+      } else {
+        console.log('  liveSummary: NOT PRESENT (match may be in innings break or completed)');
+      }
+      
+      // Try liveSummary first (preferred source for live matches)
+      if (content?.supportInfo?.liveSummary) {
+        const liveSummary = content.supportInfo.liveSummary;
+        
+        // Find striker (currentType === 2) and non-striker (currentType === 1) from batsmen
+        const striker = liveSummary.batsmen?.find(b => b.currentType === 2);
+        const nonStriker = liveSummary.batsmen?.find(b => b.currentType === 1);
+        // Find current bowler (currentType === 1)
+        const bowler = liveSummary.bowlers?.find(b => b.currentType === 1);
+        
+        result.currentPlayers = {
+          striker: striker ? {
+            name: striker.player?.longName || striker.player?.name,
+            espnId: striker.player?.id || striker.player?.objectId,
+            runs: striker.runs || 0,
+            balls: striker.balls || 0
+          } : null,
+          nonStriker: nonStriker ? {
+            name: nonStriker.player?.longName || nonStriker.player?.name,
+            espnId: nonStriker.player?.id || nonStriker.player?.objectId,
+            runs: nonStriker.runs || 0,
+            balls: nonStriker.balls || 0
+          } : null,
+          bowler: bowler ? {
+            name: bowler.player?.longName || bowler.player?.name,
+            espnId: bowler.player?.id || bowler.player?.objectId,
+            overs: bowler.overs || 0,
+            runs: bowler.conceded || bowler.runs || 0,
+            wickets: bowler.wickets || 0
+          } : null
+        };
+        console.log('  Current players extracted from liveSummary:',
+                    'Striker=' + (result.currentPlayers.striker?.name || 'N/A'),
+                    'NonStriker=' + (result.currentPlayers.nonStriker?.name || 'N/A'),
+                    'Bowler=' + (result.currentPlayers.bowler?.name || 'N/A'));
+      }
+      // Fallback to livePerformance if liveSummary not available
+      else if (content?.livePerformance) {
+        const livePerf = content.livePerformance;
+        result.currentPlayers = {
+          striker: livePerf.batsmanStriker ? {
+            name: livePerf.batsmanStriker.player?.longName || livePerf.batsmanStriker.player?.name,
+            espnId: livePerf.batsmanStriker.player?.id || livePerf.batsmanStriker.player?.objectId,
+            runs: livePerf.batsmanStriker.runs || 0,
+            balls: livePerf.batsmanStriker.balls || 0
+          } : null,
+          nonStriker: livePerf.batsmanNonStriker ? {
+            name: livePerf.batsmanNonStriker.player?.longName || livePerf.batsmanNonStriker.player?.name,
+            espnId: livePerf.batsmanNonStriker.player?.id || livePerf.batsmanNonStriker.player?.objectId,
+            runs: livePerf.batsmanNonStriker.runs || 0,
+            balls: livePerf.batsmanNonStriker.balls || 0
+          } : null,
+          bowler: livePerf.bowlerStriker ? {
+            name: livePerf.bowlerStriker.player?.longName || livePerf.bowlerStriker.player?.name,
+            espnId: livePerf.bowlerStriker.player?.id || livePerf.bowlerStriker.player?.objectId,
+            overs: livePerf.bowlerStriker.overs || 0,
+            runs: livePerf.bowlerStriker.conceded || livePerf.bowlerStriker.runs || 0,
+            wickets: livePerf.bowlerStriker.wickets || 0
+          } : null
+        };
+        console.log('  Current players extracted from livePerformance (fallback)');
+      }
     }
 
     if (capturedData.scorecard) {
       const scorecard = capturedData.scorecard.content || capturedData.scorecard;
+      
+      // Also check scorecard for live summary info (fallback if matchDetails didn't have it)
+      if (!result.currentPlayers && scorecard.supportInfo?.liveSummary) {
+        const liveSummary = scorecard.supportInfo.liveSummary;
+        const striker = liveSummary.batsmen?.find(b => b.currentType === 2);
+        const nonStriker = liveSummary.batsmen?.find(b => b.currentType === 1);
+        const bowler = liveSummary.bowlers?.find(b => b.currentType === 1);
+        
+        result.currentPlayers = {
+          striker: striker ? {
+            name: striker.player?.longName || striker.player?.name,
+            espnId: striker.player?.id || striker.player?.objectId,
+            runs: striker.runs || 0,
+            balls: striker.balls || 0
+          } : null,
+          nonStriker: nonStriker ? {
+            name: nonStriker.player?.longName || nonStriker.player?.name,
+            espnId: nonStriker.player?.id || nonStriker.player?.objectId,
+            runs: nonStriker.runs || 0,
+            balls: nonStriker.balls || 0
+          } : null,
+          bowler: bowler ? {
+            name: bowler.player?.longName || bowler.player?.name,
+            espnId: bowler.player?.id || bowler.player?.objectId,
+            overs: bowler.overs || 0,
+            runs: bowler.conceded || bowler.runs || 0,
+            wickets: bowler.wickets || 0
+          } : null
+        };
+        console.log('  Current players extracted from scorecard liveSummary (fallback)');
+      }
       
       if (scorecard.innings) {
         for (const innings of scorecard.innings) {
           const inningsData = {
             team: innings.team?.longName || innings.team?.name || 'Unknown',
             inningsNumber: innings.inningNumber,
+            isCurrent: innings.isCurrent || false,  // Mark current innings
             batting: [],
             bowling: [],
             extras: null,

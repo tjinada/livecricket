@@ -290,6 +290,65 @@ function addDirectFetchRoutes(router, auth, Match, matchEspnTeamsToLocal, matchP
           bowling: []
         };
 
+        // Match current players (striker, non-striker, bowler) for live innings
+        // This uses data from transformedData.currentPlayers which is extracted from ESPN livePerformance
+        // Note: currentPlayers is only available during ACTIVE LIVE PLAY - not during innings breaks or completed matches
+        if (transformedData.currentPlayers && espnInnings.isCurrent) {
+          const cp = transformedData.currentPlayers;
+          console.log(`  Current players from ESPN livePerformance: Striker=${cp.striker?.name || 'N/A'}, NonStriker=${cp.nonStriker?.name || 'N/A'}, Bowler=${cp.bowler?.name || 'N/A'}`);
+          
+          // Match striker - verify they're from this innings' batting team
+          if (cp.striker?.name) {
+            const strikerMatch = matchPlayer(cp.striker.name, squad, match.espnPlayerMappings, localTeam._id);
+            if (strikerMatch.player) {
+              inningsPreview.striker = {
+                espnName: cp.striker.name,
+                espnId: cp.striker.espnId,
+                runs: cp.striker.runs,
+                balls: cp.striker.balls,
+                matchedPlayer: strikerMatch.player,
+                confidence: strikerMatch.confidence
+              };
+            }
+          }
+          
+          // Match non-striker
+          if (cp.nonStriker?.name) {
+            const nonStrikerMatch = matchPlayer(cp.nonStriker.name, squad, match.espnPlayerMappings, localTeam._id);
+            if (nonStrikerMatch.player) {
+              inningsPreview.nonStriker = {
+                espnName: cp.nonStriker.name,
+                espnId: cp.nonStriker.espnId,
+                runs: cp.nonStriker.runs,
+                balls: cp.nonStriker.balls,
+                matchedPlayer: nonStrikerMatch.player,
+                confidence: nonStrikerMatch.confidence
+              };
+            }
+          }
+          
+          // Match current bowler (from opposing team)
+          if (cp.bowler?.name) {
+            const bowlerMatch = matchPlayer(cp.bowler.name, opposingSquad, match.espnPlayerMappings, localTeamInfo.opposingTeamId);
+            if (bowlerMatch.player) {
+              inningsPreview.currentBowler = {
+                espnName: cp.bowler.name,
+                espnId: cp.bowler.espnId,
+                overs: cp.bowler.overs,
+                runs: cp.bowler.runs,
+                wickets: cp.bowler.wickets,
+                matchedPlayer: bowlerMatch.player,
+                confidence: bowlerMatch.confidence
+              };
+            }
+          }
+          
+          console.log(`  Current players matched: Striker=${inningsPreview.striker?.matchedPlayer?.name || 'N/A'}, NonStriker=${inningsPreview.nonStriker?.matchedPlayer?.name || 'N/A'}, Bowler=${inningsPreview.currentBowler?.matchedPlayer?.name || 'N/A'}`);
+        } else if (transformedData.currentPlayers) {
+          // Log why we're not matching - helps debug
+          console.log(`  Current players available but not applied to this innings: isCurrent=${espnInnings.isCurrent}, team=${espnInnings.team}`);
+        }
+
         // Match batsmen
         for (const espnBatsman of (espnInnings.batting || [])) {
           const playerMatch = matchPlayer(
