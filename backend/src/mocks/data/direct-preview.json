@@ -1,0 +1,630 @@
+{
+  "success": true,
+  "data": {
+    "matchId": "694e9d70e92463c6f23174f7",
+    "espnUrl": "https://www.espncricinfo.com/series/sri-lanka-women-tour-of-india-2025-26-1513733/india-women-vs-sri-lanka-women-3rd-t20i-1513737/full-scorecard",
+    "matchStatus": "IND Women won by 8 wickets (with 40 balls remaining)",
+    "target": null,
+    "teamMapping": {
+      "matched": true,
+      "mapping": {
+        "Sri Lanka Women": {
+          "team": {
+            "_id": "692c86fc2453c97b0cbcc94b",
+            "name": "Sri Lanka",
+            "code": "SL"
+          },
+          "squadKey": "team1",
+          "opposingTeamId": "692b6726c92b5fb1402d26ed"
+        },
+        "India Women": {
+          "team": {
+            "_id": "692b6726c92b5fb1402d26ed",
+            "name": "India",
+            "code": "IND"
+          },
+          "squadKey": "team2",
+          "opposingTeamId": "692c86fc2453c97b0cbcc94b"
+        }
+      }
+    },
+    "innings": [
+      {
+        "espnTeam": "Sri Lanka Women",
+        "localTeam": {
+          "_id": "692c86fc2453c97b0cbcc94b",
+          "name": "Sri Lanka"
+        },
+        "total": {
+          "runs": 112,
+          "wickets": 7
+        },
+        "overs": 20,
+        "extras": {
+          "total": 6,
+          "byes": 1,
+          "legByes": 2,
+          "wides": 3,
+          "noBalls": 0
+        },
+        "isCurrent": false,
+        "striker": null,
+        "nonStriker": null,
+        "currentBowler": null,
+        "batting": [
+          {
+            "espnName": "Hasini Perera",
+            "espnId": 58124,
+            "espnStats": {
+              "runs": 25,
+              "balls": 18,
+              "fours": 5,
+              "sixes": 0,
+              "strikeRate": 138.88,
+              "isNotOut": false,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694a21329b2c12ee099435d8",
+              "name": "Hasini Perera"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Chamari Athapaththu",
+            "espnId": 53652,
+            "espnStats": {
+              "runs": 3,
+              "balls": 12,
+              "fours": 0,
+              "sixes": 0,
+              "strikeRate": 25,
+              "isNotOut": false,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694a21419b2c12ee0994362b",
+              "name": "Chamari Athapaththu"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Harshitha Samarawickrama",
+            "espnId": 67555,
+            "espnStats": {
+              "runs": 2,
+              "balls": 4,
+              "fours": 0,
+              "sixes": 0,
+              "strikeRate": 50,
+              "isNotOut": false,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694a21329b2c12ee099435f6",
+              "name": "Harshitha Samarawickrama"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Imesha Dulani",
+            "espnId": 85151,
+            "espnStats": {
+              "runs": 27,
+              "balls": 32,
+              "fours": 4,
+              "sixes": 0,
+              "strikeRate": 84.37,
+              "isNotOut": false,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694a21419b2c12ee0994363d",
+              "name": "Imesha Dulani"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Nilakshika Silva",
+            "espnId": 67546,
+            "espnStats": {
+              "runs": 4,
+              "balls": 9,
+              "fours": 0,
+              "sixes": 0,
+              "strikeRate": 44.44,
+              "isNotOut": false,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694a21329b2c12ee09943608",
+              "name": "Nilakshika Silva"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Kavisha Dilhari",
+            "espnId": 85045,
+            "espnStats": {
+              "runs": 20,
+              "balls": 13,
+              "fours": 2,
+              "sixes": 1,
+              "strikeRate": 153.84,
+              "isNotOut": false,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694a21419b2c12ee09943637",
+              "name": "Kavisha Dilhari"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Kaushini Nuthyangana",
+            "espnId": 112438,
+            "espnStats": {
+              "runs": 19,
+              "balls": 16,
+              "fours": 2,
+              "sixes": 0,
+              "strikeRate": 118.75,
+              "isNotOut": true,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694a21329b2c12ee099435ff",
+              "name": "Kaushini Nuthyangana"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Malsha Shehani",
+            "espnId": 73069,
+            "espnStats": {
+              "runs": 5,
+              "balls": 11,
+              "fours": 0,
+              "sixes": 0,
+              "strikeRate": 45.45,
+              "isNotOut": false,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694cb3e7b7913e9db6eeb1b7",
+              "name": "Malsha Shehani"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Malki Madara",
+            "espnId": 114914,
+            "espnStats": {
+              "runs": 1,
+              "balls": 5,
+              "fours": 0,
+              "sixes": 0,
+              "strikeRate": 20,
+              "isNotOut": true,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694a21419b2c12ee09943682",
+              "name": "Malki Madara"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Inoka Ranaweera",
+            "espnId": 61574,
+            "espnStats": {
+              "runs": 0,
+              "balls": 0,
+              "fours": 0,
+              "sixes": 0,
+              "strikeRate": 0,
+              "isNotOut": true,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694a21329b2c12ee099435ea",
+              "name": "Inoka Ranaweera"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Nimasha Meepage",
+            "espnId": 115064,
+            "espnStats": {
+              "runs": 0,
+              "balls": 0,
+              "fours": 0,
+              "sixes": 0,
+              "strikeRate": 0,
+              "isNotOut": true,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694cb3e5b7913e9db6eeb1b3",
+              "name": "Nimasha Meepage"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          }
+        ],
+        "bowling": [
+          {
+            "espnName": "Renuka Singh",
+            "espnId": 89351,
+            "espnStats": {
+              "overs": 4,
+              "maidens": 1,
+              "runs": 21,
+              "wickets": 4,
+              "economy": 5.25,
+              "dotBalls": 16
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931d26",
+              "name": "Renuka Singh"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Kranti Gaud",
+            "espnId": 119155,
+            "espnStats": {
+              "overs": 4,
+              "maidens": 0,
+              "runs": 22,
+              "wickets": 0,
+              "economy": 5.5,
+              "dotBalls": 15
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931cc9",
+              "name": "Kranti Gaud"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Deepti Sharma",
+            "espnId": 70137,
+            "espnStats": {
+              "overs": 4,
+              "maidens": 0,
+              "runs": 18,
+              "wickets": 3,
+              "economy": 4.5,
+              "dotBalls": 14
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931d3b",
+              "name": "Deepti Sharma"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Vaishnavi Sharma",
+            "espnId": 117209,
+            "espnStats": {
+              "overs": 3,
+              "maidens": 0,
+              "runs": 14,
+              "wickets": 0,
+              "economy": 4.66,
+              "dotBalls": 8
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931d59",
+              "name": "Vaishnavi Sharma"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Amanjot Kaur",
+            "espnId": 108883,
+            "espnStats": {
+              "overs": 4,
+              "maidens": 0,
+              "runs": 23,
+              "wickets": 0,
+              "economy": 5.75,
+              "dotBalls": 11
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931cea",
+              "name": "Amanjot Kaur"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Shree Charani",
+            "espnId": 119145,
+            "espnStats": {
+              "overs": 1,
+              "maidens": 0,
+              "runs": 11,
+              "wickets": 0,
+              "economy": 11,
+              "dotBalls": 1
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931d44",
+              "name": "Shree Charani"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          }
+        ]
+      },
+      {
+        "espnTeam": "India Women",
+        "localTeam": {
+          "_id": "692b6726c92b5fb1402d26ed",
+          "name": "India"
+        },
+        "total": {
+          "runs": 115,
+          "wickets": 2
+        },
+        "overs": 13.2,
+        "extras": {
+          "total": 5,
+          "byes": 0,
+          "legByes": 1,
+          "wides": 3,
+          "noBalls": 1
+        },
+        "isCurrent": true,
+        "striker": {
+          "espnName": "Harmanpreet Kaur",
+          "espnId": 58198,
+          "runs": 21,
+          "balls": 18,
+          "matchedPlayer": {
+            "_id": "694d83cdef51af853d931ced",
+            "name": "Harmanpreet Kaur"
+          },
+          "confidence": 100
+        },
+        "nonStriker": {
+          "espnName": "Shafali Verma",
+          "espnId": 105213,
+          "runs": 79,
+          "balls": 42,
+          "matchedPlayer": {
+            "_id": "694d83cdef51af853d931d38",
+            "name": "Shafali Verma"
+          },
+          "confidence": 100
+        },
+        "currentBowler": {
+          "espnName": "Malsha Shehani",
+          "espnId": 73069,
+          "overs": 2.2,
+          "runs": 28,
+          "wickets": 0,
+          "matchedPlayer": {
+            "_id": "694cb3e7b7913e9db6eeb1b7",
+            "name": "Malsha Shehani"
+          },
+          "confidence": 100
+        },
+        "batting": [
+          {
+            "espnName": "Shafali Verma",
+            "espnId": 105213,
+            "espnStats": {
+              "runs": 79,
+              "balls": 42,
+              "fours": 11,
+              "sixes": 3,
+              "strikeRate": 188.09,
+              "isNotOut": true,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931d38",
+              "name": "Shafali Verma"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Smriti Mandhana",
+            "espnId": 70132,
+            "espnStats": {
+              "runs": 1,
+              "balls": 6,
+              "fours": 0,
+              "sixes": 0,
+              "strikeRate": 16.66,
+              "isNotOut": false,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931cf6",
+              "name": "Smriti Mandhana"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Jemimah Rodrigues",
+            "espnId": 82827,
+            "espnStats": {
+              "runs": 9,
+              "balls": 15,
+              "fours": 1,
+              "sixes": 0,
+              "strikeRate": 60,
+              "isNotOut": false,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931d29",
+              "name": "Jemimah Rodrigues"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Harmanpreet Kaur",
+            "espnId": 58198,
+            "espnStats": {
+              "runs": 21,
+              "balls": 18,
+              "fours": 2,
+              "sixes": 0,
+              "strikeRate": 116.66,
+              "isNotOut": true,
+              "dismissal": null
+            },
+            "matchedPlayer": {
+              "_id": "694d83cdef51af853d931ced",
+              "name": "Harmanpreet Kaur"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          }
+        ],
+        "bowling": [
+          {
+            "espnName": "Malsha Shehani",
+            "espnId": 73069,
+            "espnStats": {
+              "overs": 2.2,
+              "maidens": 0,
+              "runs": 28,
+              "wickets": 0,
+              "economy": 12,
+              "dotBalls": 3
+            },
+            "matchedPlayer": {
+              "_id": "694cb3e7b7913e9db6eeb1b7",
+              "name": "Malsha Shehani"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Malki Madara",
+            "espnId": 114914,
+            "espnStats": {
+              "overs": 2,
+              "maidens": 0,
+              "runs": 11,
+              "wickets": 0,
+              "economy": 5.5,
+              "dotBalls": 6
+            },
+            "matchedPlayer": {
+              "_id": "694a21419b2c12ee09943682",
+              "name": "Malki Madara"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Nimasha Meepage",
+            "espnId": 115064,
+            "espnStats": {
+              "overs": 2,
+              "maidens": 0,
+              "runs": 29,
+              "wickets": 0,
+              "economy": 14.5,
+              "dotBalls": 4
+            },
+            "matchedPlayer": {
+              "_id": "694cb3e5b7913e9db6eeb1b3",
+              "name": "Nimasha Meepage"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Kavisha Dilhari",
+            "espnId": 85045,
+            "espnStats": {
+              "overs": 3,
+              "maidens": 0,
+              "runs": 18,
+              "wickets": 2,
+              "economy": 6,
+              "dotBalls": 11
+            },
+            "matchedPlayer": {
+              "_id": "694a21419b2c12ee09943637",
+              "name": "Kavisha Dilhari"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          },
+          {
+            "espnName": "Inoka Ranaweera",
+            "espnId": 61574,
+            "espnStats": {
+              "overs": 4,
+              "maidens": 0,
+              "runs": 28,
+              "wickets": 0,
+              "economy": 7,
+              "dotBalls": 6
+            },
+            "matchedPlayer": {
+              "_id": "694a21329b2c12ee099435ea",
+              "name": "Inoka Ranaweera"
+            },
+            "matchType": "exact",
+            "confidence": 100,
+            "candidates": []
+          }
+        ]
+      }
+    ],
+    "ballByBallAvailable": true
+  },
+  "fetchMethod": "mock"
+}

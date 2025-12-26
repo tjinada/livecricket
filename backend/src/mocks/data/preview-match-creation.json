@@ -1,0 +1,882 @@
+{
+  "success": true,
+  "data": {
+    "matchInfo": {
+      "title": "3rd T20I",
+      "seriesName": "Sri Lanka Women tour of India",
+      "date": "2025-12-26T00:00:00.000Z",
+      "venue": "Greenfield International Stadium, Thiruvananthapuram",
+      "format": "t20",
+      "gender": "women",
+      "matchNumber": 3
+    },
+    "espnUrl": "https://www.espncricinfo.com/series/sri-lanka-women-tour-of-india-2025-26-1513733/india-women-vs-sri-lanka-women-3rd-t20i-1513737/match-squads",
+    "scorecardUrl": "https://www.espncricinfo.com/series/sri-lanka-women-tour-of-india-2025-26-1513733/india-women-vs-sri-lanka-women-3rd-t20i-1513737/full-scorecard",
+    "teamMapping": [
+      {
+        "espnTeam": {
+          "id": 3672,
+          "name": "Sri Lanka Women",
+          "shortName": "SL-W"
+        },
+        "localTeam": {
+          "_id": "692c86fc2453c97b0cbcc94b",
+          "name": "Sri Lanka",
+          "code": "SL",
+          "flagUrl": "https://flagicons.lipis.dev/flags/4x3/lk.svg"
+        },
+        "localTeamCandidates": [
+          {
+            "country": {
+              "_id": "692c86fc2453c97b0cbcc94b",
+              "name": "Sri Lanka",
+              "code": "SL",
+              "flagUrl": "https://flagicons.lipis.dev/flags/4x3/lk.svg"
+            },
+            "score": 100
+          }
+        ],
+        "players": [
+          {
+            "espnPlayer": {
+              "id": 53652,
+              "name": "Chamari Athapaththu",
+              "isCaptain": true,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "batting allrounder"
+            },
+            "localPlayer": {
+              "_id": "694a21419b2c12ee0994362b",
+              "name": "Chamari Athapaththu",
+              "role": "all-rounder"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21419b2c12ee0994362b",
+                  "name": "Chamari Athapaththu",
+                  "role": "all-rounder"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 67555,
+              "name": "Harshitha Samarawickrama",
+              "isCaptain": false,
+              "isViceCaptain": true,
+              "isKeeper": false,
+              "role": "top-order batter"
+            },
+            "localPlayer": {
+              "_id": "694a21329b2c12ee099435f6",
+              "name": "Harshitha Samarawickrama",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21329b2c12ee099435f6",
+                  "name": "Harshitha Samarawickrama",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 85045,
+              "name": "Kavisha Dilhari",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "batting allrounder"
+            },
+            "localPlayer": {
+              "_id": "694a21419b2c12ee09943637",
+              "name": "Kavisha Dilhari",
+              "role": "all-rounder"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21419b2c12ee09943637",
+                  "name": "Kavisha Dilhari",
+                  "role": "all-rounder"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 85151,
+              "name": "Imesha Dulani",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "batter"
+            },
+            "localPlayer": {
+              "_id": "694a21419b2c12ee0994363d",
+              "name": "Imesha Dulani",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21419b2c12ee0994363d",
+                  "name": "Imesha Dulani",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 117216,
+              "name": "Shashini Gimhani",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694a21419b2c12ee09943658",
+              "name": "Shashini Gimhani",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21419b2c12ee09943658",
+                  "name": "Shashini Gimhani",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 110851,
+              "name": "Vishmi Gunaratne",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "batter"
+            },
+            "localPlayer": {
+              "_id": "694a21419b2c12ee0994365b",
+              "name": "Vishmi Gunaratne",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21419b2c12ee0994365b",
+                  "name": "Vishmi Gunaratne",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 112438,
+              "name": "Kaushini Nuthyangana",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "middle-order batter"
+            },
+            "localPlayer": {
+              "_id": "694a21329b2c12ee099435ff",
+              "name": "Kaushini Nuthyangana",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21329b2c12ee099435ff",
+                  "name": "Kaushini Nuthyangana",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 114917,
+              "name": "Kawya Kavindi",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694a21419b2c12ee09943673",
+              "name": "Kawya Kavindi",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21419b2c12ee09943673",
+                  "name": "Kawya Kavindi",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 114914,
+              "name": "Malki Madara",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694a21419b2c12ee09943682",
+              "name": "Malki Madara",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21419b2c12ee09943682",
+                  "name": "Malki Madara",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 115064,
+              "name": "Nimasha Meepage",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694cb3e5b7913e9db6eeb1b3",
+              "name": "Nimasha Meepage",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694cb3e5b7913e9db6eeb1b3",
+                  "name": "Nimasha Meepage",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 58124,
+              "name": "Hasini Perera",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "middle-order batter"
+            },
+            "localPlayer": {
+              "_id": "694a21329b2c12ee099435d8",
+              "name": "Hasini Perera",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21329b2c12ee099435d8",
+                  "name": "Hasini Perera",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 61574,
+              "name": "Inoka Ranaweera",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694a21329b2c12ee099435ea",
+              "name": "Inoka Ranaweera",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21329b2c12ee099435ea",
+                  "name": "Inoka Ranaweera",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 114430,
+              "name": "Rashmika Sewwandi",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "batting allrounder"
+            },
+            "localPlayer": {
+              "_id": "694a21329b2c12ee09943602",
+              "name": "Rashmika Sewwandi",
+              "role": "all-rounder"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21329b2c12ee09943602",
+                  "name": "Rashmika Sewwandi",
+                  "role": "all-rounder"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 73069,
+              "name": "Malsha Shehani",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694cb3e7b7913e9db6eeb1b7",
+              "name": "Malsha Shehani",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694cb3e7b7913e9db6eeb1b7",
+                  "name": "Malsha Shehani",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 67546,
+              "name": "Nilakshika Silva",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "middle-order batter"
+            },
+            "localPlayer": {
+              "_id": "694a21329b2c12ee09943608",
+              "name": "Nilakshika Silva",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694a21329b2c12ee09943608",
+                  "name": "Nilakshika Silva",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          }
+        ]
+      },
+      {
+        "espnTeam": {
+          "id": 1863,
+          "name": "India Women",
+          "shortName": "IND-W"
+        },
+        "localTeam": {
+          "_id": "692b6726c92b5fb1402d26ed",
+          "name": "India",
+          "code": "IND",
+          "flagUrl": "https://flagicons.lipis.dev/flags/4x3/in.svg"
+        },
+        "localTeamCandidates": [
+          {
+            "country": {
+              "_id": "692b6726c92b5fb1402d26ed",
+              "name": "India",
+              "code": "IND",
+              "flagUrl": "https://flagicons.lipis.dev/flags/4x3/in.svg"
+            },
+            "score": 100
+          }
+        ],
+        "players": [
+          {
+            "espnPlayer": {
+              "id": 58198,
+              "name": "Harmanpreet Kaur",
+              "isCaptain": true,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "batting allrounder"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931ced",
+              "name": "Harmanpreet Kaur",
+              "role": "all-rounder"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931ced",
+                  "name": "Harmanpreet Kaur",
+                  "role": "all-rounder"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 70132,
+              "name": "Smriti Mandhana",
+              "isCaptain": false,
+              "isViceCaptain": true,
+              "isKeeper": false,
+              "role": "opening batter"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931cf6",
+              "name": "Smriti Mandhana",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931cf6",
+                  "name": "Smriti Mandhana",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 89343,
+              "name": "Harleen Deol",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "middle-order batter"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931cc0",
+              "name": "Harleen Deol",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931cc0",
+                  "name": "Harleen Deol",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 119155,
+              "name": "Kranti Gaud",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931cc9",
+              "name": "Kranti Gaud",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931cc9",
+                  "name": "Kranti Gaud",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 107319,
+              "name": "Richa Ghosh",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": true,
+              "role": "wicketkeeper batter"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931ccf",
+              "name": "Richa Ghosh",
+              "role": "wicket-keeper"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931ccf",
+                  "name": "Richa Ghosh",
+                  "role": "wicket-keeper"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 117238,
+              "name": "Gunalan Kamalini",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": true,
+              "role": "batter"
+            },
+            "localPlayer": {
+              "_id": "694e9c89e92463c6f231730b",
+              "name": "Gunalan Kamalini",
+              "role": "wicket-keeper"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694e9c89e92463c6f231730b",
+                  "name": "Gunalan Kamalini",
+                  "role": "wicket-keeper"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 108883,
+              "name": "Amanjot Kaur",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "batting allrounder"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931cea",
+              "name": "Amanjot Kaur",
+              "role": "all-rounder"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931cea",
+                  "name": "Amanjot Kaur",
+                  "role": "all-rounder"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 67505,
+              "name": "Sneh Rana",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowling allrounder"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931d1d",
+              "name": "Sneh Rana",
+              "role": "all-rounder"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931d1d",
+                  "name": "Sneh Rana",
+                  "role": "all-rounder"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 89365,
+              "name": "Arundhati Reddy",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931d23",
+              "name": "Arundhati Reddy",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931d23",
+                  "name": "Arundhati Reddy",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 89351,
+              "name": "Renuka Singh",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931d26",
+              "name": "Renuka Singh",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931d26",
+                  "name": "Renuka Singh",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 82827,
+              "name": "Jemimah Rodrigues",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "middle-order batter"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931d29",
+              "name": "Jemimah Rodrigues",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931d29",
+                  "name": "Jemimah Rodrigues",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 105213,
+              "name": "Shafali Verma",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "opening batter"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931d38",
+              "name": "Shafali Verma",
+              "role": "batsman"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931d38",
+                  "name": "Shafali Verma",
+                  "role": "batsman"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 70137,
+              "name": "Deepti Sharma",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "allrounder"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931d3b",
+              "name": "Deepti Sharma",
+              "role": "all-rounder"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931d3b",
+                  "name": "Deepti Sharma",
+                  "role": "all-rounder"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 119145,
+              "name": "Shree Charani",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931d44",
+              "name": "Shree Charani",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931d44",
+                  "name": "Shree Charani",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          },
+          {
+            "espnPlayer": {
+              "id": 117209,
+              "name": "Vaishnavi Sharma",
+              "isCaptain": false,
+              "isViceCaptain": false,
+              "isKeeper": false,
+              "role": "bowler"
+            },
+            "localPlayer": {
+              "_id": "694d83cdef51af853d931d59",
+              "name": "Vaishnavi Sharma",
+              "role": "bowler"
+            },
+            "localPlayerCandidates": [
+              {
+                "player": {
+                  "_id": "694d83cdef51af853d931d59",
+                  "name": "Vaishnavi Sharma",
+                  "role": "bowler"
+                },
+                "score": 100,
+                "matchType": "exact"
+              }
+            ],
+            "needsCreation": false
+          }
+        ]
+      }
+    ],
+    "unmatchedPlayers": []
+  },
+  "fetchMethod": "mock"
+}

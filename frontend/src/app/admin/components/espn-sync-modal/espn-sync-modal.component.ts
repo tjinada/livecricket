@@ -464,22 +464,34 @@ export class EspnSyncModalComponent implements OnInit {
   initializeSelections(): void {
     if (!this.preview) return;
 
+    console.log('[ESPN Sync] initializeSelections - preview innings count:', this.preview.innings.length);
+
     // Pre-populate selections for auto-matched players
     this.preview.innings.forEach((innings, inningsIdx) => {
+      console.log(`[ESPN Sync] Innings ${inningsIdx}: ${innings.batting.length} batters, ${innings.bowling.length} bowlers`);
+      
       innings.batting.forEach((bat, batIdx) => {
         if (bat.matchedPlayer && bat.confidence >= 70) {
           const key = `${inningsIdx}-batting-${batIdx}`;
+          console.log(`[ESPN Sync] Auto-match batting: ${key} -> ${bat.matchedPlayer._id} (${bat.espnName})`);
           this.manualSelections.set(key, bat.matchedPlayer._id);
+        } else {
+          console.log(`[ESPN Sync] No auto-match for batting ${batIdx}: matchedPlayer=${!!bat.matchedPlayer}, confidence=${bat.confidence}`);
         }
       });
 
       innings.bowling.forEach((bowl, bowlIdx) => {
         if (bowl.matchedPlayer && bowl.confidence >= 70) {
           const key = `${inningsIdx}-bowling-${bowlIdx}`;
+          console.log(`[ESPN Sync] Auto-match bowling: ${key} -> ${bowl.matchedPlayer._id} (${bowl.espnName})`);
           this.manualSelections.set(key, bowl.matchedPlayer._id);
+        } else {
+          console.log(`[ESPN Sync] No auto-match for bowling ${bowlIdx}: matchedPlayer=${!!bowl.matchedPlayer}, confidence=${bowl.confidence}`);
         }
       });
     });
+    
+    console.log('[ESPN Sync] After init, manualSelections size:', this.manualSelections.size);
   }
 
   get unmatchedCount(): number {
@@ -585,7 +597,19 @@ export class EspnSyncModalComponent implements OnInit {
   }
 
   confirmFullSync(): void {
-    if (!this.preview || this.unmatchedCount > 0) return;
+    console.log('[ESPN Sync] confirmFullSync called');
+    console.log('[ESPN Sync] preview:', this.preview);
+    console.log('[ESPN Sync] unmatchedCount:', this.unmatchedCount);
+    console.log('[ESPN Sync] manualSelections:', Array.from(this.manualSelections.entries()));
+    
+    if (!this.preview) {
+      console.log('[ESPN Sync] No preview, returning');
+      return;
+    }
+    if (this.unmatchedCount > 0) {
+      console.log('[ESPN Sync] Unmatched players exist, returning');
+      return;
+    }
 
     this.syncing = true;
     this.loadingMessage = 'Replacing match data from ESPN...';

@@ -33,6 +33,28 @@ const { getOversDisplay, getBallDisplay } = require('../services/scoringEngine')
 
 const router = express.Router();
 
+// ============================================
+// MOCK INTEGRATION (MUST BE FIRST!)
+// ============================================
+// Apply mock middleware BEFORE any routes are defined so it can intercept all requests
+try {
+  const { mockMiddleware } = require('../mocks/espnMockIntegration');
+  const mockRoutes = require('../mocks/mockRoutes');
+  
+  // Add mock middleware to intercept ESPN API calls when mock mode enabled
+  router.use(mockMiddleware);
+  
+  // Add mock management routes (/api/espn/mock/*)
+  router.use('/mock', mockRoutes);
+  
+  console.log(`✓ ESPN Mock integration loaded (enabled: ${process.env.ESPN_MOCK_ENABLED === 'true'})`);
+} catch (e) {
+  // Mock module not available, continue without mocking
+  if (e.code !== 'MODULE_NOT_FOUND') {
+    console.log('ESPN Mock integration error:', e.message);
+  }
+}
+
 /**
  * Map ESPN numeric dismissal types to our string enum values
  * ESPN dismissal type codes (from their API):
