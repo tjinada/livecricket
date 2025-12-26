@@ -606,6 +606,25 @@ export class EspnSyncModalComponent implements OnInit {
 
     // Build innings data
     this.preview.innings.forEach((innings, inningsIdx) => {
+      // Determine if innings is complete:
+      // 1. All out (10 wickets)
+      // 2. Overs completed (parse overs string like "20.0" for T20 or "50.0" for ODI)
+      let isInningsComplete = innings.total?.wickets === 10;
+      
+      // Check if overs are completed (only if we have overs data)
+      if (!isInningsComplete && innings.overs) {
+        const oversMatch = String(innings.overs).match(/(\d+)(?:\.(\d))?/);
+        if (oversMatch) {
+          const completedOvers = parseInt(oversMatch[1], 10) || 0;
+          const balls = parseInt(oversMatch[2], 10) || 0;
+          // Consider complete if 20+ overs (T20) or 50+ overs (ODI) and no balls remaining
+          // This is a heuristic - 20 overs with .0 balls means T20 innings complete
+          if ((completedOvers >= 20 && balls === 0) || (completedOvers >= 50 && balls === 0)) {
+            isInningsComplete = true;
+          }
+        }
+      }
+      
       const inningsData: InningsSyncData = {
         localTeamId: innings.localTeam._id,
         total: innings.total,
@@ -613,7 +632,7 @@ export class EspnSyncModalComponent implements OnInit {
         extras: innings.extras,
         batting: [],
         bowling: [],
-        isComplete: innings.total?.wickets === 10 || !innings.isCurrent
+        isComplete: isInningsComplete
       };
 
       // Add current players for live matches

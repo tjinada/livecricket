@@ -183,4 +183,12 @@ export class MatchService {
   }): Observable<ApiResponse<any>> {
     return this.http.patch<ApiResponse<any>>(`${this.apiUrl}/${id}/squad-order`, data);
   }
+
+  // Update innings status (not-started, in-progress, completed)
+  updateInningsStatus(id: string, inningsIndex: number, status: 'not-started' | 'in-progress' | 'completed'): Observable<ApiResponse<Match>> {
+    return this.http.patch<ApiResponse<Match>>(`${this.apiUrl}/${id}/innings-status`, {
+      inningsIndex,
+      status
+    });
+  }
 }

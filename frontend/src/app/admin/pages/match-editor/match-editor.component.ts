@@ -122,6 +122,41 @@ interface InningsEdit {
                     </option>
                   }
                 </select>
+                
+                <!-- Innings Status Toggle -->
+                <div class="mt-2 flex items-center justify-between">
+                  <span class="text-xs text-slate-500">Innings Status:</span>
+                  <div class="flex items-center gap-2">
+                    @if (getInningsStatus() === 'completed') {
+                      <span class="text-xs px-2 py-1 bg-slate-200 text-slate-600 rounded-full">Completed</span>
+                      <button 
+                        (click)="setInningsStatus('in-progress')"
+                        class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full hover:bg-emerald-200 transition-colors"
+                        title="Mark as in progress"
+                      >
+                        ↩ Resume
+                      </button>
+                    } @else if (getInningsStatus() === 'in-progress') {
+                      <span class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full animate-pulse">In Progress</span>
+                      <button 
+                        (click)="setInningsStatus('completed')"
+                        class="text-xs px-2 py-1 bg-slate-200 text-slate-600 rounded-full hover:bg-slate-300 transition-colors"
+                        title="Mark as completed"
+                      >
+                        ✓ End
+                      </button>
+                    } @else {
+                      <span class="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full">Not Started</span>
+                      <button 
+                        (click)="setInningsStatus('in-progress')"
+                        class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full hover:bg-emerald-200 transition-colors"
+                        title="Start innings"
+                      >
+                        ▶ Start
+                      </button>
+                    }
+                  </div>
+                </div>
               </div>
 
               <!-- Inline Editable Score Section -->
@@ -1847,6 +1882,35 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.error = err.error?.message || 'Failed to remove player';
         this.squadUpdating = false;
+      }
+    });
+  }
+
+  // Innings Status Methods
+  getInningsStatus(): string {
+    if (!this.match?.innings?.[this.selectedInningsIndex]) return 'not-started';
+    return this.match.innings[this.selectedInningsIndex].status || 'not-started';
+  }
+
+  setInningsStatus(status: 'not-started' | 'in-progress' | 'completed'): void {
+    if (!this.match) return;
+    
+    this.saving = true;
+    
+    this.matchService.updateInningsStatus(this.matchId, this.selectedInningsIndex, status).subscribe({
+      next: (response: ApiResponse<Match>) => {
+        if (response.success && response.data) {
+          this.match = response.data;
+          this.loadInningsData();
+          this.showToast(`Innings marked as ${status === 'in-progress' ? 'in progress' : status}`);
+        } else {
+          this.error = response.message || 'Failed to update innings status';
+        }
+        this.saving = false;
+      },
+      error: (err: any) => {
+        this.error = err.error?.message || 'Failed to update innings status';
+        this.saving = false;
       }
     });
   }

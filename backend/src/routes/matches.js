@@ -1249,4 +1249,100 @@ router.patch('/:id/squad-order', auth, async (req, res, next) => {
   }
 });
 
+// PATCH /api/matches/:id/innings-status - Update innings status (in-progress, completed, not-started)
+router.patch('/:id/innings-status', auth, async (req, res, next) => {
+  try {
+    const match = await Match.findById(req.params.id)
+      .populate('team1', 'name shortName code flagPath')
+      .populate('team2', 'name shortName code flagPath')
+      .populate('squads.team1.player', 'name role battingStyle bowlingStyle headshotPath')
+      .populate('squads.team2.player', 'name role battingStyle bowlingStyle headshotPath')
+      .populate('innings.battingStats.player', 'name role battingStyle bowlingStyle headshotPath')
+      .populate('innings.bowlingStats.player', 'name role battingStyle bowlingStyle headshotPath')
+      .populate('innings.currentBatsmen.striker', 'name role battingStyle bowlingStyle headshotPath')
+      .populate('innings.currentBatsmen.nonStriker', 'name role battingStyle bowlingStyle headshotPath')
+      .populate('innings.currentBowler', 'name role battingStyle bowlingStyle headshotPath');
+    
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+    
+    const { inningsIndex, status } = req.body;
+    
+    if (inningsIndex === undefined || inningsIndex < 0 || inningsIndex >= match.innings.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid innings index is required'
+      });
+    }
+    
+    if (!status || !['not-started', 'in-progress', 'completed'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid status (not-started, in-progress, completed) is required'
+      });
+    }
+    
+    // Update the innings status
+    match.innings[inningsIndex].status = status;
+    
+    // Update match status based on innings
+    if (status === 'in-progress') {
+      match.status = 'live';
+    } else if (status === 'completed') {
+      // Check if all innings are completed
+      const allCompleted = match.innings.every(inn => inn.status === 'completed');
+      if (allCompleted && match.innings.length === 2) {
+        match.status = 'completed';
+        
+        // Calculate result if not set
+        if (!match.result) {
+          const firstInningsRuns = match.innings[0].totalRuns || 0;
+          const secondInningsRuns = match.innings[1].totalRuns || 0;
+          
+          if (secondInningsRuns > firstInningsRuns) {
+            match.result = {
+              winner: match.innings[1].battingTeam,
+              winMargin: 10 - (match.innings[1].totalWickets || 0),
+              winType: 'wickets'
+            };
+          } else if (firstInningsRuns > secondInningsRuns) {
+            match.result = {
+              winner: match.innings[0].battingTeam,
+              winMargin: firstInningsRuns - secondInningsRuns,
+              winType: 'runs'
+            };
+          } else {
+            match.result = {
+              winner: null,
+              winMargin: 0,
+              winType: 'tie'
+            };
+          }
+        }
+      }
+    }
+    
+    await match.save();
+    
+    // Broadcast update to SSE clients
+    broadcastToMatch(req.params.id, 'innings-status-change', { 
+      inningsIndex, 
+      status,
+      matchStatus: match.status 
+    });
+    
+    res.json({
+      success: true,
+      message: `Innings status updated to ${status}`,
+      data: match
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
