@@ -98,7 +98,7 @@ interface InningsEdit {
         <div class="flex-1 flex overflow-hidden">
           
           <!-- Left Sidebar - Match Info, Score, ESPN -->
-          <div class="w-80 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col overflow-y-auto">
+          <div class="w-96 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col overflow-y-auto">
             
             <!-- Match Info Card -->
             <div class="p-4 border-b border-slate-100">
@@ -108,54 +108,117 @@ interface InningsEdit {
               <p class="text-xs text-slate-500 mt-1">{{ match.format }} • {{ match.venue }}</p>
             </div>
 
-            <!-- Live Score Display -->
+            <!-- Innings Selector -->
             @if (inningsEdit) {
+              <div class="p-3 border-b border-slate-100 bg-slate-50">
+                <select 
+                  [(ngModel)]="selectedInningsIndex"
+                  (change)="loadInningsData()"
+                  class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                  @for (innings of match.innings; track $index) {
+                    <option [value]="$index">
+                      {{ $index === 0 ? '1st' : '2nd' }} Innings - {{ getTeamNameById(innings.battingTeam) }} Batting
+                    </option>
+                  }
+                </select>
+              </div>
+
+              <!-- Inline Editable Score Section -->
               <div class="p-4 bg-gradient-to-br from-slate-800 to-slate-900 text-white">
-                <div class="flex items-baseline justify-between">
-                  <div>
-                    <div class="text-3xl font-bold tracking-tight">
-                      {{ inningsEdit.totalRuns }}/{{ inningsEdit.totalWickets }}
-                    </div>
-                    <div class="text-slate-400 text-sm">
-                      {{ getOversDisplay(inningsEdit.totalBalls) }} overs
-                    </div>
+                <!-- Main Score - Editable -->
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="flex items-baseline gap-1">
+                    <input 
+                      type="number"
+                      [(ngModel)]="inningsEdit.totalRuns"
+                      (change)="markDirty()"
+                      class="w-20 bg-white/10 border border-white/20 rounded px-2 py-1 text-3xl font-bold text-white text-center focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:bg-white/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      min="0"
+                    />
+                    <span class="text-2xl text-slate-400">/</span>
+                    <input 
+                      type="number"
+                      [(ngModel)]="inningsEdit.totalWickets"
+                      (change)="markDirty()"
+                      class="w-12 bg-white/10 border border-white/20 rounded px-2 py-1 text-3xl font-bold text-white text-center focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:bg-white/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      min="0" max="10"
+                    />
                   </div>
-                  <button 
-                    (click)="showTotalsModal = true"
-                    class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-xs transition-colors"
-                  >
-                    Edit Totals
-                  </button>
                 </div>
                 
-                <!-- Extras Summary -->
-                <div class="mt-3 pt-3 border-t border-white/10 text-xs text-slate-400">
-                  <span class="mr-3">Wd: {{ inningsEdit.extras.wides }}</span>
-                  <span class="mr-3">NB: {{ inningsEdit.extras.noBalls }}</span>
-                  <span class="mr-3">B: {{ inningsEdit.extras.byes }}</span>
-                  <span>LB: {{ inningsEdit.extras.legByes }}</span>
+                <!-- Overs - Editable (Overs + Balls) -->
+                <div class="flex items-center gap-2 text-sm mb-3">
+                  <input 
+                    type="number"
+                    [ngModel]="getOvers(inningsEdit.totalBalls)"
+                    (ngModelChange)="updateOvers($event)"
+                    class="w-12 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-center text-sm focus:ring-2 focus:ring-emerald-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    min="0"
+                  />
+                  <span class="text-slate-500 text-xs">ov</span>
+                  <input 
+                    type="number"
+                    [ngModel]="getBalls(inningsEdit.totalBalls)"
+                    (ngModelChange)="updateBalls($event)"
+                    class="w-12 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-center text-sm focus:ring-2 focus:ring-emerald-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    min="0" max="5"
+                  />
+                  <span class="text-slate-500 text-xs">balls</span>
+                </div>
+                
+                <!-- Extras - Editable Grid -->
+                <div class="pt-3 border-t border-white/10">
+                  <div class="text-xs text-slate-400 mb-2">Extras ({{ calculateTotalExtras() }})</div>
+                  <div class="grid grid-cols-4 gap-2">
+                    <div>
+                      <label class="block text-xs text-slate-500 mb-1">Wd</label>
+                      <input 
+                        type="number"
+                        [(ngModel)]="inningsEdit.extras.wides"
+                        (change)="markDirty()"
+                        class="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-center text-sm focus:ring-2 focus:ring-emerald-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-slate-500 mb-1">NB</label>
+                      <input 
+                        type="number"
+                        [(ngModel)]="inningsEdit.extras.noBalls"
+                        (change)="markDirty()"
+                        class="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-center text-sm focus:ring-2 focus:ring-emerald-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-slate-500 mb-1">B</label>
+                      <input 
+                        type="number"
+                        [(ngModel)]="inningsEdit.extras.byes"
+                        (change)="markDirty()"
+                        class="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-center text-sm focus:ring-2 focus:ring-emerald-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-slate-500 mb-1">LB</label>
+                      <input 
+                        type="number"
+                        [(ngModel)]="inningsEdit.extras.legByes"
+                        (change)="markDirty()"
+                        class="w-full bg-white/10 border border-white/20 rounded px-2 py-1.5 text-white text-center text-sm focus:ring-2 focus:ring-emerald-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        min="0"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Current Players -->
                 <div class="mt-3 pt-3 border-t border-white/10 text-xs">
                   <div class="text-slate-400 mb-1">At Crease</div>
-                  <div class="text-white">{{ getStrikerName() }}* / {{ getNonStrikerName() }}</div>
+                  <div class="text-white font-medium">{{ getStrikerName() }}* / {{ getNonStrikerName() }}</div>
                 </div>
-              </div>
-
-              <!-- Innings Selector -->
-              <div class="p-3 border-b border-slate-100">
-                <select 
-                  [(ngModel)]="selectedInningsIndex"
-                  (change)="loadInningsData()"
-                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                >
-                  @for (innings of match.innings; track $index) {
-                    <option [value]="$index">
-                      {{ $index === 0 ? '1st' : '2nd' }} Inn - {{ getTeamNameById(innings.battingTeam) }}
-                    </option>
-                  }
-                </select>
               </div>
             }
 
@@ -232,7 +295,7 @@ interface InningsEdit {
 
             <!-- Quick Validation -->
             @if (inningsEdit) {
-              <div class="p-4 flex-1">
+              <div class="p-4">
                 <div class="text-xs font-medium text-slate-500 mb-2">Quick Check</div>
                 <div class="space-y-1.5 text-xs">
                   @if (calculateBatsmanTotal() + calculateTotalExtras() === inningsEdit.totalRuns) {
@@ -249,6 +312,28 @@ interface InningsEdit {
                     <div class="text-emerald-600">✓ Batsmen set</div>
                   } @else {
                     <div class="text-amber-500">⚠ Set striker/non-striker</div>
+                  }
+                </div>
+                
+                <!-- BIG Save Button -->
+                <div class="mt-6">
+                  <button 
+                    (click)="saveAllChanges()"
+                    [disabled]="saving"
+                    [class]="isDirty 
+                      ? 'w-full py-4 bg-emerald-500 text-white text-lg font-bold rounded-xl hover:bg-emerald-600 shadow-xl shadow-emerald-500/30 transition-all flex items-center justify-center gap-3' 
+                      : 'w-full py-4 bg-slate-100 text-slate-400 text-lg font-medium rounded-xl cursor-not-allowed flex items-center justify-center gap-3'"
+                  >
+                    <span class="text-2xl">💾</span>
+                    <span>{{ saving ? 'Saving...' : (isDirty ? 'SAVE CHANGES' : 'No Changes') }}</span>
+                  </button>
+                  @if (isDirty) {
+                    <button 
+                      (click)="discardChanges()"
+                      class="w-full mt-2 py-2 text-slate-400 text-sm hover:text-slate-600 transition-colors"
+                    >
+                      Discard changes
+                    </button>
                   }
                 </div>
               </div>
@@ -287,26 +372,12 @@ interface InningsEdit {
                   </button>
                 </div>
 
-                <!-- Save Actions -->
-                <div class="flex items-center gap-3">
-                  @if (isDirty) {
-                    <span class="text-xs text-amber-600 font-medium">Unsaved changes</span>
-                  }
-                  <button 
-                    (click)="discardChanges()"
-                    [disabled]="!isDirty || saving"
-                    class="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Discard
-                  </button>
-                  <button 
-                    (click)="saveAllChanges()"
-                    [disabled]="!isDirty || saving"
-                    class="px-4 py-1.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {{ saving ? 'Saving...' : '💾 Save' }}
-                  </button>
-                </div>
+                <!-- Unsaved indicator -->
+                @if (isDirty) {
+                  <span class="text-xs text-amber-600 font-medium px-2 py-1 bg-amber-50 rounded-full">
+                    ● Unsaved changes
+                  </span>
+                }
               </div>
 
               <!-- Tab Content -->
@@ -633,107 +704,7 @@ interface InningsEdit {
         </div>
       }
 
-      <!-- Edit Totals Modal -->
-      @if (showTotalsModal && inningsEdit) {
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div class="p-4 border-b border-slate-200 flex justify-between items-center">
-              <h3 class="text-lg font-semibold text-slate-800">Edit Innings Totals</h3>
-              <button (click)="showTotalsModal = false" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
-            </div>
-            <div class="p-4 space-y-4">
-              <div class="grid grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-slate-600 mb-1">Total Runs</label>
-                  <input 
-                    type="number" 
-                    [(ngModel)]="inningsEdit.totalRuns"
-                    (change)="markDirty()"
-                    class="w-full px-3 py-2 border border-slate-200 rounded-lg text-lg font-bold focus:ring-2 focus:ring-emerald-500"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-600 mb-1">Wickets</label>
-                  <input 
-                    type="number" 
-                    [(ngModel)]="inningsEdit.totalWickets"
-                    (change)="markDirty()"
-                    class="w-full px-3 py-2 border border-slate-200 rounded-lg text-lg font-bold focus:ring-2 focus:ring-emerald-500"
-                    min="0" max="10"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-600 mb-1">Balls</label>
-                  <input 
-                    type="number" 
-                    [(ngModel)]="inningsEdit.totalBalls"
-                    (change)="markDirty()"
-                    class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    min="0"
-                  />
-                  <span class="text-xs text-slate-500">({{ getOversDisplay(inningsEdit.totalBalls) }} ov)</span>
-                </div>
-              </div>
-              
-              <div class="border-t border-slate-200 pt-4">
-                <label class="block text-sm font-medium text-slate-600 mb-2">Extras</label>
-                <div class="grid grid-cols-4 gap-3">
-                  <div>
-                    <label class="block text-xs text-slate-500 mb-1">Wides</label>
-                    <input 
-                      type="number" 
-                      [(ngModel)]="inningsEdit.extras.wides"
-                      (change)="markDirty()"
-                      class="w-full px-2 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs text-slate-500 mb-1">No Balls</label>
-                    <input 
-                      type="number" 
-                      [(ngModel)]="inningsEdit.extras.noBalls"
-                      (change)="markDirty()"
-                      class="w-full px-2 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs text-slate-500 mb-1">Byes</label>
-                    <input 
-                      type="number" 
-                      [(ngModel)]="inningsEdit.extras.byes"
-                      (change)="markDirty()"
-                      class="w-full px-2 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs text-slate-500 mb-1">Leg Byes</label>
-                    <input 
-                      type="number" 
-                      [(ngModel)]="inningsEdit.extras.legByes"
-                      (change)="markDirty()"
-                      class="w-full px-2 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                      min="0"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="p-4 border-t border-slate-200 flex justify-end">
-              <button 
-                (click)="showTotalsModal = false"
-                class="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
+      
       <!-- Squad Management Modal -->
       @if (showSquadManagement) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1020,7 +991,7 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
   
   // UI State
   activeTab: 'batting' | 'bowling' = 'batting';
-  showTotalsModal = false;
+  // showTotalsModal removed - using inline editing now
   showSquadValidationModal = false;
   
   // SSE
@@ -1310,6 +1281,31 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     const overs = Math.floor(totalBalls / 6);
     const balls = totalBalls % 6;
     return `${overs}.${balls}`;
+  }
+
+  // Overs/Balls helpers for inline editing
+  getOvers(totalBalls: number): number {
+    return Math.floor(totalBalls / 6);
+  }
+
+  getBalls(totalBalls: number): number {
+    return totalBalls % 6;
+  }
+
+  updateOvers(overs: number): void {
+    if (!this.inningsEdit) return;
+    const currentBalls = this.inningsEdit.totalBalls % 6;
+    this.inningsEdit.totalBalls = (overs * 6) + currentBalls;
+    this.markDirty();
+  }
+
+  updateBalls(balls: number): void {
+    if (!this.inningsEdit) return;
+    // Ensure balls is between 0-5
+    const safeBalls = Math.max(0, Math.min(5, balls));
+    const currentOvers = Math.floor(this.inningsEdit.totalBalls / 6);
+    this.inningsEdit.totalBalls = (currentOvers * 6) + safeBalls;
+    this.markDirty();
   }
 
   getStrikerName(): string {
