@@ -1812,6 +1812,15 @@ router.post('/match/:matchId/full-sync', auth, async (req, res, next) => {
 
     await match.save();
 
+    // Broadcast ESPN sync event to connected clients (Live Scoring view)
+    if (broadcastToMatch) {
+      broadcastToMatch(matchId, 'espn-sync', {
+        stats: syncStats,
+        matchStatus: match.status
+      });
+      console.log(`Broadcasted espn-sync event for match ${matchId}`);
+    }
+
     res.json({
       success: true,
       message: 'Match completely replaced from ESPN data',
@@ -2541,5 +2550,21 @@ router.post('/players/:countryId/sync', auth, async (req, res, next) => {
 
 // Add direct fetch routes (no browser needed - fastest method!)
 addDirectFetchRoutes(router, auth, Match, matchEspnTeamsToLocal, matchPlayer);
+
+// Store broadcast function reference (set from app.js)
+let broadcastToMatch = null;
+
+/**
+ * Set the broadcast function from matches router
+ * Called from app.js to enable SSE notifications
+ */
+router.setBroadcast = (broadcastFn) => {
+  broadcastToMatch = broadcastFn;
+};
+
+/**
+ * Get current broadcast function
+ */
+router.getBroadcast = () => broadcastToMatch;
 
 module.exports = router;

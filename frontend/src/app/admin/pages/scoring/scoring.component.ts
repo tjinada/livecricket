@@ -2897,6 +2897,18 @@ export class ScoringComponent implements OnInit, OnDestroy {
       this.reloadMatch();
     });
 
+    // Listen for innings status changes from Match Editor or ESPN sync
+    this.eventSource.addEventListener('innings-status-change', () => {
+      this.lastHeartbeat = Date.now();
+      this.reloadMatch();
+    });
+
+    // Listen for ESPN sync updates (full match data replacement)
+    this.eventSource.addEventListener('espn-sync', () => {
+      this.lastHeartbeat = Date.now();
+      this.reloadMatch();
+    });
+
     this.eventSource.onerror = () => {
       this.isDisplayConnected = false;
       this.scheduleReconnect();

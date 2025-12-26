@@ -20,9 +20,13 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 // Import routes
 const matchesRouter = require('./routes/matches');
 const scoringRouter = require('./routes/scoring');
+const espnRouter = require('./routes/espn');
 
 // Connect scoring router to matches broadcast function
 scoringRouter.setBroadcast(matchesRouter.broadcastToMatch);
+
+// Connect ESPN router to matches broadcast function for sync notifications
+espnRouter.setBroadcast(matchesRouter.broadcastToMatch);
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -34,7 +38,7 @@ app.use('/api/seed', require('./routes/seed'));
 app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/highlights', require('./routes/highlights'));
-app.use('/api/espn', require('./routes/espn'));
+app.use('/api/espn', espnRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
