@@ -1696,11 +1696,29 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get bowling team name for highlight mode (innings summary)
+   * Get bowling team name for highlight mode (for both innings summary and ball-by-ball highlights)
    */
   getHighlightBowlingTeamName(): string {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData?.bowlingTeam) {
-      return this.highlightViewState.highlightData.bowlingTeam;
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
+      // Check highlightData.bowlingTeam (for inningsSummary)
+      if (this.highlightViewState.highlightData.bowlingTeam) {
+        return this.highlightViewState.highlightData.bowlingTeam;
+      }
+      // Check scoreAfter.bowlingTeam (for ball-by-ball highlights)
+      const scoreAfter = this.highlightViewState.highlightData.scoreAfter;
+      if (scoreAfter?.bowlingTeam) {
+        return scoreAfter.bowlingTeam;
+      }
+      // Derive from innings number: if 1st innings, bowling team is the team that bats 2nd
+      const inningsNumber = this.highlightViewState.highlightData.inningsNumber || 
+                            (scoreAfter?.isSecondInnings ? 2 : 1);
+      if (inningsNumber === 1 && this.match?.innings?.length >= 2) {
+        // 1st innings batting, so bowling team is 2nd innings batting team
+        return this.getTeamName(this.match.innings[1]?.battingTeam) || this.getBowlingTeamName();
+      } else if (inningsNumber === 1 && this.match?.innings?.length === 1) {
+        // Only 1st innings exists, bowling team is the non-batting team
+        return this.getTeamName(this.match.innings[0]?.bowlingTeam) || this.getBowlingTeamName();
+      }
     }
     return this.getBowlingTeamName();
   }

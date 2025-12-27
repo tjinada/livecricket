@@ -594,6 +594,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       battingTeam: innings.battingTeam?.name || 'Team',
       battingTeamCode: innings.battingTeam?.code || 'TM',
       battingTeamFlag: innings.battingTeam?.flagUrl || null,
+      bowlingTeam: innings.bowlingTeam?.name || 'Team',
       
       // Striker info
       strikerName: strikerStats?.name || 'Batsman',
