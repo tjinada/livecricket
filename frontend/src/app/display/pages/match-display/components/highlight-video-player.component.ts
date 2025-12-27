@@ -241,8 +241,14 @@ export class HighlightVideoPlayerComponent implements OnInit, OnDestroy {
       'wicket': 'WICKET!',
       'fifty': 'FIFTY!',
       'hundred': 'CENTURY!',
-      'overSummary': 'Match Summary',
+      'matchIntro': 'Match Intro',
+      'teamLineup': 'Starting XI',
+      'inningsIntro': 'Innings Intro',
+      'chaseSetup': 'Chase Setup',
+      'inningsStart': 'Innings Start',
+      'overSummary': 'Phase Summary',
       'inningsSummary': 'Innings Summary',
+      'matchResult': 'Match Result',
       'matchSummary': 'Match Summary'
     };
     return labels[type] || type;
@@ -255,8 +261,14 @@ export class HighlightVideoPlayerComponent implements OnInit, OnDestroy {
       'wicket': 'bg-red-600',
       'fifty': 'bg-yellow-500',
       'hundred': 'bg-amber-500',
+      'matchIntro': 'bg-blue-600',
+      'teamLineup': 'bg-teal-600',
+      'inningsIntro': 'bg-indigo-600',
+      'chaseSetup': 'bg-orange-600',
+      'inningsStart': 'bg-green-600',
       'overSummary': 'bg-blue-600',
       'inningsSummary': 'bg-indigo-600',
+      'matchResult': 'bg-yellow-500',
       'matchSummary': 'bg-cyan-600'
     };
     return colors[type] || 'bg-gray-600';

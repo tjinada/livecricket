@@ -178,13 +178,18 @@ export class StartingXiViewComponent implements OnInit, OnChanges {
   animationStarted = false;
   
   // Helper to split players into two rows (5 top + 6 bottom)
+  // Only shows the first 11 players (Playing XI)
   get topRowPlayers(): SquadPlayer[] {
-    const sorted = [...this.players].sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99));
+    const sorted = [...this.players]
+      .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99))
+      .slice(0, 11); // Limit to Playing XI only
     return sorted.slice(0, 5);
   }
   
   get bottomRowPlayers(): SquadPlayer[] {
-    const sorted = [...this.players].sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99));
+    const sorted = [...this.players]
+      .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99))
+      .slice(0, 11); // Limit to Playing XI only
     return sorted.slice(5, 11);
   }
   

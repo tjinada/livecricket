@@ -1014,137 +1014,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       }
     }
 
-    // ========== PHASE 4: Smart Phase Summaries ==========
-    // Check for phase boundaries and add summaries only if notable
-    const currentOver = Math.floor(runningBalls / 6);
-    
-    // Powerplay end (after over 6)
-    if (runningBalls > 0 && runningBalls % 6 === 0 && currentOver === powerplayEnd && !phaseSummaryShown.powerplay) {
-      phaseSummaryShown.powerplay = true;
-      
-      // Always show powerplay summary as it's a key phase
-      const sortedBatsmen = Object.values(batsmanStats)
-        .filter(b => b.runs > 0)
-        .sort((a, b) => b.runs - a.runs);
-      const topScorer = sortedBatsmen[0];
-      
-      const sortedBowlers = Object.values(bowlerStats)
-        .filter(b => b.wickets > 0 || b.runs > 0)
-        .sort((a, b) => {
-          if (b.wickets !== a.wickets) return b.wickets - a.wickets;
-          const aOvers = a.overs + a.balls / 6;
-          const bOvers = b.overs + b.balls / 6;
-          if (aOvers === 0) return 1;
-          if (bOvers === 0) return -1;
-          return (a.runs / aOvers) - (b.runs / bOvers);
-        });
-      const bestBowler = sortedBowlers[0];
-      
-      highlights.push({
-        type: 'overSummary',
-        duration: HIGHLIGHT_DURATIONS.phaseSummary,
-        sequence: ball.sequence,
-        timestamp: ball.timestamp,
-        data: {
-          phaseType: 'powerplay',
-          phaseName: 'POWERPLAY',
-          oversCompleted: currentOver,
-          totalRuns: runningScore,
-          totalWickets: runningWickets,
-          runRate: (runningScore / currentOver).toFixed(2),
-          boundariesInPhase: phaseStats.boundaries,
-          wicketsInPhase: phaseStats.wickets,
-          battingTeam: innings.battingTeam?.name || 'Team',
-          battingTeamCode: innings.battingTeam?.code || 'TM',
-          battingTeamFlag: innings.battingTeam?.flagUrl || null,
-          topScorer: topScorer ? {
-            name: topScorer.name,
-            image: topScorer.image,
-            runs: topScorer.runs,
-            balls: topScorer.balls,
-            fours: topScorer.fours,
-            sixes: topScorer.sixes
-          } : null,
-          bestBowler: bestBowler ? {
-            name: bestBowler.name,
-            image: bestBowler.image,
-            wickets: bestBowler.wickets,
-            runs: bestBowler.runs,
-            overs: `${bestBowler.overs}.${bestBowler.balls}`
-          } : null,
-          scoreAfter: buildScoreState(ball, ball.batsman, ball.nonStriker, ball.bowler)
-        }
-      });
-      
-      // Reset phase stats for middle overs
-      resetPhaseStats();
-    }
-    
-    // Middle overs end (after over 15 for T20, 40 for ODI) - only if notable
-    if (runningBalls > 0 && runningBalls % 6 === 0 && currentOver === middleOversEnd && !phaseSummaryShown.middle) {
-      phaseSummaryShown.middle = true;
-      
-      // Only show if phase was notable OR it's been a while since last highlight
-      if (phaseWasNotable()) {
-        const sortedBatsmen = Object.values(batsmanStats)
-          .filter(b => b.runs > 0)
-          .sort((a, b) => b.runs - a.runs);
-        const topScorer = sortedBatsmen[0];
-        
-        const sortedBowlers = Object.values(bowlerStats)
-          .filter(b => b.wickets > 0 || b.runs > 0)
-          .sort((a, b) => {
-            if (b.wickets !== a.wickets) return b.wickets - a.wickets;
-            const aOvers = a.overs + a.balls / 6;
-            const bOvers = b.overs + b.balls / 6;
-            if (aOvers === 0) return 1;
-            if (bOvers === 0) return -1;
-            return (a.runs / aOvers) - (b.runs / bOvers);
-          });
-        const bestBowler = sortedBowlers[0];
-        
-        const phaseName = match.format === 'T20' ? 'MIDDLE OVERS' : 'MIDDLE OVERS';
-        
-        highlights.push({
-          type: 'overSummary',
-          duration: HIGHLIGHT_DURATIONS.phaseSummary,
-          sequence: ball.sequence,
-          timestamp: ball.timestamp,
-          data: {
-            phaseType: 'middle',
-            phaseName: phaseName,
-            oversCompleted: currentOver,
-            phaseOvers: `${powerplayEnd + 1}-${currentOver}`,
-            totalRuns: runningScore,
-            totalWickets: runningWickets,
-            runsInPhase: runningScore - phaseStats.startingScore,
-            wicketsInPhase: runningWickets - phaseStats.startingWickets,
-            runRate: (runningScore / currentOver).toFixed(2),
-            boundariesInPhase: phaseStats.boundaries,
-            battingTeam: innings.battingTeam?.name || 'Team',
-            battingTeamCode: innings.battingTeam?.code || 'TM',
-            battingTeamFlag: innings.battingTeam?.flagUrl || null,
-            topScorer: topScorer ? {
-              name: topScorer.name,
-              image: topScorer.image,
-              runs: topScorer.runs,
-              balls: topScorer.balls
-            } : null,
-            bestBowler: bestBowler ? {
-              name: bestBowler.name,
-              image: bestBowler.image,
-              wickets: bestBowler.wickets,
-              runs: bestBowler.runs,
-              overs: `${bestBowler.overs}.${bestBowler.balls}`
-            } : null,
-            scoreAfter: buildScoreState(ball, ball.batsman, ball.nonStriker, ball.bowler)
-          }
-        });
-      }
-      
-      // Reset phase stats for death overs
-      resetPhaseStats();
-    }
+    // Phase summaries removed - only show innings summaries at the end of each innings
   }
 
   // Add innings summary at the end
@@ -1496,10 +1366,11 @@ async function generateTeamLineups(match) {
   // Helper to build lineup for a team
   // NOTE: squadPlayer.player is already populated with name, role, headshotPath
   const buildLineup = async (team, squad, teamType) => {
-    // Get Playing XI only, sorted by batting order
+    // Get Playing XI only (exactly 11 players), sorted by batting order
     const playingXI = squad
       .filter(p => p.isPlayingXI)
-      .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99));
+      .sort((a, b) => (a.battingOrder || 99) - (b.battingOrder || 99))
+      .slice(0, 11); // Limit to first 11 players only
     
     if (playingXI.length === 0) {
       return null; // No playing XI set
