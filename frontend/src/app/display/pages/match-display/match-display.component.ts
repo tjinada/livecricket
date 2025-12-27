@@ -1723,6 +1723,31 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     return this.getBowlingTeamName();
   }
 
+  /**
+   * Get batting team flag for highlight mode
+   */
+  getHighlightBattingTeamFlag(): string | null {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
+      // Check highlightData.battingTeamFlag (for inningsSummary and intro highlights)
+      if (this.highlightViewState.highlightData.battingTeamFlag) {
+        return this.highlightViewState.highlightData.battingTeamFlag;
+      }
+      // Check scoreAfter.battingTeamFlag (for ball-by-ball highlights)
+      const scoreAfter = this.highlightViewState.highlightData.scoreAfter;
+      if (scoreAfter?.battingTeamFlag) {
+        return scoreAfter.battingTeamFlag;
+      }
+      // Derive from innings number
+      const inningsNumber = this.highlightViewState.highlightData.inningsNumber || 
+                            (scoreAfter?.isSecondInnings ? 2 : 1);
+      const inningsIndex = inningsNumber - 1;
+      if (this.match?.innings?.[inningsIndex]?.battingTeam) {
+        return this.getTeamFlag(this.match.innings[inningsIndex].battingTeam);
+      }
+    }
+    return this.getBattingTeamFlag();
+  }
+
   // ==================== STARTING XI HELPERS ====================
 
   /**
