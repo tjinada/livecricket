@@ -1416,7 +1416,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   /**
    * Get batting stats for phase/innings summary during highlights
    * For overSummary highlights, use the topScorer data from highlightData
-   * For inningsSummary highlights, use the topBatsmen array from highlightData
+   * For inningsSummary highlights, use the allBattingStats array from highlightData (full scorecard)
    */
   getHighlightBattingStats(): Array<{
     name: string;
@@ -1433,8 +1433,23 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
       const data = this.highlightViewState.highlightData;
       
-      // For inningsSummary, use the topBatsmen array from highlightData
-      // This is the correct data for the specific innings being summarized
+      // For inningsSummary, use allBattingStats (full scorecard) if available
+      if (data.allBattingStats && Array.isArray(data.allBattingStats)) {
+        return data.allBattingStats.map((batsman: any) => ({
+          name: batsman.name || 'Batsman',
+          image: batsman.image ? (batsman.image.startsWith('http') ? batsman.image : `https://img1.hscicdn.com/image/upload${batsman.image}`) : null,
+          runs: batsman.runs || 0,
+          balls: batsman.balls || 0,
+          fours: batsman.fours || 0,
+          sixes: batsman.sixes || 0,
+          dismissalText: batsman.dismissalText || (batsman.isDNB ? 'DNB' : (batsman.isOut ? 'out' : 'not out')),
+          isCurrentBatsman: !batsman.isOut && !batsman.isDNB,
+          isStriker: false,
+          isDNB: batsman.isDNB || false
+        }));
+      }
+      
+      // Fallback: use topBatsmen array (backwards compatibility)
       if (data.topBatsmen && Array.isArray(data.topBatsmen)) {
         return data.topBatsmen.map((batsman: any) => ({
           name: batsman.name || 'Batsman',
@@ -1509,7 +1524,7 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   /**
    * Get bowling stats for phase/innings summary during highlights
    * For overSummary highlights, use the bestBowler data from highlightData
-   * For inningsSummary highlights, use the topBowlers array from highlightData
+   * For inningsSummary highlights, use the allBowlingStats array from highlightData (full bowling card)
    */
   getHighlightBowlingStats(): Array<{
     name: string;
@@ -1524,8 +1539,21 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
       const data = this.highlightViewState.highlightData;
       
-      // For inningsSummary, use the topBowlers array from highlightData
-      // This is the correct data for the specific innings being summarized
+      // For inningsSummary, use allBowlingStats (full bowling card) if available
+      if (data.allBowlingStats && Array.isArray(data.allBowlingStats)) {
+        return data.allBowlingStats.map((bowler: any, index: number) => ({
+          name: bowler.name || 'Bowler',
+          image: bowler.image ? (bowler.image.startsWith('http') ? bowler.image : `https://img1.hscicdn.com/image/upload${bowler.image}`) : null,
+          oversDisplay: bowler.overs || '0.0',
+          runs: bowler.runs || 0,
+          wickets: bowler.wickets || 0,
+          economy: bowler.economy || '0.00',
+          isCurrentBowler: false,
+          isBestBowler: index === 0 // First bowler (sorted by wickets) is best
+        }));
+      }
+      
+      // Fallback: use topBowlers array (backwards compatibility)
       if (data.topBowlers && Array.isArray(data.topBowlers)) {
         return data.topBowlers.map((bowler: any, index: number) => {
           const oversStr = bowler.overs || '0.0';
@@ -1595,6 +1623,86 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
     }
     // Fallback to current match data
     return this.getLiveMatchSummaryBowlingStats();
+  }
+
+  /**
+   * Get total extras for highlight mode (innings summary)
+   */
+  getHighlightTotalExtras(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData?.totalExtras !== undefined) {
+      return this.highlightViewState.highlightData.totalExtras;
+    }
+    return this.getTotalExtras();
+  }
+
+  /**
+   * Get extras breakdown for highlight mode (innings summary)
+   */
+  getHighlightExtrasBreakdown(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData?.extrasBreakdown) {
+      return this.highlightViewState.highlightData.extrasBreakdown;
+    }
+    return this.getExtrasBreakdown();
+  }
+
+  /**
+   * Get yet to bat count for highlight mode (innings summary)
+   */
+  getHighlightYetToBatCount(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData?.yetToBatCount !== undefined) {
+      return this.highlightViewState.highlightData.yetToBatCount;
+    }
+    return this.getYetToBatCount();
+  }
+
+  /**
+   * Get total fours for highlight mode (innings summary)
+   */
+  getHighlightTotalFours(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData?.totalFours !== undefined) {
+      return this.highlightViewState.highlightData.totalFours;
+    }
+    return this.getTotalFours();
+  }
+
+  /**
+   * Get total sixes for highlight mode (innings summary)
+   */
+  getHighlightTotalSixes(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData?.totalSixes !== undefined) {
+      return this.highlightViewState.highlightData.totalSixes;
+    }
+    return this.getTotalSixes();
+  }
+
+  /**
+   * Get dot balls percentage for highlight mode (innings summary)
+   */
+  getHighlightDotBallsPercentage(): number {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData?.dotBallsPercentage !== undefined) {
+      return this.highlightViewState.highlightData.dotBallsPercentage;
+    }
+    return this.getDotBallsPercentage();
+  }
+
+  /**
+   * Get fall of wickets for highlight mode (innings summary)
+   */
+  getHighlightFallOfWickets(): Array<{ wicketNumber: number; runs: number; playerName: string }> {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData?.fallOfWickets) {
+      return this.highlightViewState.highlightData.fallOfWickets;
+    }
+    return this.getLiveMatchSummaryFOW();
+  }
+
+  /**
+   * Get bowling team name for highlight mode (innings summary)
+   */
+  getHighlightBowlingTeamName(): string {
+    if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData?.bowlingTeam) {
+      return this.highlightViewState.highlightData.bowlingTeam;
+    }
+    return this.getBowlingTeamName();
   }
 
   // ==================== STARTING XI HELPERS ====================

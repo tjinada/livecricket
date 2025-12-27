@@ -48,15 +48,9 @@
       <div class="flex flex-col bg-gradient-to-b from-blue-900/80 to-blue-950/80 rounded-lg backdrop-blur-sm overflow-hidden">
         
         <!-- Innings Complete Header - Show for innings summary -->
-        <div *ngIf="isInningsSummary" class="bg-gradient-to-r from-green-900/50 to-blue-900/50 border-b border-green-600/30 px-5 py-4">
-          <div class="flex items-center justify-center gap-3">
-            <span class="text-2xl">✅</span>
-            <div class="text-xl text-green-400 uppercase tracking-wider font-bold">Innings Complete</div>
-          </div>
-          <div class="text-center text-gray-400 mt-2">Top Performers</div>
-        </div>
+        <!-- REMOVED: Now using full live match summary view instead -->
         
-        <!-- At the Crease Card - Hide for innings summary -->
+        <!-- At the Crease Card - Hide for innings summary (innings is complete, no one at crease) -->
         <div *ngIf="!isInningsSummary" class="bg-yellow-900/30 border-b border-yellow-600/30 px-5 py-4">
           <div class="text-base text-yellow-400 uppercase tracking-wider mb-3">At The Crease</div>
           <div class="flex items-center justify-between">
@@ -156,7 +150,7 @@
         <!-- Bowling Card -->
         <div class="flex-1 bg-gradient-to-b from-gray-800/80 to-gray-900/80 rounded-lg backdrop-blur-sm overflow-hidden flex flex-col">
           
-          <!-- Bowling Now - Hide for innings summary -->
+          <!-- Bowling Now - Hide for innings summary (innings is complete) -->
           <div *ngIf="!isInningsSummary" class="bg-green-900/30 border-b border-green-700/30 px-5 py-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-4">
@@ -176,14 +170,6 @@
                     [ngClass]="getBallColorClass(ball)">{{ ball.display === '0' ? '•' : ball.display }}</div>
                 </ng-container>
               </div>
-            </div>
-          </div>
-          
-          <!-- Top Bowlers Header - Show for innings summary -->
-          <div *ngIf="isInningsSummary" class="bg-gradient-to-r from-green-900/50 to-gray-900/50 border-b border-green-600/30 px-5 py-4">
-            <div class="flex items-center justify-center gap-3">
-              <span class="text-2xl">🎯</span>
-              <div class="text-xl text-green-400 uppercase tracking-wider font-bold">Top Bowlers</div>
             </div>
           </div>
           

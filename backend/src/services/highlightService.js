@@ -1031,6 +1031,117 @@ async function generateInningsHighlights(matchId, inningsNumber) {
     })
     .slice(0, 3);
 
+  // Full batting stats for the innings (for live match summary display)
+  // Get all batsmen including DNBs from the playing XI
+  const allBattingStats = [];
+  
+  // First, add all batsmen who actually batted (from innings.battingStats)
+  const battedPlayerIds = new Set();
+  for (const bs of innings.battingStats || []) {
+    const playerId = bs.player?._id?.toString();
+    if (playerId) battedPlayerIds.add(playerId);
+    
+    allBattingStats.push({
+      name: bs.player?.name || 'Batsman',
+      image: bs.player?.headshotPath || null,
+      runs: bs.runs || 0,
+      balls: bs.balls || 0,
+      fours: bs.fours || 0,
+      sixes: bs.sixes || 0,
+      isOut: bs.isOut || false,
+      isDNB: false,
+      dismissalText: bs.isOut ? 'out' : 'not out'
+    });
+  }
+  
+  // Add DNB players from the batting team's squad
+  const battingTeamId = innings.battingTeam?._id?.toString() || innings.battingTeam?.toString();
+  const team1Id = match.team1?._id?.toString() || match.team1?.toString();
+  const battingSquad = battingTeamId === team1Id ? match.squads?.team1 : match.squads?.team2;
+  
+  if (battingSquad) {
+    for (const squadPlayer of battingSquad) {
+      if (!squadPlayer.isPlayingXI) continue; // Only playing XI
+      const playerId = squadPlayer.player?._id?.toString();
+      if (!playerId || battedPlayerIds.has(playerId)) continue; // Already batted
+      
+      allBattingStats.push({
+        name: squadPlayer.player?.name || 'Player',
+        image: squadPlayer.player?.headshotPath || null,
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        isOut: false,
+        isDNB: true,
+        dismissalText: 'DNB'
+      });
+    }
+  }
+  
+  // All bowling stats for the innings
+  const allBowlingStats = (innings.bowlingStats || [])
+    .filter(bs => bs.overs > 0 || bs.balls > 0 || bs.runs > 0)
+    .sort((a, b) => {
+      if (b.wickets !== a.wickets) return b.wickets - a.wickets;
+      return a.runs - b.runs;
+    })
+    .map(bs => ({
+      name: bs.player?.name || 'Bowler',
+      image: bs.player?.headshotPath || null,
+      wickets: bs.wickets || 0,
+      runs: bs.runs || 0,
+      overs: `${bs.overs || 0}.${bs.balls || 0}`,
+      economy: (bs.overs * 6 + (bs.balls || 0)) > 0 
+        ? ((bs.runs / (bs.overs * 6 + (bs.balls || 0))) * 6).toFixed(2)
+        : '0.00'
+    }));
+  
+  // Calculate extras
+  const extras = innings.extras || {};
+  const totalExtras = (extras.wides || 0) + (extras.noBalls || 0) + (extras.byes || 0) + (extras.legByes || 0);
+  const extrasBreakdown = [
+    extras.wides ? `W ${extras.wides}` : null,
+    extras.noBalls ? `NB ${extras.noBalls}` : null,
+    extras.byes ? `B ${extras.byes}` : null,
+    extras.legByes ? `LB ${extras.legByes}` : null
+  ].filter(Boolean).join(', ');
+  
+  // Fall of wickets
+  const fallOfWickets = (innings.fallOfWickets || []).map(fow => {
+    // Get player name from playerLookup or fow.player
+    const playerId = fow.player?._id?.toString() || fow.player?.toString();
+    const lookupData = playerId ? playerLookup[playerId] : null;
+    const playerName = lookupData?.name || fow.player?.name || 'Batsman';
+    // Get short name (last name or last word)
+    const shortName = playerName.split(' ').pop();
+    
+    return {
+      wicketNumber: fow.wicketNumber || 0,
+      runs: fow.runs || 0,
+      playerName: shortName
+    };
+  });
+  
+  // Calculate stats
+  let totalFours = 0;
+  let totalSixes = 0;
+  for (const bs of innings.battingStats || []) {
+    totalFours += bs.fours || 0;
+    totalSixes += bs.sixes || 0;
+  }
+  
+  // Calculate dot balls percentage
+  let totalDotBalls = 0;
+  for (const bws of innings.bowlingStats || []) {
+    totalDotBalls += bws.dotBalls || 0;
+  }
+  const totalBalls = innings.totalBalls || 0;
+  const dotBallsPercentage = totalBalls > 0 ? Math.round((totalDotBalls / totalBalls) * 100) : 0;
+  
+  // Count DNBs
+  const yetToBatCount = allBattingStats.filter(b => b.isDNB).length;
+
   highlights.push({
     type: 'inningsSummary',
     duration: HIGHLIGHT_DURATIONS.inningsSummary,
@@ -1041,6 +1152,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       battingTeam: innings.battingTeam?.name || 'Team',
       battingTeamCode: innings.battingTeam?.code || 'TM',
       battingTeamFlag: innings.battingTeam?.flagUrl || null,
+      bowlingTeam: innings.bowlingTeam?.name || 'Team',
       totalRuns: innings.totalRuns,
       totalWickets: innings.totalWickets,
       overs: getOversDisplay(innings.totalBalls),
@@ -1048,6 +1160,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
         ? ((innings.totalRuns / innings.totalBalls) * 6).toFixed(2)
         : '0.00',
       extras: innings.extras,
+      // Top performers (for backwards compatibility with simple display)
       topBatsmen: topBatsmen.map(b => ({
         name: b.player?.name || 'Batsman',
         image: b.player?.headshotPath || null,
@@ -1063,7 +1176,17 @@ async function generateInningsHighlights(matchId, inningsNumber) {
         wickets: b.wickets,
         runs: b.runs,
         overs: `${b.overs}.${b.balls}`
-      }))
+      })),
+      // Full data for live match summary display
+      allBattingStats: allBattingStats,
+      allBowlingStats: allBowlingStats,
+      totalExtras: totalExtras,
+      extrasBreakdown: extrasBreakdown,
+      fallOfWickets: fallOfWickets,
+      totalFours: totalFours,
+      totalSixes: totalSixes,
+      dotBallsPercentage: dotBallsPercentage,
+      yetToBatCount: yetToBatCount
     }
   });
 
