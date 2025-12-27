@@ -473,9 +473,14 @@ export class MatchIntroViewComponent implements OnInit, OnDestroy, OnChanges {
   }
   
   // Helper to transform headshotPath to full Cloudinary URL
+  // Handles both ESPN headshotPath and local uploads
   getPlayerImageUrl(path: string | null): string | null {
     if (!path) return null;
-    if (path.startsWith('http')) return path; // Already a full URL
+    // Already a full URL - return as-is
+    if (path.startsWith('http')) return path;
+    // Local upload path - use relative URL (served by backend)
+    if (path.startsWith('/uploads')) return path;
+    // ESPN headshotPath - prepend Cloudinary CDN URL
     // Path like /lsci/db/PICTURES/... needs Cloudinary prefix
     return `https://img1.hscicdn.com/image/upload${path}`;
   }
