@@ -211,10 +211,10 @@ async function generateInningsHighlights(matchId, inningsNumber) {
     .populate('team2', 'name code flagUrl')
     .populate('innings.battingTeam', 'name code flagUrl')
     .populate('innings.bowlingTeam', 'name code flagUrl')
-    .populate('innings.battingStats.player', 'name headshotPath')
-    .populate('innings.battingStats.dismissal.bowler', 'name headshotPath')
-    .populate('innings.battingStats.dismissal.fielder', 'name headshotPath')
-    .populate('innings.bowlingStats.player', 'name headshotPath');
+    .populate('innings.battingStats.player', 'name headshotPath imageUrl')
+    .populate('innings.battingStats.dismissal.bowler', 'name headshotPath imageUrl')
+    .populate('innings.battingStats.dismissal.fielder', 'name headshotPath imageUrl')
+    .populate('innings.bowlingStats.player', 'name headshotPath imageUrl');
 
   if (!match) {
     throw new Error('Match not found');
@@ -230,11 +230,11 @@ async function generateInningsHighlights(matchId, inningsNumber) {
     match: matchId,
     inningsNumber: inningsNumber
   })
-    .populate('batsman', 'name headshotPath')
-    .populate('nonStriker', 'name headshotPath')
-    .populate('bowler', 'name headshotPath')
-    .populate('wicket.dismissedPlayer', 'name headshotPath')
-    .populate('wicket.fielder', 'name headshotPath')
+    .populate('batsman', 'name headshotPath imageUrl')
+    .populate('nonStriker', 'name headshotPath imageUrl')
+    .populate('bowler', 'name headshotPath imageUrl')
+    .populate('wicket.dismissedPlayer', 'name headshotPath imageUrl')
+    .populate('wicket.fielder', 'name headshotPath imageUrl')
     .sort({ sequence: 1 });
 
   const highlights = [];
@@ -392,6 +392,18 @@ async function generateInningsHighlights(matchId, inningsNumber) {
   // This uses the same data source that works for innings summary
   // Include players from ALL innings to cover both batting and bowling teams
   const playerLookup = {};
+  
+  /**
+   * Helper to get player image - prefers imageUrl (manual uploads) over headshotPath (ESPN)
+   */
+  const getPlayerImage = (player) => {
+    if (!player) return null;
+    // Prefer locally uploaded imageUrl (e.g., /uploads/player-images/...)
+    if (player.imageUrl) return player.imageUrl;
+    // Fall back to ESPN headshotPath
+    return player.headshotPath || null;
+  };
+  
   console.log('[DEBUG] Building playerLookup from match innings...');
   for (const inn of match.innings || []) {
     console.log(`[DEBUG] Processing innings ${inn.inningsNumber}, battingStats count: ${inn.battingStats?.length}, bowlingStats count: ${inn.bowlingStats?.length}`);
@@ -401,9 +413,9 @@ async function generateInningsHighlights(matchId, inningsNumber) {
         if (!playerLookup[id]) {
           playerLookup[id] = {
             name: bs.player.name,
-            headshotPath: bs.player.headshotPath || null
+            headshotPath: getPlayerImage(bs.player)
           };
-          console.log(`[DEBUG] Added batsman to lookup: ${bs.player.name}, id: ${id}, headshotPath: ${bs.player.headshotPath || 'NULL'}`);
+          console.log(`[DEBUG] Added batsman to lookup: ${bs.player.name}, id: ${id}, image: ${playerLookup[id].headshotPath || 'NULL'}`);
         }
       }
     }
@@ -413,9 +425,9 @@ async function generateInningsHighlights(matchId, inningsNumber) {
         if (!playerLookup[id]) {
           playerLookup[id] = {
             name: bws.player.name,
-            headshotPath: bws.player.headshotPath || null
+            headshotPath: getPlayerImage(bws.player)
           };
-          console.log(`[DEBUG] Added bowler to lookup: ${bws.player.name}, id: ${id}, headshotPath: ${bws.player.headshotPath || 'NULL'}`);
+          console.log(`[DEBUG] Added bowler to lookup: ${bws.player.name}, id: ${id}, image: ${playerLookup[id].headshotPath || 'NULL'}`);
         }
       }
     }
@@ -508,9 +520,11 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       // Prefer image from playerLookup (Match innings data) over Ball populate
       // This is the same data source that works for innings summary
       const lookupData = playerLookup[id];
-      const finalImage = lookupData?.headshotPath !== undefined ? lookupData.headshotPath : (player.headshotPath || null);
+      // Use getPlayerImage helper for Ball populate data as fallback
+      const ballImage = getPlayerImage(player);
+      const finalImage = lookupData?.headshotPath !== undefined ? lookupData.headshotPath : ballImage;
       console.log(`[DEBUG] getBatsmanStats creating entry for ${player.name || id}:`);
-      console.log(`[DEBUG]   - player.headshotPath from Ball: ${player.headshotPath || 'NULL'}`);
+      console.log(`[DEBUG]   - player image from Ball: ${ballImage || 'NULL'}`);
       console.log(`[DEBUG]   - lookupData found: ${lookupData ? 'YES' : 'NO'}`);
       console.log(`[DEBUG]   - lookupData.headshotPath: ${lookupData?.headshotPath || 'NULL'}`);
       console.log(`[DEBUG]   - Final image used: ${finalImage || 'NULL'}`);
@@ -538,10 +552,12 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       // Prefer image from playerLookup (Match innings data) over Ball populate
       // This is the same data source that works for innings summary
       const lookupData = playerLookup[id];
+      // Use getPlayerImage helper for Ball populate data as fallback
+      const ballImage = getPlayerImage(player);
       bowlerStats[id] = {
         id,
         name: lookupData?.name || player.name || 'Bowler',
-        image: lookupData?.headshotPath !== undefined ? lookupData.headshotPath : (player.headshotPath || null),
+        image: lookupData?.headshotPath !== undefined ? lookupData.headshotPath : ballImage,
         overs: 0,
         balls: 0,
         runs: 0,
@@ -1044,7 +1060,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
     
     allBattingStats.push({
       name: bs.player?.name || 'Batsman',
-      image: bs.player?.headshotPath || null,
+      image: getPlayerImage(bs.player),
       runs: bs.runs || 0,
       balls: bs.balls || 0,
       fours: bs.fours || 0,
@@ -1068,7 +1084,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       
       allBattingStats.push({
         name: squadPlayer.player?.name || 'Player',
-        image: squadPlayer.player?.headshotPath || null,
+        image: getPlayerImage(squadPlayer.player),
         runs: 0,
         balls: 0,
         fours: 0,
@@ -1089,7 +1105,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
     })
     .map(bs => ({
       name: bs.player?.name || 'Bowler',
-      image: bs.player?.headshotPath || null,
+      image: getPlayerImage(bs.player),
       wickets: bs.wickets || 0,
       runs: bs.runs || 0,
       overs: `${bs.overs || 0}.${bs.balls || 0}`,
@@ -1164,7 +1180,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       // Top performers (for backwards compatibility with simple display)
       topBatsmen: topBatsmen.map(b => ({
         name: b.player?.name || 'Batsman',
-        image: b.player?.headshotPath || null,
+        image: getPlayerImage(b.player),
         runs: b.runs,
         balls: b.balls,
         fours: b.fours,
@@ -1173,7 +1189,7 @@ async function generateInningsHighlights(matchId, inningsNumber) {
       })),
       topBowlers: topBowlers.map(b => ({
         name: b.player?.name || 'Bowler',
-        image: b.player?.headshotPath || null,
+        image: getPlayerImage(b.player),
         wickets: b.wickets,
         runs: b.runs,
         overs: `${b.overs}.${b.balls}`
@@ -1487,8 +1503,17 @@ async function generateTeamLineups(match) {
     return roleMap[role] || role;
   };
   
+  // Helper to get player image - prefers imageUrl (manual uploads) over headshotPath (ESPN)
+  const getPlayerImage = (player) => {
+    if (!player) return null;
+    // Prefer locally uploaded imageUrl (e.g., /uploads/player-images/...)
+    if (player.imageUrl) return player.imageUrl;
+    // Fall back to ESPN headshotPath
+    return player.headshotPath || null;
+  };
+  
   // Helper to build lineup for a team
-  // NOTE: squadPlayer.player is already populated with name, role, headshotPath
+  // NOTE: squadPlayer.player is already populated with name, role, headshotPath, imageUrl
   const buildLineup = async (team, squad, teamType) => {
     // Get Playing XI only (exactly 11 players), sorted by batting order
     const playingXI = squad
@@ -1507,7 +1532,7 @@ async function generateTeamLineups(match) {
       
       return {
         name: player?.name || 'Player',
-        image: player?.headshotPath || null,
+        image: getPlayerImage(player),
         role: formatRole(player?.role || 'batsman')
       };
     });
@@ -1560,8 +1585,8 @@ async function generateHighlightVideo(matchId, options = {}) {
     .populate('team1', 'name code flagUrl')
     .populate('team2', 'name code flagUrl')
     .populate('toss.winner', 'name code')
-    .populate('squads.team1.player', 'name role headshotPath')
-    .populate('squads.team2.player', 'name role headshotPath');
+    .populate('squads.team1.player', 'name role headshotPath imageUrl')
+    .populate('squads.team2.player', 'name role headshotPath imageUrl');
 
   if (!match) {
     throw new Error('Match not found');
