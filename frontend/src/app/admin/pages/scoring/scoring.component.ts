@@ -400,10 +400,38 @@ type ModalType = 'none' | 'wicket' | 'extras' | 'changeBowler' | 'endInnings' | 
                 <p class="text-gray-500 text-sm">{{ match.format }} • {{ match.venue }}</p>
               </div>
               <div class="text-right">
+                <!-- Manual Innings Selector -->
+                @if (match.innings && match.innings.length > 1) {
+                  <div class="flex items-center gap-2 mb-1">
+                    <label class="text-xs text-gray-400">View:</label>
+                    <select 
+                      [(ngModel)]="viewInningsIndex"
+                      class="text-sm px-2 py-1 border border-gray-200 rounded bg-white focus:ring-2 focus:ring-green-500"
+                    >
+                      @for (inn of match.innings; track $index) {
+                        <option [value]="$index">
+                          {{ $index === 0 ? '1st' : '2nd' }} Inn - {{ getTeamNameById(inn.battingTeam) }}
+                          @if ($index === match.currentInnings) { (Live) }
+                        </option>
+                      }
+                    </select>
+                    @if (viewInningsIndex !== match.currentInnings) {
+                      <button 
+                        (click)="viewInningsIndex = match.currentInnings ?? 0"
+                        class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                      >
+                        ↩ Back to Live
+                      </button>
+                    }
+                  </div>
+                }
                 <p class="text-sm text-gray-500">
-                  {{ getBattingTeamName() }} Innings
+                  {{ getViewingBattingTeamName() }} Innings
+                  @if (viewInningsIndex !== match.currentInnings) {
+                    <span class="text-amber-600">(viewing)</span>
+                  }
                 </p>
-                @if (currentInnings && match.currentInnings === 1) {
+                @if (viewingInnings && match.currentInnings === 1 && viewInningsIndex === 1) {
                   <p class="text-sm text-green-600 font-medium">
                     Target: {{ getTarget() }}
                   </p>
@@ -2691,6 +2719,9 @@ export class ScoringComponent implements OnInit, OnDestroy {
   selectedCompletedInningsIndex = 0;
   showFullScoringView = false;
 
+  // Manual innings selector (for viewing different innings)
+  viewInningsIndex: number = 0;
+
   // SSE connection
   private eventSource: EventSource | null = null;
   isDisplayConnected = true;
@@ -2751,6 +2782,8 @@ export class ScoringComponent implements OnInit, OnDestroy {
           this.match = response.data;
           this.displayView = this.match.displayView || 'live-score';
           this.buildPlayerNameCache();
+          // Initialize viewInningsIndex to current innings
+          this.viewInningsIndex = this.match.currentInnings ?? 0;
           // Keep admin in scoring view even if match completes while they're scoring
           // This prevents the jarring switch to "Match Completed" view mid-scoring
           if (this.match.status === 'live') {
@@ -2774,6 +2807,12 @@ export class ScoringComponent implements OnInit, OnDestroy {
             this.match = response.data;
             this.displayView = this.match.displayView || 'live-score';
             this.buildPlayerNameCache();
+            // Sync viewInningsIndex with current innings when match data is refreshed
+            // (only if currently viewing the live innings)
+            if (this.viewInningsIndex === (this.match.currentInnings ?? 0) - 1 || 
+                this.viewInningsIndex > (this.match.innings?.length ?? 1) - 1) {
+              this.viewInningsIndex = this.match.currentInnings ?? 0;
+            }
             // Note: Bowler selection now handled via inline dropdown, not auto-opening modal
           }
           resolve();
@@ -2959,6 +2998,18 @@ export class ScoringComponent implements OnInit, OnDestroy {
   get currentInnings() {
     if (!this.match?.innings || this.match.innings.length === 0) return null;
     return this.match.innings[this.match.currentInnings || 0];
+  }
+
+  // Get the innings currently being viewed (for manual innings selector)
+  get viewingInnings() {
+    if (!this.match?.innings || this.viewInningsIndex === undefined) return null;
+    return this.match.innings[this.viewInningsIndex];
+  }
+
+  // Get the batting team name for the innings being viewed
+  getViewingBattingTeamName(): string {
+    if (!this.viewingInnings) return '';
+    return this.getTeamNameById(this.viewingInnings.battingTeam);
   }
 
   get needsBowler(): boolean {

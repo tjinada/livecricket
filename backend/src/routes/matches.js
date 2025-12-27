@@ -1286,11 +1286,30 @@ router.patch('/:id/innings-status', auth, async (req, res, next) => {
       });
     }
     
+    const previousStatus = match.innings[inningsIndex].status;
+    
     // Update the innings status
     match.innings[inningsIndex].status = status;
     
-    // Update match status based on innings
-    if (status === 'in-progress') {
+    // Handle currentInnings based on status changes
+    if (status === 'not-started') {
+      // If resetting 2nd innings to not-started, go back to 1st innings if it's in-progress or completed
+      if (inningsIndex === 1 && match.innings[0]) {
+        // Set currentInnings back to 1st innings
+        match.currentInnings = 0;
+        // If 1st innings was completed, mark it as in-progress again
+        if (match.innings[0].status === 'completed') {
+          match.innings[0].status = 'in-progress';
+        }
+        match.status = 'live';
+      } else if (inningsIndex === 0) {
+        // If resetting 1st innings, stay on 1st innings
+        match.currentInnings = 0;
+        match.status = 'live';
+      }
+    } else if (status === 'in-progress') {
+      // Set this innings as current
+      match.currentInnings = inningsIndex;
       match.status = 'live';
     } else if (status === 'completed') {
       // Check if all innings are completed
@@ -1323,6 +1342,9 @@ router.patch('/:id/innings-status', auth, async (req, res, next) => {
             };
           }
         }
+      } else if (inningsIndex === 0 && match.innings.length >= 2) {
+        // First innings completed, move to second innings
+        match.currentInnings = 1;
       }
     }
     
@@ -1332,6 +1354,7 @@ router.patch('/:id/innings-status', auth, async (req, res, next) => {
     broadcastToMatch(req.params.id, 'innings-status-change', { 
       inningsIndex, 
       status,
+      currentInnings: match.currentInnings,
       matchStatus: match.status 
     });
     

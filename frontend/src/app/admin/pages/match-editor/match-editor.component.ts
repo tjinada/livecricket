@@ -136,6 +136,13 @@ interface InningsEdit {
                       >
                         ↩ Resume
                       </button>
+                      <button 
+                        (click)="confirmResetInnings()"
+                        class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+                        title="Reset to not started (clears stats)"
+                      >
+                        🔄 Reset
+                      </button>
                     } @else if (getInningsStatus() === 'in-progress') {
                       <span class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full animate-pulse">In Progress</span>
                       <button 
@@ -144,6 +151,13 @@ interface InningsEdit {
                         title="Mark as completed"
                       >
                         ✓ End
+                      </button>
+                      <button 
+                        (click)="confirmResetInnings()"
+                        class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+                        title="Reset to not started (clears stats)"
+                      >
+                        🔄 Reset
                       </button>
                     } @else {
                       <span class="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full">Not Started</span>
@@ -1266,6 +1280,18 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         this.refreshMatchData();
       }
     });
+    
+    // Listen for innings start (new innings)
+    this.eventSource.addEventListener('innings-start', (event: any) => {
+      console.log('[Match Editor] New innings started via SSE');
+      this.refreshMatchData();
+    });
+    
+    // Listen for innings complete
+    this.eventSource.addEventListener('innings-complete', (event: any) => {
+      console.log('[Match Editor] Innings complete via SSE');
+      this.refreshMatchData();
+    });
 
     this.eventSource.onerror = () => {
       setTimeout(() => this.setupSSE(), 5000);
@@ -1285,7 +1311,22 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
     this.matchService.getById(this.matchId).subscribe({
       next: (response: ApiResponse<Match>) => {
         if (response.success && response.data) {
+          const previousInningsCount = this.match?.innings?.length || 0;
+          const newInningsCount = response.data.innings?.length || 0;
+          const previousCurrentInnings = this.match?.currentInnings;
+          const newCurrentInnings = response.data.currentInnings;
+          
           this.match = response.data;
+          
+          // If a new innings was started or currentInnings changed, switch to it
+          if (newInningsCount > previousInningsCount || 
+              (newCurrentInnings !== undefined && newCurrentInnings !== previousCurrentInnings)) {
+            this.selectedInningsIndex = newCurrentInnings ?? (newInningsCount - 1);
+            this.buildSquadLists();
+            this.cacheTeamPlayers();
+            this.showToast('New innings started');
+          }
+          
           this.loadInningsData();
         }
       }
@@ -1913,5 +1954,19 @@ export class MatchEditorComponent implements OnInit, OnDestroy {
         this.saving = false;
       }
     });
+  }
+
+  confirmResetInnings(): void {
+    const confirmed = confirm(
+      'Are you sure you want to reset this innings to "Not Started"?\n\n' +
+      'This will:\n' +
+      '- Set status back to "not-started"\n' +
+      '- Keep the innings data but allow you to start fresh\n\n' +
+      'Note: This does NOT delete ball records or stats. Use this to fix mistaken status changes.'
+    );
+    
+    if (confirmed) {
+      this.setInningsStatus('not-started');
+    }
   }
 }
