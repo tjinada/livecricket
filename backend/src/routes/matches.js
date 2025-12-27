@@ -1311,6 +1311,17 @@ router.patch('/:id/innings-status', auth, async (req, res, next) => {
       // Set this innings as current
       match.currentInnings = inningsIndex;
       match.status = 'live';
+      
+      // If resuming first innings and second innings exists but hasn't started, delete it
+      if (inningsIndex === 0 && match.innings.length > 1) {
+        const secondInnings = match.innings[1];
+        if (secondInnings.status === 'not-started' && 
+            secondInnings.totalRuns === 0 && 
+            secondInnings.totalBalls === 0) {
+          // Remove the empty second innings
+          match.innings.splice(1, 1);
+        }
+      }
     } else if (status === 'completed') {
       // Check if all innings are completed
       const allCompleted = match.innings.every(inn => inn.status === 'completed');
@@ -1342,8 +1353,32 @@ router.patch('/:id/innings-status', auth, async (req, res, next) => {
             };
           }
         }
-      } else if (inningsIndex === 0 && match.innings.length >= 2) {
-        // First innings completed, move to second innings
+      } else if (inningsIndex === 0) {
+        // First innings completed
+        if (match.innings.length === 1) {
+          // No second innings exists yet - create empty placeholder
+          const firstInnings = match.innings[0];
+          match.innings.push({
+            battingTeam: firstInnings.bowlingTeam,
+            bowlingTeam: firstInnings.battingTeam,
+            inningsNumber: 2,
+            totalRuns: 0,
+            totalWickets: 0,
+            totalBalls: 0,
+            extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0 },
+            status: 'not-started',
+            currentBatsmen: { striker: null, nonStriker: null },
+            currentBowler: null,
+            lastBowler: null,
+            battingStats: [],
+            bowlingStats: [],
+            currentOver: [],
+            overs: [],
+            fallOfWickets: [],
+            partnership: null
+          });
+        }
+        // Move to second innings
         match.currentInnings = 1;
       }
     }

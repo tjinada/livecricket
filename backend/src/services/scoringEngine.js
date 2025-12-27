@@ -896,13 +896,83 @@ async function startSecondInnings(matchId, { striker, nonStriker, bowler }) {
     throw new Error('Match not found or not live');
   }
 
-  if (match.currentInnings !== 0) {
-    throw new Error('First innings not complete or second innings already started');
+  const firstInnings = match.innings[0];
+  if (!firstInnings || firstInnings.status !== 'completed') {
+    throw new Error('First innings is not complete');
   }
 
-  const firstInnings = match.innings[0];
-  if (firstInnings.status !== 'completed') {
-    throw new Error('First innings is not complete');
+  // Check if second innings already exists
+  if (match.innings.length > 1) {
+    const existingSecondInnings = match.innings[1];
+    
+    // If second innings exists and is already in-progress or completed, don't create another
+    if (existingSecondInnings.status === 'in-progress') {
+      throw new Error('Second innings is already in progress');
+    }
+    
+    if (existingSecondInnings.status === 'completed') {
+      throw new Error('Second innings is already completed');
+    }
+    
+    // If second innings exists but is "not-started", update it instead of creating a new one
+    if (existingSecondInnings.status === 'not-started') {
+      existingSecondInnings.status = 'in-progress';
+      existingSecondInnings.currentBatsmen = {
+        striker: striker,
+        nonStriker: nonStriker
+      };
+      existingSecondInnings.currentBowler = bowler;
+      
+      // Ensure batting stats has the openers
+      const hasStriker = existingSecondInnings.battingStats.some(
+        bs => bs.player.toString() === striker.toString()
+      );
+      if (!hasStriker) {
+        existingSecondInnings.battingStats.push({
+          player: striker, runs: 0, balls: 0, fours: 0, sixes: 0, isOut: false, position: 1
+        });
+      }
+      
+      const hasNonStriker = existingSecondInnings.battingStats.some(
+        bs => bs.player.toString() === nonStriker.toString()
+      );
+      if (!hasNonStriker) {
+        existingSecondInnings.battingStats.push({
+          player: nonStriker, runs: 0, balls: 0, fours: 0, sixes: 0, isOut: false, position: 2
+        });
+      }
+      
+      // Ensure bowling stats has the bowler
+      const hasBowler = existingSecondInnings.bowlingStats.some(
+        bs => bs.player.toString() === bowler.toString()
+      );
+      if (!hasBowler) {
+        existingSecondInnings.bowlingStats.push({
+          player: bowler, overs: 0, balls: 0, runs: 0, wickets: 0, wides: 0, noBalls: 0, maidens: 0, dotBalls: 0
+        });
+      }
+      
+      // Update partnership
+      existingSecondInnings.partnership = {
+        runs: 0,
+        balls: 0,
+        batsman1: striker,
+        batsman2: nonStriker
+      };
+      
+      match.currentInnings = 1;
+      await match.save();
+      
+      return {
+        innings: existingSecondInnings,
+        target: firstInnings.totalRuns + 1
+      };
+    }
+  }
+
+  // Guard against duplicate innings - should only reach here if no second innings exists
+  if (match.currentInnings !== 0) {
+    throw new Error('First innings not complete or second innings already started');
   }
 
   // Create second innings
