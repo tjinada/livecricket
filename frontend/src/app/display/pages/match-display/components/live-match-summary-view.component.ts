@@ -74,6 +74,9 @@ export class LiveMatchSummaryViewComponent {
   @Input() extrasBreakdown = '';
   @Input() yetToBatCount = 0;
   
+  // Display mode - for innings summary, hide "at the crease" section
+  @Input() isInningsSummary = false;
+  
   // Stats
   @Input() totalFours = 0;
   @Input() totalSixes = 0;

@@ -436,6 +436,7 @@
           [runsNeeded]="getHighlightRunsNeeded()"
           [ballsRemaining]="getHighlightBallsRemaining()"
           [requiredRunRate]="getRequiredRunRate()"
+          [isInningsSummary]="highlightViewState?.highlightType === 'inningsSummary'"
         ></app-live-match-summary-view>
 
         <app-final-match-summary-view
