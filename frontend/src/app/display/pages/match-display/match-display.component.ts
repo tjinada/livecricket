@@ -1056,30 +1056,54 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   /**
    * Get total runs - uses highlight score state when in highlight mode
+   * For inningsSummary, uses totalRuns from highlightData
    */
   getHighlightTotalRuns(): number {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
-      return this.highlightViewState.scoreState.runs;
+    if (this.isInDisplayHighlightMode()) {
+      // For inningsSummary, use totalRuns from highlightData (specific innings data)
+      if (this.highlightViewState?.highlightData?.totalRuns !== undefined) {
+        return this.highlightViewState.highlightData.totalRuns;
+      }
+      // For other highlights, use scoreState
+      if (this.highlightViewState?.scoreState) {
+        return this.highlightViewState.scoreState.runs;
+      }
     }
     return this.currentInnings?.totalRuns || 0;
   }
 
   /**
    * Get total wickets - uses highlight score state when in highlight mode
+   * For inningsSummary, uses totalWickets from highlightData
    */
   getHighlightTotalWickets(): number {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
-      return this.highlightViewState.scoreState.wickets;
+    if (this.isInDisplayHighlightMode()) {
+      // For inningsSummary, use totalWickets from highlightData (specific innings data)
+      if (this.highlightViewState?.highlightData?.totalWickets !== undefined) {
+        return this.highlightViewState.highlightData.totalWickets;
+      }
+      // For other highlights, use scoreState
+      if (this.highlightViewState?.scoreState) {
+        return this.highlightViewState.scoreState.wickets;
+      }
     }
     return this.currentInnings?.totalWickets || 0;
   }
 
   /**
    * Get overs display - uses highlight score state when in highlight mode
+   * For inningsSummary, uses overs from highlightData
    */
   getHighlightOversDisplay(): string {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
-      return this.highlightViewState.scoreState.overs;
+    if (this.isInDisplayHighlightMode()) {
+      // For inningsSummary, use overs from highlightData (specific innings data)
+      if (this.highlightViewState?.highlightData?.overs) {
+        return this.highlightViewState.highlightData.overs;
+      }
+      // For other highlights, use scoreState
+      if (this.highlightViewState?.scoreState) {
+        return this.highlightViewState.scoreState.overs;
+      }
     }
     return this.getOversDisplay();
   }
@@ -1272,17 +1296,25 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
 
   /**
    * Get current run rate during highlights
+   * For inningsSummary, uses runRate from highlightData
    */
   getHighlightCurrentRunRate(): string {
-    if (this.isInDisplayHighlightMode() && this.highlightViewState?.scoreState) {
-      const { runs, overs } = this.highlightViewState.scoreState;
-      // Parse overs string like "6.1" to calculate balls
-      const parts = overs.split('.');
-      const completedOvers = parseInt(parts[0]) || 0;
-      const balls = parseInt(parts[1]) || 0;
-      const totalBalls = completedOvers * 6 + balls;
-      if (totalBalls === 0) return '0.00';
-      return ((runs / totalBalls) * 6).toFixed(2);
+    if (this.isInDisplayHighlightMode()) {
+      // For inningsSummary, use runRate from highlightData (specific innings data)
+      if (this.highlightViewState?.highlightData?.runRate) {
+        return this.highlightViewState.highlightData.runRate;
+      }
+      // For other highlights, calculate from scoreState
+      if (this.highlightViewState?.scoreState) {
+        const { runs, overs } = this.highlightViewState.scoreState;
+        // Parse overs string like "6.1" to calculate balls
+        const parts = overs.split('.');
+        const completedOvers = parseInt(parts[0]) || 0;
+        const balls = parseInt(parts[1]) || 0;
+        const totalBalls = completedOvers * 6 + balls;
+        if (totalBalls === 0) return '0.00';
+        return ((runs / totalBalls) * 6).toFixed(2);
+      }
     }
     return this.getCurrentRunRate();
   }
@@ -1382,8 +1414,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get batting stats for phase summary during highlights
+   * Get batting stats for phase/innings summary during highlights
    * For overSummary highlights, use the topScorer data from highlightData
+   * For inningsSummary highlights, use the topBatsmen array from highlightData
    */
   getHighlightBattingStats(): Array<{
     name: string;
@@ -1399,6 +1432,23 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }> {
     if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
       const data = this.highlightViewState.highlightData;
+      
+      // For inningsSummary, use the topBatsmen array from highlightData
+      // This is the correct data for the specific innings being summarized
+      if (data.topBatsmen && Array.isArray(data.topBatsmen)) {
+        return data.topBatsmen.map((batsman: any) => ({
+          name: batsman.name || 'Batsman',
+          image: batsman.image ? (batsman.image.startsWith('http') ? batsman.image : `https://img1.hscicdn.com/image/upload${batsman.image}`) : null,
+          runs: batsman.runs || 0,
+          balls: batsman.balls || 0,
+          fours: batsman.fours || 0,
+          sixes: batsman.sixes || 0,
+          dismissalText: batsman.isOut ? 'out' : 'not out',
+          isCurrentBatsman: !batsman.isOut,
+          isStriker: false,
+          isDNB: false
+        }));
+      }
       
       // For overSummary / phase summary, show topScorer prominently
       if (data.topScorer) {
@@ -1457,8 +1507,9 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get bowling stats for phase summary during highlights
+   * Get bowling stats for phase/innings summary during highlights
    * For overSummary highlights, use the bestBowler data from highlightData
+   * For inningsSummary highlights, use the topBowlers array from highlightData
    */
   getHighlightBowlingStats(): Array<{
     name: string;
@@ -1472,6 +1523,30 @@ export class MatchDisplayComponent implements OnInit, OnDestroy {
   }> {
     if (this.isInDisplayHighlightMode() && this.highlightViewState?.highlightData) {
       const data = this.highlightViewState.highlightData;
+      
+      // For inningsSummary, use the topBowlers array from highlightData
+      // This is the correct data for the specific innings being summarized
+      if (data.topBowlers && Array.isArray(data.topBowlers)) {
+        return data.topBowlers.map((bowler: any, index: number) => {
+          const oversStr = bowler.overs || '0.0';
+          const parts = oversStr.split('.');
+          const fullOvers = parseInt(parts[0]) || 0;
+          const balls = parseInt(parts[1]) || 0;
+          const totalBalls = fullOvers * 6 + balls;
+          const economy = totalBalls > 0 ? ((bowler.runs || 0) / totalBalls * 6).toFixed(2) : '0.00';
+          
+          return {
+            name: bowler.name || 'Bowler',
+            image: bowler.image ? (bowler.image.startsWith('http') ? bowler.image : `https://img1.hscicdn.com/image/upload${bowler.image}`) : null,
+            oversDisplay: oversStr,
+            runs: bowler.runs || 0,
+            wickets: bowler.wickets || 0,
+            economy: economy,
+            isCurrentBowler: false,
+            isBestBowler: index === 0
+          };
+        });
+      }
       
       // For overSummary / phase summary, show bestBowler prominently
       if (data.bestBowler) {
